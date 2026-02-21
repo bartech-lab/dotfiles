@@ -45,7 +45,7 @@ optimize-images() {
   local progress_file=$(mktemp)
   echo "0" > "$progress_file"
   
-  # Start progress display in background
+  # Start progress display in background (suppress job notifications)
   (
     while true; do
       local current=$(cat "$progress_file" 2>/dev/null || echo 0)
@@ -55,7 +55,7 @@ optimize-images() {
       printf "\rOptimizing %d/%d files..." "$current" "$total_count"
       sleep 0.1
     done
-  ) &
+  ) 2>/dev/null &
   local display_pid=$!
   
   # Process JPEG files in parallel
@@ -164,7 +164,7 @@ video-remux() {
   local progress_file=$(mktemp)
   echo "0" > "$progress_file"
   
-  # Start progress display in background
+  # Start progress display in background (suppress job notifications)
   (
     while true; do
       local current=$(cat "$progress_file" 2>/dev/null || echo 0)
@@ -174,7 +174,7 @@ video-remux() {
       printf "\rProcessing %d/%d files..." "$current" "$total_files"
       sleep 0.2
     done
-  ) &
+  ) 2>/dev/null &
   local display_pid=$!
   
   # Export variables for parallel
@@ -260,7 +260,7 @@ video-encode-cpu() {
   local progress_file=$(mktemp)
   echo "0" > "$progress_file"
   
-  # Start progress display in background
+  # Start progress display in background (suppress job notifications)
   (
     while true; do
       local current=$(cat "$progress_file" 2>/dev/null || echo 0)
@@ -270,7 +270,7 @@ video-encode-cpu() {
       printf "\rEncoding %d/%d files..." "$current" "$total_files"
       sleep 0.5
     done
-  ) &
+  ) 2>/dev/null &
   local display_pid=$!
   
   # Export variables for parallel
@@ -355,7 +355,7 @@ video-encode-gpu() {
   local progress_file=$(mktemp)
   echo "0" > "$progress_file"
   
-  # Start progress display in background
+  # Start progress display in background (suppress job notifications)
   (
     while true; do
       local current=$(cat "$progress_file" 2>/dev/null || echo 0)
@@ -365,7 +365,7 @@ video-encode-gpu() {
       printf "\rEncoding %d/%d files..." "$current" "$total_files"
       sleep 0.5
     done
-  ) &
+  ) 2>/dev/null &
   local display_pid=$!
   
   # Export variables for parallel
