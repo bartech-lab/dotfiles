@@ -69,6 +69,16 @@ source ~/.zshrc
 ### Git
 - `git-cleanup` - Remove merged branches and clean repository
 
+### Homebrew
+- `brewup` - Update, upgrade, and cleanup Homebrew packages
+
+### OpenCode
+- `opencode` - Launch OpenCode with default profile
+- `omo` - Launch Oh-My-OpenCode profile (with auto-update)
+- `oac` - Launch OpenAgentsControl profile (with auto-update)
+- `ocp` - List all available OpenCode profiles
+- `ocx-profile <name>` - Launch OpenCode with specific profile
+
 ## Adding New Functions
 
 1. Create a new file in `zsh/functions/` (e.g., `03-docker.zsh`)
