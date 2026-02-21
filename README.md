@@ -40,7 +40,6 @@ These tools replace default macOS commands with modern alternatives:
   - `ll` - Detailed list with icons
   - `lt` - Tree view (2 levels deep)
 
-- **`find`** → `fd` - Fast, user-friendly find replacement
 - **`grep`** → `rg` (ripgrep) - Fast text search with better defaults
 - **`top`** → `btm` (bottom) - Modern system monitor with graphs
 - **`du`** → `dust` - Better disk usage visualization
@@ -122,7 +121,7 @@ These tools replace default macOS commands with modern alternatives:
 All dependencies are defined in `Brewfile`. The installer uses `brew bundle` to install everything automatically.
 
 **Key packages:**
-- **Shell:** eza, fd, ripgrep, dust, bottom, duf, fzf, zoxide
+- **Shell:** eza, ripgrep, dust, bottom, duf, fzf, zoxide
 - **Media:** ffmpeg, parallel, mozjpeg
 - **Zsh:** zinit, powerlevel10k, zsh-syntax-highlighting, zsh-autosuggestions
 - **Apps:** Ghostty, VS Code, Brave, and more (see Brewfile)

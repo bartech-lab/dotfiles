@@ -13,7 +13,6 @@ brew "coreutils"
 
 # Modern CLI tools (for aliases)
 brew "eza"
-brew "fd"
 brew "ripgrep"
 brew "dust"
 brew "bottom"

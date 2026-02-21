@@ -6,7 +6,7 @@ BACKUP_DIR="$HOME/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
 
 # Critical dependencies that must be present
 # Note: cjpeg is the binary from mozjpeg package
-CRITICAL_DEPS=("eza" "fd" "rg" "dust" "btm" "duf" "parallel" "ffmpeg" "cjpeg")
+CRITICAL_DEPS=("eza" "rg" "dust" "btm" "duf" "parallel" "ffmpeg" "cjpeg")
 
 echo "🚀 Installing dotfiles..."
 
@@ -128,7 +128,6 @@ echo "📋 Available functions:"
 echo ""
 echo "Shell:"
 echo "  ls, ll, lt                          - Modern file listing with eza"
-echo "  find                                - fd (modern find replacement)"
 echo "  grep                                - rg (ripgrep)"
 echo "  top                                 - btm (system monitor)"
 echo "  du                                  - dust (disk usage)"
