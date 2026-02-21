@@ -2,6 +2,46 @@
 
 Personal shell functions and scripts for macOS.
 
+## Prerequisites
+
+The following tools must be installed for the functions to work:
+
+### Required for all functions:
+- **zsh** - Default shell on macOS (pre-installed)
+- **parallel** - GNU parallel for parallel processing
+  ```bash
+  brew install parallel
+  ```
+
+### Required for image optimization (`optimize-images`):
+- **cjpeg** (mozjpeg) - JPEG optimization
+  ```bash
+  brew install mozjpeg
+  ```
+- **oxipng** - PNG optimization
+  ```bash
+  brew install oxipng
+  ```
+- **pngquant** - PNG quantization (for default mode)
+  ```bash
+  brew install pngquant
+  ```
+- **ffmpeg** - For converting transparent PNGs to JPEG
+  ```bash
+  brew install ffmpeg
+  ```
+
+### Required for video operations (`video-remux`, `video-encode-cpu`, `video-encode-gpu`):
+- **ffmpeg** - Video processing
+  ```bash
+  brew install ffmpeg
+  ```
+
+### Quick install (all dependencies at once):
+```bash
+brew install parallel mozjpeg oxipng pngquant ffmpeg
+```
+
 ## Setup
 
 ```bash
