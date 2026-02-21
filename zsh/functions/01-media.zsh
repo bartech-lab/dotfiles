@@ -421,3 +421,35 @@ video-encode-gpu() {
     osascript -e 'display notification "GPU encoding complete!" with title "video-encode-gpu"'
   fi
 }
+
+# Convert video to GIF (useful for documentation/issues)
+video-to-gif() {
+    local input="$1"
+    local output="${2:-output.gif}"
+    local fps="${3:-15}"
+    local scale="${4:-480}"
+    
+    if [[ -z "$input" ]]; then
+        echo "Usage: video-to-gif <input.mp4> [output.gif] [fps] [scale]"
+        return 1
+    fi
+    
+    if [[ ! -f "$input" ]]; then
+        echo "❌ File not found: $input"
+        return 1
+    fi
+    
+    echo "Converting to GIF (${fps}fps, ${scale}px wide)..."
+    
+    ffmpeg -i "$input" \
+        -vf "fps=$fps,scale=$scale:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse" \
+        -loop 0 "$output"
+    
+    if [[ $? -eq 0 ]]; then
+        echo "✅ Created: $output"
+        ls -lh "$output"
+    else
+        echo "❌ Conversion failed"
+        return 1
+    fi
+}
