@@ -510,3 +510,333 @@ repo-check() {
         return 0
     fi
 }
+
+# Comprehensive dotfiles environment health checker
+dotfiles-doctor() {
+    emulate -L zsh
+    setopt LOCAL_OPTIONS NO_NOMATCH
+
+    local auto_fix=false
+    local has_errors=0
+    local has_warnings=0
+
+    # Parse arguments
+    for arg in "$@"; do
+        case "$arg" in
+            --fix)
+                auto_fix=true
+                ;;
+            --help|-h)
+                echo "Usage: dotfiles-doctor [--fix]"
+                echo ""
+                echo "Comprehensive health check for dotfiles environment"
+                echo ""
+                echo "Options:"
+                echo "  --fix    Attempt to auto-fix common issues"
+                return 0
+                ;;
+            -*)
+                echo "❌ Unknown option: $arg"
+                echo "Usage: dotfiles-doctor [--fix]"
+                return 1
+                ;;
+        esac
+    done
+
+    echo "🔧 Dotfiles Doctor"
+    echo "=================="
+    echo ""
+
+    # System Checks
+    echo "System:"
+
+    # macOS version
+    local macos_version=$(sw_vers -productVersion 2>/dev/null)
+    if [[ -n "$macos_version" ]]; then
+        local major_version=$(echo "$macos_version" | cut -d. -f1)
+        if [[ "$major_version" -ge 14 ]]; then
+            echo "  ✅ macOS $macos_version"
+        else
+            echo "  ⚠️  macOS $macos_version (tested on 14+)"
+            ((has_warnings++))
+        fi
+    else
+        echo "  ❌ Cannot detect macOS version"
+        ((has_errors++))
+    fi
+
+    # Command Line Tools
+    if xcode-select -p &>/dev/null; then
+        echo "  ✅ Command Line Tools"
+    else
+        echo "  ❌ Command Line Tools not installed"
+        echo "     Run: xcode-select --install"
+        ((has_errors++))
+    fi
+
+    # Homebrew
+    if command -v brew &>/dev/null; then
+        local brew_version=$(brew --version | head -1 | awk '{print $2}')
+        echo "  ✅ Homebrew $brew_version"
+    else
+        echo "  ❌ Homebrew not installed"
+        echo "     Run: ./install.sh"
+        ((has_errors++))
+    fi
+
+    echo ""
+    echo "Critical Tools:"
+
+    # Check critical tools with versions
+    declare -A tool_packages=(
+        [zstd]="zstd"
+        [gtar]="gnu-tar"
+        [ffmpeg]="ffmpeg"
+        [cjpeg]="mozjpeg"
+        [parallel]="parallel"
+        [eza]="eza"
+        [rg]="ripgrep"
+        [dust]="dust"
+        [btm]="bottom"
+        [duf]="duf"
+    )
+
+    local missing_tools=()
+    for tool in zstd gtar ffmpeg cjpeg parallel eza rg dust btm duf; do
+        if command -v "$tool" &>/dev/null; then
+            local version=""
+            case "$tool" in
+                zstd) version=$(zstd --version 2>&1 | head -1 | awk '{print $3}') ;;
+                gtar) version=$(gtar --version 2>&1 | head -1 | awk '{print $4}') ;;
+                ffmpeg) version=$(ffmpeg -version 2>&1 | head -1 | awk '{print $3}') ;;
+                cjpeg) version=$(cjpeg -version 2>&1 | head -1 | awk '{print $3}') ;;
+                parallel) version=$(parallel --version 2>&1 | head -1 | awk '{print $3}') ;;
+                eza) version=$(eza --version 2>&1 | head -1) ;;
+                rg) version=$(rg --version 2>&1 | head -1 | awk '{print $2}') ;;
+                dust) version=$(dust --version 2>&1 | awk '{print $2}') ;;
+                btm) version=$(btm --version 2>&1 | awk '{print $2}') ;;
+                duf) version=$(duf --version 2>&1 | awk '{print $2}') ;;
+            esac
+            [[ -n "$version" ]] && echo "  ✅ $tool $version" || echo "  ✅ $tool"
+        else
+            echo "  ❌ $tool (install: brew install ${tool_packages[$tool]})"
+            missing_tools+=("$tool")
+            ((has_errors++))
+        fi
+    done
+
+    # Auto-fix missing tools
+    if [[ "$auto_fix" == true && ${#missing_tools[@]} -gt 0 && -x "$(command -v brew)" ]]; then
+        echo ""
+        echo "🔧 Auto-fixing missing tools..."
+        for tool in "${missing_tools[@]}"; do
+            local package="${tool_packages[$tool]}"
+            echo "  → Installing $package..."
+            brew install "$package" 2>/dev/null || echo "  ⚠️ Failed to install $package"
+        done
+    fi
+
+    echo ""
+    echo "Dotfiles Setup:"
+
+    # Check loader symlink
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+    local loader_path="$HOME/.config/zsh-dotfiles-loader.zsh"
+
+    if [[ -L "$loader_path" ]]; then
+        local link_target=$(readlink "$loader_path")
+        if [[ "$link_target" == "$dotfiles_dir/zsh/functions.zsh" ]]; then
+            echo "  ✅ Loader symlinked correctly"
+        else
+            echo "  ⚠️  Loader symlink points elsewhere"
+            echo "     Expected: $dotfiles_dir/zsh/functions.zsh"
+            echo "     Actual: $link_target"
+            ((has_warnings++))
+            
+            if [[ "$auto_fix" == true ]]; then
+                echo "  🔧 Fixing symlink..."
+                ln -sf "$dotfiles_dir/zsh/functions.zsh" "$loader_path"
+                echo "  ✅ Fixed"
+            fi
+        fi
+    elif [[ -f "$loader_path" ]]; then
+        echo "  ⚠️  Loader exists but is not a symlink"
+        ((has_warnings++))
+    else
+        echo "  ❌ Loader not found at $loader_path"
+        echo "     Run: ./install.sh"
+        ((has_errors++))
+    fi
+
+    # Check if sourced in .zshrc
+    if [[ -f "$HOME/.zshrc" ]]; then
+        if grep -q "zsh-dotfiles-loader.zsh" "$HOME/.zshrc" 2>/dev/null; then
+            echo "  ✅ Sourced in ~/.zshrc"
+        else
+            echo "  ❌ Not sourced in ~/.zshrc"
+            echo "     Add: source ~/.config/zsh-dotfiles-loader.zsh"
+            ((has_errors++))
+            
+            if [[ "$auto_fix" == true ]]; then
+                echo "" >> "$HOME/.zshrc"
+                echo "# Load dotfiles functions" >> "$HOME/.zshrc"
+                echo 'source ~/.config/zsh-dotfiles-loader.zsh' >> "$HOME/.zshrc"
+                echo "  🔧 Added to ~/.zshrc"
+            fi
+        fi
+    else
+        echo "  ⚠️  ~/.zshrc not found"
+        ((has_warnings++))
+    fi
+
+    # Count loaded functions
+    local function_count=$(functions | grep -cE '^[a-zA-Z_-]+\s*\(\)' 2>/dev/null || echo "0")
+    if [[ "$function_count" -gt 30 ]]; then
+        echo "  ✅ Functions loaded ($function_count functions)"
+    elif [[ "$function_count" -gt 0 ]]; then
+        echo "  ⚠️  Functions loaded ($function_count - expected >30)"
+        ((has_warnings++))
+    else
+        echo "  ❌ No functions loaded"
+        ((has_errors++))
+    fi
+
+    echo ""
+    echo "PATH Configuration:"
+
+    # Check mozjpeg priority
+    if which -a cjpeg 2>/dev/null | head -1 | grep -q "mozjpeg"; then
+        echo "  ✅ mozjpeg priority correct"
+    else
+        local cjpeg_path=$(which cjpeg 2>/dev/null)
+        if [[ -n "$cjpeg_path" ]]; then
+            echo "  ⚠️  mozjpeg not first in PATH"
+            echo "     Current: $cjpeg_path"
+            echo "     Add to ~/.zshrc (before /opt/homebrew/bin):"
+            echo '       path=("/opt/homebrew/opt/mozjpeg/bin" $path)'
+            ((has_warnings++))
+        else
+            echo "  ❌ cjpeg not found (install mozjpeg)"
+            ((has_errors++))
+        fi
+    fi
+
+    # Check for duplicates in PATH
+    local path_dups=$(echo "$PATH" | tr ':' '\n' | sort | uniq -d | wc -l | tr -d ' ')
+    if [[ "$path_dups" -eq 0 ]]; then
+        echo "  ✅ No duplicates"
+    else
+        echo "  ⚠️  $path_dups duplicate(s) in PATH"
+        ((has_warnings++))
+    fi
+
+    echo ""
+    echo "Shell:"
+
+    # Check zinit
+    if [[ -d "$HOME/.local/share/zinit/zinit.git" ]] || [[ -d "/opt/homebrew/opt/zinit" ]]; then
+        local zinit_version=$(zinit --version 2>/dev/null | head -1 | awk '{print $2}')
+        [[ -n "$zinit_version" ]] && echo "  ✅ zinit $zinit_version" || echo "  ✅ zinit installed"
+    else
+        echo "  ⚠️  zinit not found (install: brew install zinit)"
+        ((has_warnings++))
+    fi
+
+    # Check powerlevel10k
+    if [[ -n "$P9K_SSH" ]] || [[ -n "$POWERLEVEL9K_DISABLE_GITSTATUS" ]] || typeset -p POWERLEVEL9K_* &>/dev/null; then
+        echo "  ✅ powerlevel10k active"
+    else
+        echo "  ⚠️  powerlevel10k not detected"
+        ((has_warnings++))
+    fi
+
+    # Check syntax highlighting
+    if typeset -p ZSH_HIGHLIGHT_VERSION &>/dev/null || [[ -n "${ZSH_HIGHLIGHT_STYLES+x}" ]]; then
+        echo "  ✅ Syntax highlighting"
+    else
+        echo "  ⚠️  Syntax highlighting not loaded"
+        ((has_warnings++))
+    fi
+
+    # Check autosuggestions
+    if typeset -p ZSH_AUTOSUGGEST_STRATEGY &>/dev/null || [[ -n "${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE+x}" ]]; then
+        echo "  ✅ Auto-suggestions"
+    else
+        echo "  ⚠️  Auto-suggestions not loaded"
+        ((has_warnings++))
+    fi
+
+    echo ""
+    echo "Fonts:"
+
+    # Check for Nerd Fonts
+    local font_check=false
+    if fc-list : family 2>/dev/null | grep -qi "nerd\|powerline\|meslo\|hack\|fira"; then
+        font_check=true
+    elif [[ -d "$HOME/Library/Fonts" ]]; then
+        if ls "$HOME/Library/Fonts" | grep -qiE "(Nerd|Powerline|Meslo|Hack|Fira)"; then
+            font_check=true
+        fi
+    fi
+
+    if [[ "$font_check" == true ]]; then
+        echo "  ✅ Nerd Fonts installed"
+    else
+        echo "  ⚠️  Nerd Fonts not detected"
+        echo "     Install: brew tap homebrew/cask-fonts && brew install --cask font-meslo-lg-nerd-font"
+        ((has_warnings++))
+    fi
+
+    echo ""
+    echo "Git:"
+
+    if command -v git &>/dev/null; then
+        local git_version=$(git --version | awk '{print $3}')
+        echo "  ✅ Git $git_version"
+
+        # Check git config
+        local git_name=$(git config user.name 2>/dev/null)
+        local git_email=$(git config user.email 2>/dev/null)
+
+        if [[ -n "$git_name" ]]; then
+            echo "  ✅ User name: $git_name"
+        else
+            echo "  ⚠️  Git user.name not set"
+            echo "     Run: git config --global user.name 'Your Name'"
+            ((has_warnings++))
+        fi
+
+        if [[ -n "$git_email" ]]; then
+            echo "  ✅ User email: $git_email"
+        else
+            echo "  ⚠️  Git user.email not set"
+            echo "     Run: git config --global user.email 'you@example.com'"
+            ((has_warnings++))
+        fi
+    else
+        echo "  ❌ Git not installed"
+        ((has_errors++))
+    fi
+
+    # Summary
+    echo ""
+    echo "=================="
+
+    if [[ "$has_errors" -eq 0 && "$has_warnings" -eq 0 ]]; then
+        echo "✅ All systems operational!"
+        return 0
+    elif [[ "$has_errors" -eq 0 ]]; then
+        echo "⚠️  $has_warnings warning(s) - safe to proceed"
+        echo ""
+        echo "Run 'dotfiles-doctor --fix' to auto-fix common issues"
+        return 0
+    else
+        echo "❌ $has_errors error(s), $has_warnings warning(s)"
+        echo ""
+        echo "Fix errors above, then run again."
+        if [[ "$auto_fix" == false && "$has_errors" -gt 0 ]]; then
+            echo "Run 'dotfiles-doctor --fix' to attempt auto-fixes."
+        fi
+        return 1
+    fi
+}
