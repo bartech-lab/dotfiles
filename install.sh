@@ -6,7 +6,7 @@ BACKUP_DIR="$HOME/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
 
 # Critical dependencies that must be present
 # Note: cjpeg is the binary from mozjpeg package
-CRITICAL_DEPS=("eza" "rg" "dust" "btm" "duf" "parallel" "ffmpeg" "cjpeg")
+CRITICAL_DEPS=("eza" "rg" "dust" "btm" "duf" "parallel" "ffmpeg" "cjpeg" "zstd" "gtar")
 
 echo "🚀 Installing dotfiles..."
 
@@ -150,6 +150,7 @@ echo "  cpwd                                - Copy current path to clipboard"
 echo ""
 echo "Dev:"
 echo "  extract <archive>                   - Extract any archive type"
+echo "  archive [name] [--dry-run]          - Create reproducible archive"
 echo ""
 echo "Homebrew:"
 echo "  brewup                              - Update, upgrade, and cleanup"

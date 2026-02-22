@@ -95,8 +95,19 @@ These tools replace default macOS commands with modern alternatives:
 ### Dev Functions
 
 - **`extract <archive-file>`** - Universal archive extractor
-  - Supports: tar.bz2, tar.gz, bz2, rar, gz, tar, zip, Z, 7z, xz
+  - Supports: tar.bz2, tar.gz, tar.zst, tar.xz, bz2, rar, gz, tar, zip, Z, 7z, xz
   - Auto-detects format from extension
+  - **Auto-creates directory**: Extracts to folder named after archive (e.g., `archive.tar.zst` → `archive/`)
+  - **Smart collision handling**: If folder exists, creates `archive-2/`, `archive-3/`, etc.
+  - Uses `unar` for zip, rar, 7z (shows error if not installed)
+
+- **`archive [name] [--dry-run]`** - Create reproducible archive
+  - Creates `.tar.zst` archives with deterministic output
+  - Excludes: dev artifacts, caches, build output, temp files
+  - `--dry-run`: Preview what would be archived without creating file
+  - Uses zstd compression (-19)
+  - Requires: `zstd`, `gnu-tar` (optional, for full reproducibility)
+  - Auto-detects GNU tar; falls back to BSD tar if not available
 
 ### Homebrew
 
@@ -122,7 +133,7 @@ All dependencies are defined in `Brewfile`. The installer uses `brew bundle` to 
 
 **Key packages:**
 - **Shell:** eza, ripgrep, dust, bottom, duf, fzf, zoxide
-- **Media:** ffmpeg, parallel, mozjpeg
+- **Media:** ffmpeg, parallel, mozjpeg, zstd, unar
 - **Zsh:** zinit, powerlevel10k, zsh-syntax-highlighting, zsh-autosuggestions
 - **Apps:** Ghostty, VS Code, Brave, and more (see Brewfile)
 
