@@ -25,17 +25,19 @@ lt -L 3              # Tree with 3 levels
 
 ### Text Search (ripgrep)
 
+**Note:** Not aliased to `grep` to avoid breaking scripts. Use `rg` directly.
+
 | Command | Description |
 |---------|-------------|
-| `grep` | Fast search with smart defaults |
+| `rg` | Fast search with smart defaults |
 
 **Examples:**
 ```bash
-grep "pattern"         # Search in current directory
-grep -i "pattern"      # Case-insensitive
-grep --type md "TODO"  # Only markdown files
-grep -l "pattern"      # Just filenames
-grep -C 3 "pattern"    # 3 lines of context
+rg "pattern"           # Search in current directory
+rg -i "pattern"        # Case-insensitive
+rg -t md "TODO"        # Only markdown files
+rg -l "pattern"        # Just filenames
+rg -C 3 "pattern"      # 3 lines of context
 ```
 
 ### System Monitoring (bottom)
@@ -143,8 +145,9 @@ brewup                # Update, upgrade, cleanup
 **What it does:**
 1. Updates Homebrew itself
 2. Upgrades all formulae and casks
-3. Runs `brew bundle` to sync with Brewfile
-4. Cleans up old versions
+3. Cleans up old versions
+
+**Note:** Does NOT run `brew bundle`. Run that separately when you want to sync packages with Brewfile.
 
 ## OpenCode Functions
 
@@ -312,19 +315,19 @@ See [dev.md](dev.md) for full documentation.
 | Category | File | Description |
 |----------|------|-------------|
 | Core | `00-core.zsh` | Zsh plugins and theme |
-| Media | `01-media.zsh` | Image/video processing |
-| Git | `02-git.zsh` | Git helpers |
-| Brew | `03-brew.zsh` | Homebrew functions |
-| Shell | `03-shell.zsh` | Modern CLI aliases |
-| macOS | `04-macos.zsh` | System functions |
-| OpenCode | `04-opencode.zsh` | OpenCode helpers |
-| Dev | `05-dev.zsh` | Development utilities |
+| Shell | `10-shell.zsh` | Modern CLI aliases |
+| Brew | `20-brew.zsh` | Homebrew functions |
+| Git | `30-git.zsh` | Git helpers |
+| Dev | `40-dev.zsh` | Development utilities |
+| Media | `50-media.zsh` | Image/video processing |
+| macOS | `60-macos.zsh` | System functions |
+| OpenCode | `70-opencode.zsh` | OpenCode helpers |
 
 ## Adding Custom Functions
 
 1. Create a file in `zsh/functions/`:
    ```bash
-   touch zsh/functions/06-custom.zsh
+   touch zsh/functions/80-custom.zsh
    ```
 
 2. Add your function:

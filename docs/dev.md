@@ -337,7 +337,7 @@ Test on existing machines:
 
 ## Function Files
 
-Development utilities are organized in `zsh/functions/05-dev.zsh`:
+Development utilities are organized in `zsh/functions/40-dev.zsh`:
 
 ```zsh
 # Archive/Extract
