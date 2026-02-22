@@ -74,10 +74,17 @@ archive() {
     emulate -L zsh
     setopt LOCAL_OPTIONS NO_NOMATCH
 
-    # Check for zstd
-    if ! command -v zstd &>/dev/null; then
-        echo "❌ zstd not found. Install with: brew install zstd"
-        return 1
+    # Check for compressor
+    if [[ "$use_gzip" == true ]]; then
+        if ! command -v gzip &>/dev/null; then
+            echo "❌ gzip not found"
+            return 1
+        fi
+    else
+        if ! command -v zstd &>/dev/null; then
+            echo "❌ zstd not found. Install with: brew install zstd"
+            return 1
+        fi
     fi
 
     # Detect which tar to use (GNU tar preferred for reproducibility)
@@ -89,6 +96,7 @@ archive() {
     fi
 
     local dry_run=false
+    local use_gzip=false
     local name=""
 
     # Parse arguments
@@ -97,9 +105,12 @@ archive() {
             --dry-run|-n)
                 dry_run=true
                 ;;
+            -gzip)
+                use_gzip=true
+                ;;
             -*)
                 echo "❌ Unknown option: $arg"
-                echo "Usage: archive [name] [--dry-run]"
+                echo "Usage: archive [name] [--dry-run] [-gzip]"
                 return 1
                 ;;
             *)
@@ -120,7 +131,12 @@ archive() {
     fi
 
     local ts="$(date +%Y%m%d-%H%M)"
-    local outfile="${name}-${ts}.tar.zst"
+    local outfile
+    if [[ "$use_gzip" == true ]]; then
+        outfile="${name}-${ts}.tar.gz"
+    else
+        outfile="${name}-${ts}.tar.zst"
+    fi
 
     # Build exclude patterns
     local excludes=(
@@ -196,11 +212,19 @@ archive() {
     # Create archive
     echo "📦 Creating archive..."
     
-    $tar_cmd \
-        "${tar_opts[@]}" \
-        "${exclude_args[@]}" \
-        -cf - . 2>/dev/null | \
-        zstd -19 -T0 -q -o "$outfile"
+    if [[ "$use_gzip" == true ]]; then
+        $tar_cmd \
+            "${tar_opts[@]}" \
+            "${exclude_args[@]}" \
+            -cf - . 2>/dev/null | \
+            gzip -6 -c > "$outfile"
+    else
+        $tar_cmd \
+            "${tar_opts[@]}" \
+            "${exclude_args[@]}" \
+            -cf - . 2>/dev/null | \
+            zstd -19 -T0 -q -o "$outfile"
+    fi
 
     if [[ -f "$outfile" ]]; then
         local size=$(stat -f%z "$outfile" | awk '{split("B KB MB GB TB PB", unit); u=1; while($1>=1024 && u<6) {$1/=1024; u++} printf "%.1f %s", $1, unit[u]}')

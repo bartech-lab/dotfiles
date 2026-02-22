@@ -101,12 +101,13 @@ These tools replace default macOS commands with modern alternatives:
   - **Smart collision handling**: If folder exists, creates `archive-2/`, `archive-3/`, etc.
   - Uses `unar` for zip, rar, 7z (shows error if not installed)
 
-- **`archive [name] [--dry-run]`** - Create reproducible archive
-  - Creates `.tar.zst` archives with deterministic output
+- **`archive [name] [--dry-run] [-gzip]`** - Create reproducible archive
+  - Creates `.tar.zst` archives with deterministic output (default)
   - Excludes: dev artifacts, caches, build output, temp files
   - `--dry-run`: Preview what would be archived without creating file
-  - Uses zstd compression (-19)
-  - Requires: `zstd`, `gnu-tar` (optional, for full reproducibility)
+  - `-gzip`: Use gzip compression (-6) instead of zstd, creates `.tar.gz`
+  - Uses zstd compression (-19) by default
+  - Requires: `zstd` (or `gzip` for `-gzip`), `gnu-tar` (optional, for full reproducibility)
   - Auto-detects GNU tar; falls back to BSD tar if not available
 
 ### Homebrew
