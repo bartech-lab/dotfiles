@@ -10,7 +10,7 @@
 
 ```bash
 # 1. Clone repository
-git clone <your-repo-url> ~/dotfiles
+git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 
 # 2. Run installer (handles everything)
@@ -69,7 +69,7 @@ On a completely fresh macOS machine:
 
 2. **Clone and install**:
    ```bash
-   git clone <your-repo-url> ~/dotfiles
+   git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
    cd ~/dotfiles
    ./install.sh
    ```

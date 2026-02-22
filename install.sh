@@ -16,7 +16,7 @@ if [[ "$PWD" != "$HOME/dotfiles" ]]; then
   print -u2 "   Current location: $PWD"
   print -u2 ""
   print -u2 "Example:"
-  print -u2 "  git clone <repo> ~/dotfiles"
+  print -u2 "  git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles"
   exit 1
 fi
 
