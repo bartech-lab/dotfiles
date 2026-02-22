@@ -218,6 +218,29 @@ echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 
 Then restart your terminal.
 
+### Media functions not working (empty output files)
+
+If `optimize-images`, `video-encode-cpu`, or `video-encode-gpu` show success but produce empty files, check your PATH order. The `mozjpeg` keg-only formula must come BEFORE `/opt/homebrew/bin` in your PATH:
+
+```bash
+# In ~/.zshrc - mozjpeg MUST be first
+path=(
+  "/opt/homebrew/opt/mozjpeg/bin"  # ← This must come BEFORE brew bin
+  "/opt/homebrew/bin"
+  ...
+)
+```
+
+**Why:** mozjpeg provides `cjpeg` which conflicts with the jpeg-turbo version. If jpeg-turbo's cjpeg is found first, it cannot read existing JPEG files (it only creates them from other formats), causing optimization to fail silently.
+
+**Verify the fix:**
+```bash
+which -a cjpeg
+# Should show mozjpeg version FIRST:
+# /opt/homebrew/opt/mozjpeg/bin/cjpeg
+# /opt/homebrew/bin/cjpeg
+```
+
 ## Archive
 
 Old/obsolete scripts from previous setups are kept in `archive/`:
