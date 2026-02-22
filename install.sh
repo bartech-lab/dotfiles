@@ -4,6 +4,13 @@ DOTFILES_DIR="$HOME/dotfiles"
 BACKUP_DIR="$HOME/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
 DRY_RUN=false
 
+# Enforce ~/dotfiles location
+if [[ "$PWD" != "$HOME/dotfiles" ]]; then
+  print -u2 "❌ Please clone dotfiles into ~/dotfiles"
+  print -u2 "   Current location: $PWD"
+  exit 1
+fi
+
 # Critical dependencies that must be present
 # Note: cjpeg is the binary from mozjpeg package
 CRITICAL_DEPS=("eza" "rg" "dust" "btm" "duf" "parallel" "ffmpeg" "cjpeg" "zstd" "gtar")
