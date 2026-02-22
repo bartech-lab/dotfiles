@@ -283,6 +283,10 @@ echo "💡 Optional tools installed but not activated:"
 echo "  fzf                                 - Add to ~/.zshrc: eval \"\$(fzf --zsh)\""
 echo "  zoxide                              - Add to ~/.zshrc: eval \"\$(zoxide init zsh)\""
 echo ""
+echo "Configuration:"
+echo "  Functions: ~/dotfiles/zsh/functions/"
+echo "  Loader:    ~/.config/zsh-dotfiles-loader.zsh"
+echo ""
 
 if [[ "$DRY_RUN" == true ]]; then
     echo "📝 Dry run complete - No changes made"
