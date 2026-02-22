@@ -253,14 +253,6 @@ which -a cjpeg
 # /opt/homebrew/bin/cjpeg
 ```
 
-## Archive
-
-Old/obsolete scripts from previous setups are kept in `archive/`:
-- `archive/IEH/` - IEH game scripts
-- `archive/Manjaro/` - Manjaro Linux scripts
-
-These are not loaded automatically but kept for reference.
-
 ## License
 
 Personal dotfiles - feel free to use as inspiration for your own setup.
