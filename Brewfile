@@ -1,61 +1,100 @@
 # Minimal Dotfiles Brewfile
 # Essential tools for a clean macOS setup
+# 
+# To install: brew bundle --file=~/dotfiles/Brewfile
+# To check:   brew bundle check --file=~/dotfiles/Brewfile
 
-# Taps
+# Taps - Additional package repositories
+# autoupdate: Keeps Homebrew updated automatically
+# localsend: AirDrop alternative for cross-platform file sharing
 tap "homebrew/autoupdate"
 tap "localsend/localsend"
 
-# Essentials
-brew "git"
-brew "gh"
-brew "curl"
-brew "coreutils"
+# ============================================================================
+# Core System Tools
+# ============================================================================
 
-# Modern CLI tools (for aliases)
-brew "eza"
-brew "ripgrep"
-brew "dust"
-brew "bottom"
-brew "duf"
-brew "fzf"
-brew "zoxide"
+# Essential utilities
+brew "git"              # Version control (probably already installed, but ensures latest)
+brew "gh"               # GitHub CLI for PRs, issues, repos
+brew "curl"             # HTTP client (macOS built-in is outdated)
+brew "coreutils"        # GNU core utilities (gcp, gmv, gdate, etc.)
 
-# Zsh enhancements
-brew "zinit"
-brew "powerlevel10k"
-brew "zsh-syntax-highlighting"
-brew "zsh-autosuggestions"
+# ============================================================================
+# Modern CLI Replacements
+# ============================================================================
+# These replace default macOS commands with better alternatives
+# See functions.md for usage details
 
-# Media & Tools
-brew "ffmpeg"
-brew "parallel"
-brew "zstd"
-brew "gnu-tar"
-brew "unar"
-brew "scrcpy"
-brew "mozjpeg"
-brew "yt-dlp"
-brew "nvm"
+brew "eza"              # Modern ls replacement (icons, git status, tree)
+brew "ripgrep"          # Modern grep replacement (rg command, fast search)
+brew "dust"             # Modern du replacement (visual disk usage)
+brew "bottom"           # Modern top replacement (btm command, graphs)
+brew "duf"              # Modern df replacement (colorful disk free)
 
-# Python
-brew "pipx"
+# Optional but recommended
+brew "fzf"              # Fuzzy finder (interactive file/command selection)
+brew "zoxide"           # Smart cd replacement (z command, learns your habits)
 
-# Casks
-cask "brave-browser"
-cask "android-platform-tools"
-cask "ghostty"
-cask "handbrake-app"
-cask "iina"
-cask "keka"
-cask "kekaexternalhelper"
-cask "paintbrush"
-cask "stats"
-cask "tg-pro"
-cask "visual-studio-code"
-cask "localsend/localsend/localsend"
+# ============================================================================
+# Zsh Shell Enhancements
+# ============================================================================
 
+brew "zinit"            # Zsh plugin manager (fast, parallel loading)
+brew "powerlevel10k"    # Fast Zsh theme with git status, instant prompt
+brew "zsh-syntax-highlighting"   # Command highlighting as you type
+brew "zsh-autosuggestions"       # Fish-like suggestions from history
+
+# ============================================================================
+# Media Processing Pipeline
+# ============================================================================
+# Used by: optimize-images, video-* functions
+# See docs/media.md for details
+
+brew "ffmpeg"           # Universal media converter (required for video/gif)
+brew "parallel"         # GNU parallel for batch processing images
+brew "zstd"             # Fast compression for archive() function
+brew "gnu-tar"          # Reproducible archives (--sort=name, --mtime)
+brew "unar"             # Universal archive extractor (zip, rar, 7z)
+brew "scrcpy"           # Android screen mirroring/control
+brew "mozjpeg"          # Provides cjpeg binary for image optimization
+brew "yt-dlp"           # YouTube video downloader (ffmpeg companion)
+
+# Image optimization tools (used by optimize-images)
+brew "oxipng"           # PNG optimizer (lossless)
+brew "pngquant"         # PNG quantizer (lossy, smaller files)
+# Note: mozjpeg provides cjpeg for JPEG optimization
+
+# ============================================================================
+# Development Tools
+# ============================================================================
+
+brew "nvm"              # Node version manager (if you use Node.js)
+brew "pipx"             # Python app installer (isolated packages)
+
+# ============================================================================
+# GUI Applications (Casks)
+# ============================================================================
+
+cask "brave-browser"            # Privacy-focused browser
+cask "android-platform-tools"   # ADB, fastboot for Android development
+cask "ghostty"                  # Modern terminal emulator (GPU-accelerated)
+cask "handbrake-app"            # Video transcoder (GUI for ffmpeg tasks)
+cask "iina"                     # Modern macOS video player
+cask "keka"                     # Archive extractor (7z, rar support)
+cask "kekaexternalhelper"       # Keka Finder integration
+cask "paintbrush"               # Simple image editor
+cask "stats"                    # System monitor in menu bar
+cask "tg-pro"                   # Temperature monitoring for Mac
+cask "visual-studio-code"       # Code editor
+cask "localsend/localsend/localsend"  # Cross-platform file sharing
+
+# ============================================================================
 # VS Code Extensions
-vscode "davidanson.vscode-markdownlint"
-vscode "mikestead.dotenv"
-vscode "tamasfe.even-better-toml"
-vscode "ms-playwright.playwright"
+# ============================================================================
+# Installed automatically with VS Code
+
+vscode "davidanson.vscode-markdownlint"   # Markdown linting
+vscode "mikestead.dotenv"                 # .env file support
+vscode "tamasfe.even-better-toml"         # TOML file support
+vscode "ms-playwright.playwright"         # Playwright test support
