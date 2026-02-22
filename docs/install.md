@@ -36,7 +36,7 @@ Your commands are automatically upgraded:
 | Command | What You Get | Why It's Better |
 |---------|--------------|-----------------|
 | `ls`, `ll`, `lt` | `eza` | Icons, git status, tree view |
-| `grep` | `rg` (ripgrep) | Fast, smart defaults, respects .gitignore |
+| `rg` | ripgrep | Fast grep replacement (use `rg`, not aliased to `grep`)
 | `top` | `btm` (bottom) | Graphs, process tree, mouse support |
 | `du` | `dust` | Visual disk usage, sorted by size |
 | `df` | `duf` | Colorful, sortable disk free |

@@ -16,13 +16,13 @@ dotfiles/
 │   ├── functions.zsh         # Main loader (sources all files)
 │   └── functions/            # Individual function files
 │       ├── 00-core.zsh       # Zsh plugins and theme
-│       ├── 01-media.zsh      # Media processing
-│       ├── 02-git.zsh        # Git helpers
-│       ├── 03-brew.zsh       # Homebrew functions
-│       ├── 03-shell.zsh      # Modern CLI aliases
-│       ├── 04-macos.zsh      # macOS system functions
-│       ├── 04-opencode.zsh   # OpenCode helpers
-│       └── 05-dev.zsh        # Development utilities
+│       ├── 10-shell.zsh      # Modern CLI aliases
+│       ├── 20-brew.zsh       # Homebrew functions
+│       ├── 30-git.zsh        # Git helpers
+│       ├── 40-dev.zsh        # Development utilities
+│       ├── 50-media.zsh      # Media processing
+│       ├── 60-macos.zsh      # macOS system functions
+│       └── 70-opencode.zsh   # OpenCode helpers
 ├── install.sh                # One-command installer
 ├── Brewfile                  # Homebrew dependencies
 └── README.md                 # Project entry point
@@ -34,11 +34,13 @@ Functions load in a specific sequence controlled by filenames:
 
 ```
 00-core.zsh      → First (zinit, powerlevel10k)
-01-media.zsh     → Second
-02-git.zsh       → Third
-03-*.zsh         → Fourth (brew, shell)
-04-*.zsh         → Fifth (macos, opencode)
-05-dev.zsh       → Sixth
+10-*.zsh         → Second (shell)
+20-*.zsh         → Third (brew)
+30-*.zsh         → Fourth (git)
+40-*.zsh         → Fifth (dev)
+50-*.zsh         → Sixth (media)
+60-*.zsh         → Seventh (macos)
+70-*.zsh         → Eighth (opencode)
 ```
 
 The numbered prefix ensures consistent loading regardless of filesystem order.
@@ -114,13 +116,13 @@ Example: `archive()` has `--dry-run` and `-gzip` flags.
 ### Adding New Functions
 
 1. Create file in `zsh/functions/`:
-   ```bash
-   touch zsh/functions/06-docker.zsh
-   ```
+    ```bash
+    touch zsh/functions/80-docker.zsh
+    ```
 
 2. Add your functions:
-   ```zsh
-   # zsh/functions/06-docker.zsh
+    ```zsh
+    # zsh/functions/80-docker.zsh
    docker-clean() {
        docker system prune -f
    }

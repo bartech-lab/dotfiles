@@ -1,13 +1,10 @@
 # Modern CLI Aliases
-# Requires: brew install eza ripgrep dust bottom duf
+# Requires: brew install eza dust bottom duf
 
 # File listing (eza)
 alias ls='eza --icons --group-directories-first'
 alias ll='eza -la --icons --group-directories-first'
 alias lt='eza --tree --level=2 --icons'
-
-# Text search (ripgrep)
-alias grep='rg'
 
 # System monitoring (btm)
 alias top='btm'

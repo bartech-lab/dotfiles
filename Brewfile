@@ -6,9 +6,7 @@
 
 # Taps - Additional package repositories
 # autoupdate: Keeps Homebrew updated automatically
-# localsend: AirDrop alternative for cross-platform file sharing
 tap "homebrew/autoupdate"
-tap "localsend/localsend"
 
 # ============================================================================
 # Core System Tools
@@ -35,6 +33,7 @@ brew "duf"              # Modern df replacement (colorful disk free)
 # Optional but recommended
 brew "fzf"              # Fuzzy finder (interactive file/command selection)
 brew "zoxide"           # Smart cd replacement (z command, learns your habits)
+brew "fd"               # Fast find replacement (simple, fast, user-friendly)
 
 # ============================================================================
 # Zsh Shell Enhancements
@@ -87,7 +86,7 @@ cask "paintbrush"               # Simple image editor
 cask "stats"                    # System monitor in menu bar
 cask "tg-pro"                   # Temperature monitoring for Mac
 cask "visual-studio-code"       # Code editor
-cask "localsend/localsend/localsend"  # Cross-platform file sharing
+cask "localsend"                # Cross-platform file sharing
 
 # ============================================================================
 # VS Code Extensions
