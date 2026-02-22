@@ -383,13 +383,19 @@ video-encode-gpu() {
     else
       q=52
       crop=$(ffmpeg -hide_banner -i "$file" -vf cropdetect=limit=0.1:round=2 -t 8 -f null - 2>&1 | awk -F'"'"'crop='"'"' '"'"'/crop=/{print $2}'"'"' | awk '"'"'{print $1}'"'"' | tail -1)
-      vf=""
-      [[ -n "$crop" ]] && vf="-vf crop=$crop"
       
-      if ffmpeg -hide_banner -loglevel error -i "$file" $vf -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
-        :
+      if [[ -n "$crop" ]]; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+          :
+        else
+          echo "FAILED: $base" >> "'$ERROR_LOG'"
+        fi
       else
-        echo "FAILED: $base" >> "'$ERROR_LOG'"
+        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+          :
+        else
+          echo "FAILED: $base" >> "'$ERROR_LOG'"
+        fi
       fi
       echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
     fi
