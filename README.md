@@ -5,7 +5,7 @@ Personal shell functions, aliases, and scripts for macOS. Clean, minimal, and au
 ## Quick Start
 
 ```bash
-git clone <your-repo-url> ~/dotfiles
+git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 source ~/.zshrc
