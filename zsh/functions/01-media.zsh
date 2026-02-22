@@ -41,30 +41,12 @@ optimize-images() {
   echo "Found $total_count files ($jpeg_count JPEG, $png_count PNG)"
   echo ""
   
-  # Create temp file for progress tracking
-  local progress_file=$(mktemp)
-  echo "0" > "$progress_file"
-  
-  # Start progress display in background (suppress job notifications)
-  (
-    while true; do
-      local current=$(cat "$progress_file" 2>/dev/null || echo 0)
-      if [[ "$current" -ge "$total_count" ]]; then
-        break
-      fi
-      printf "\rOptimizing %d/%d files..." "$current" "$total_count"
-      sleep 0.1
-    done
-  ) &!
-  local display_pid=$!
-  
   # Process JPEG files in parallel
   if [[ $jpeg_count -gt 0 ]]; then
     find . -maxdepth 1 \( -name "*.jpg" -o -name "*.jpeg" \) -print0 | \
       sed 's|^\./||' | \
-      parallel -0 --will-cite '
+      parallel -0 --shell zsh --bar --will-cite '
         cjpeg -quality 92 -optimize -progressive {} > optimized/{} 2>/dev/null
-        echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
       ' >/dev/null 2>&1
   fi
   
@@ -73,14 +55,13 @@ optimize-images() {
     if [[ $LOSSLESS -eq 1 ]]; then
       find . -maxdepth 1 -name "*.png" -print0 | \
         sed 's|^\./||' | \
-        parallel -0 --will-cite '
+        parallel -0 --shell zsh --bar --will-cite '
           oxipng -q -o 4 --strip safe -i 0 --out optimized/{} {} 2>/dev/null
-          echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
         ' >/dev/null 2>&1
     else
       find . -maxdepth 1 -name "*.png" -print0 | \
         sed 's|^\./||' | \
-        parallel -0 --will-cite '
+        parallel -0 --shell zsh --bar --will-cite '
           if file {} 2>/dev/null | grep -q "RGBA\|alpha"; then
             name=$(basename {} .png)
             ffmpeg -hide_banner -loglevel error -i {} -q:v 2 optimized/${name}.jpg 2>/dev/null
@@ -93,22 +74,11 @@ optimize-images() {
               oxipng -q -o 4 --strip safe -i 0 --out optimized/{} {} 2>/dev/null
             fi
           fi
-          echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
         ' >/dev/null 2>&1
     fi
   fi
   
-  # Kill progress display
-  kill $display_pid 2>/dev/null
-  wait $display_pid 2>/dev/null
-  
-  # Final display
-  printf "\rOptimizing %d/%d files..." "$total_count" "$total_count"
   echo ""
-  echo ""
-  
-  # Cleanup
-  rm -f "$progress_file"
   
   # Check for DNG files and warn user
   local dng_files=()
@@ -143,6 +113,9 @@ video-remux() {
   local OUTDIR="mp4"
   local ERROR_LOG="$OUTDIR/remux_errors.log"
   
+  # Clear old error log if exists
+  rm -f "$ERROR_LOG"
+  
   # Count files
   local files=()
   while IFS= read -r -d '' file; do
@@ -160,63 +133,25 @@ video-remux() {
   echo "Mode: LOSSLESS COPY (no re-encoding)"
   echo ""
   
-  # Progress tracking
-  local progress_file=$(mktemp)
-  echo "0" > "$progress_file"
-  
-  # Start progress display in background (suppress job notifications)
-  (
-    while true; do
-      local current=$(cat "$progress_file" 2>/dev/null || echo 0)
-      if [[ "$current" -ge "$total_files" ]]; then
-        break
-      fi
-      printf "\rProcessing %d/%d files..." "$current" "$total_files"
-      sleep 0.2
-    done
-  ) &!
-  local display_pid=$!
-  
-  # Export variables for parallel
-  export OUTDIR ERROR_LOG progress_file
-  
   # Use GNU parallel for clean parallel processing
-  printf '%s\0' "${files[@]}" | parallel -0 --will-cite '
+  printf '%s\0' "${files[@]}" | parallel -0 --shell zsh --bar --will-cite '
     file="{}"
     base=$(basename "$file")
     name="${base%.*}"
-    out="'$OUTDIR'/${name}.mp4"
+    out="mp4/${name}.mp4"
     
-    if [[ -f "$out" ]]; then
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
-    elif ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart "$out" 2>/dev/null; then
-      touch -r "$file" "$out"
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
-    else
-      echo "FAILED: $base" >> "'$ERROR_LOG'"
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
+    if [[ ! -f "$out" ]]; then
+      ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart "$out" 2>/dev/null && touch -r "$file" "$out" || echo "FAILED: $base" >> "'$ERROR_LOG'"
     fi
-  ' >/dev/null 2>&1
+  '
   
-  # Kill progress display
-  kill $display_pid 2>/dev/null
-  wait $display_pid 2>/dev/null
-  
-  # Final display
-  printf "\rProcessing %d/%d files..." "$total_files" "$total_files"
-  echo ""
-  echo ""
-  
-  # Check for errors
-  if [[ -f "$ERROR_LOG" ]]; then
+  # Show errors if any
+  if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
     local error_count=$(wc -l < "$ERROR_LOG")
-    if (( error_count > 0 )); then
-      echo "⚠️  $error_count file(s) had issues. Check: $ERROR_LOG"
-      echo ""
-    fi
+    echo ""
+    echo "⚠️  $error_count file(s) had issues:"
+    cat "$ERROR_LOG"
   fi
-  
-  rm -f "$progress_file"
   
   echo "✅ Done! Remuxed files in: $(pwd)/$OUTDIR/"
   
@@ -239,6 +174,9 @@ video-encode-cpu() {
   local OUTDIR="encoded"
   local ERROR_LOG="$OUTDIR/encode_errors.log"
   
+  # Clear old error log if exists
+  rm -f "$ERROR_LOG"
+  
   # Count files
   local files=()
   while IFS= read -r -d '' file; do
@@ -256,62 +194,25 @@ video-encode-cpu() {
   echo "Mode: CPU H.265 (high quality, slow)"
   echo ""
   
-  # Progress tracking
-  local progress_file=$(mktemp)
-  echo "0" > "$progress_file"
-  
-  # Start progress display in background (suppress job notifications)
-  (
-    while true; do
-      local current=$(cat "$progress_file" 2>/dev/null || echo 0)
-      if [[ "$current" -ge "$total_files" ]]; then
-        break
-      fi
-      printf "\rEncoding %d/%d files..." "$current" "$total_files"
-      sleep 0.5
-    done
-  ) &!
-  local display_pid=$!
-  
-  # Export variables for parallel
-  export OUTDIR ERROR_LOG progress_file
-  
   # Use GNU parallel for clean parallel processing (2 jobs for CPU)
-  printf '%s\0' "${files[@]}" | parallel -0 -j2 --will-cite '
+  printf '%s\0' "${files[@]}" | parallel -0 -j2 --shell zsh --bar --will-cite '
     file="{}"
     base=$(basename "$file")
     name="${base%.*}"
-    out="'$OUTDIR'/${name}.mp4"
+    out="encoded/${name}.mp4"
     
-    if [[ -f "$out" ]]; then
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
-    elif ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
-    else
-      echo "FAILED: $base" >> "'$ERROR_LOG'"
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
+    if [[ ! -f "$out" ]]; then
+      ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null || echo "FAILED: $base" >> "'$ERROR_LOG'"
     fi
-  ' >/dev/null 2>&1
+  '
   
-  # Kill progress display
-  kill $display_pid 2>/dev/null
-  wait $display_pid 2>/dev/null
-  
-  # Final display
-  printf "\rEncoding %d/%d files..." "$total_files" "$total_files"
-  echo ""
-  echo ""
-  
-  # Check for errors
-  if [[ -f "$ERROR_LOG" ]]; then
+  # Show errors if any
+  if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
     local error_count=$(wc -l < "$ERROR_LOG")
-    if (( error_count > 0 )); then
-      echo "⚠️  $error_count file(s) had issues. Check: $ERROR_LOG"
-      echo ""
-    fi
+    echo ""
+    echo "⚠️  $error_count file(s) had issues:"
+    cat "$ERROR_LOG"
   fi
-  
-  rm -f "$progress_file"
   
   echo "✅ Done! Encoded files in: $(pwd)/$OUTDIR/"
   
@@ -334,6 +235,9 @@ video-encode-gpu() {
   local OUTDIR="encoded"
   local ERROR_LOG="$OUTDIR/encode_errors.log"
   
+  # Clear old error log if exists
+  rm -f "$ERROR_LOG"
+  
   # Count files
   local files=()
   while IFS= read -r -d '' file; do
@@ -351,75 +255,32 @@ video-encode-gpu() {
   echo "Mode: GPU H.265 (fast encoding)"
   echo ""
   
-  # Progress tracking
-  local progress_file=$(mktemp)
-  echo "0" > "$progress_file"
-  
-  # Start progress display in background (suppress job notifications)
-  (
-    while true; do
-      local current=$(cat "$progress_file" 2>/dev/null || echo 0)
-      if [[ "$current" -ge "$total_files" ]]; then
-        break
-      fi
-      printf "\rEncoding %d/%d files..." "$current" "$total_files"
-      sleep 0.5
-    done
-  ) &!
-  local display_pid=$!
-  
-  # Export variables for parallel
-  export OUTDIR ERROR_LOG progress_file
-  
   # Use GNU parallel for clean parallel processing (4 jobs for GPU)
-  printf '%s\0' "${files[@]}" | parallel -0 -j4 --will-cite '
+  printf '%s\0' "${files[@]}" | parallel -0 -j4 --shell zsh --bar --will-cite '
     file="{}"
     base=$(basename "$file")
     name="${base%.*}"
-    out="'$OUTDIR'/${name}.mp4"
+    out="encoded/${name}.mp4"
     
-    if [[ -f "$out" ]]; then
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
-    else
+    if [[ ! -f "$out" ]]; then
       q=52
       crop=$(ffmpeg -hide_banner -i "$file" -vf cropdetect=limit=0.1:round=2 -t 8 -f null - 2>&1 | awk -F'"'"'crop='"'"' '"'"'/crop=/{print $2}'"'"' | awk '"'"'{print $1}'"'"' | tail -1)
       
       if [[ -n "$crop" ]]; then
-        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
-          :
-        else
-          echo "FAILED: $base" >> "'$ERROR_LOG'"
-        fi
+        ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null || echo "FAILED: $base" >> "'$ERROR_LOG'"
       else
-        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
-          :
-        else
-          echo "FAILED: $base" >> "'$ERROR_LOG'"
-        fi
+        ffmpeg -hide_banner -loglevel error -i "$file" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null || echo "FAILED: $base" >> "'$ERROR_LOG'"
       fi
-      echo $(($(cat "'$progress_file'") + 1)) > "'$progress_file'"
     fi
-  ' >/dev/null 2>&1
+  '
   
-  # Kill progress display
-  kill $display_pid 2>/dev/null
-  wait $display_pid 2>/dev/null
-  
-  # Final display
-  printf "\rEncoding %d/%d files..." "$total_files" "$total_files"
-  echo ""
-  echo ""
-  
-  # Check for errors
-  if [[ -f "$ERROR_LOG" ]]; then
+  # Show errors if any
+  if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
     local error_count=$(wc -l < "$ERROR_LOG")
-    if (( error_count > 0 )); then
-      echo "⚠️  $error_count file(s) had issues. Check: $ERROR_LOG"
-      echo ""
-    fi
+    echo ""
+    echo "⚠️  $error_count file(s) had issues:"
+    cat "$ERROR_LOG"
   fi
-  
-  rm -f "$progress_file"
   
   echo "✅ Done! Encoded files in: $(pwd)/$OUTDIR/"
   
