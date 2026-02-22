@@ -58,9 +58,6 @@ source ~/.zshrc
 # Preview changes before installing
 ./install.sh --dry-run
 
-# Check repository health before archiving
-repo-check && archive
-
 # Diagnose your environment
 dotfiles-doctor
 ```
