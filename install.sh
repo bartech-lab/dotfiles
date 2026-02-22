@@ -205,44 +205,30 @@ for dep in "${CRITICAL_DEPS[@]}"; do
     fi
 done
 
-# Auto-install missing critical dependencies
+# Report missing dependencies with fix instructions
 if [[ ${#missing_deps[@]} -gt 0 && "$DRY_RUN" == false ]]; then
     echo ""
-    echo "📦 Installing missing critical dependencies..."
-    for dep in "${missing_deps[@]}"; do
-        echo "  → Installing $dep..."
-        # Special case: cjpeg comes from mozjpeg package
-        if [[ "$dep" == "cjpeg" ]]; then
-            brew install "mozjpeg" 2>/dev/null || echo "  ⚠️ Failed to install mozjpeg"
-        else
-            brew install "$dep" 2>/dev/null || {
-                # Try alternate formula names
-                case "$dep" in
-                    "rg") brew install "ripgrep" ;;
-                    "btm") brew install "bottom" ;;
-                    *) echo "  ⚠️ Failed to install $dep" ;;
-                esac
-            }
-        fi
-    done
-    
-    # Re-check
+    echo "❌ Missing dependencies - Add to Brewfile:"
     echo ""
-    echo "🔍 Verifying installations..."
-    still_missing=()
     for dep in "${missing_deps[@]}"; do
-        if ! command -v "$dep" &>/dev/null; then
-            still_missing+=("$dep")
-            echo "  ❌ $dep (still missing)"
-        else
-            echo "  ✅ $dep (installed)"
-        fi
+        case "$dep" in
+            cjpeg)
+                echo "  brew \"mozjpeg\"  # provides cjpeg binary"
+                ;;
+            rg)
+                echo "  brew \"ripgrep\"  # provides rg command"
+                ;;
+            btm)
+                echo "  brew \"bottom\"   # provides btm command"
+                ;;
+            *)
+                echo "  brew \"$dep\""
+                ;;
+        esac
     done
-    
-    if [[ ${#still_missing[@]} -gt 0 ]]; then
-        echo ""
-        echo "⚠️ Warning: Some dependencies could not be installed: ${still_missing[*]}"
-    fi
+    echo ""
+    echo "Then run: brew bundle --file=~/dotfiles/Brewfile"
+    echo ""
 fi
 
 # Show available functions
