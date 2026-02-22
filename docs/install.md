@@ -1,0 +1,158 @@
+# Installation Guide
+
+## Prerequisites
+
+- **macOS** - Tested on macOS Sonoma and later
+- **zsh** - Default shell on macOS (pre-installed)
+- **Homebrew** - Will be auto-installed by `./install.sh` if not present
+
+## Quick Start
+
+```bash
+# 1. Clone repository
+git clone <your-repo-url> ~/dotfiles
+cd ~/dotfiles
+
+# 2. Run installer (handles everything)
+./install.sh
+
+# 3. Restart terminal or reload
+source ~/.zshrc
+```
+
+The installer will:
+- Install Homebrew (if not present)
+- Install all dependencies via `brew bundle`
+- Link dotfiles functions loader
+- Auto-install any missing critical dependencies
+- Check and report status
+
+## What Gets Installed
+
+### Shell Replacements
+
+Your commands are automatically upgraded:
+
+| Command | What You Get | Why It's Better |
+|---------|--------------|-----------------|
+| `ls`, `ll`, `lt` | `eza` | Icons, git status, tree view |
+| `grep` | `rg` (ripgrep) | Fast, smart defaults, respects .gitignore |
+| `top` | `btm` (bottom) | Graphs, process tree, mouse support |
+| `du` | `dust` | Visual disk usage, sorted by size |
+| `df` | `duf` | Colorful, sortable disk free |
+
+### Media Processing
+
+Ready-to-use video/image processing:
+- `optimize-images` - Batch optimize JPEG/PNG
+- `video-to-gif` - Convert videos to animated GIFs
+- `video-remux` - Lossless container conversion
+- `video-encode-cpu/gpu` - H.265 encoding
+
+### Development Tools
+
+- `extract` - Universal archive extractor
+- `archive` - Create reproducible archives
+- `git-cleanup`, `git-open` - Git helpers
+- `brewup` - Homebrew maintenance
+
+See [functions.md](functions.md) for full command reference.
+
+## Fresh macOS Setup
+
+On a completely fresh macOS machine:
+
+1. **Install Command Line Tools** (if needed):
+   ```bash
+   xcode-select --install
+   ```
+
+2. **Clone and install**:
+   ```bash
+   git clone <your-repo-url> ~/dotfiles
+   cd ~/dotfiles
+   ./install.sh
+   ```
+
+3. **Restart terminal** - Everything will be ready!
+
+The installer handles:
+- Installing Homebrew
+- Installing all Brewfile dependencies
+- Linking all function files
+- Verifying critical dependencies
+- Setting up shell integration
+
+## Updating
+
+To update packages:
+```bash
+brew bundle --file=~/dotfiles/Brewfile
+```
+
+To get latest dotfiles changes:
+```bash
+cd ~/dotfiles && git pull
+```
+
+## Troubleshooting
+
+### Missing dependencies after install
+
+Run the install script again - it will auto-install any missing critical dependencies:
+```bash
+./install.sh
+```
+
+### Functions not loading
+
+Check that the loader is sourced in `~/.zshrc`:
+```bash
+grep "zsh-dotfiles-loader" ~/.zshrc
+```
+
+Should show: `source ~/.config/zsh-dotfiles-loader.zsh`
+
+### Homebrew not found
+
+On Apple Silicon Macs, ensure Homebrew is in PATH:
+```bash
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+```
+
+Then restart your terminal.
+
+### PATH ordering issues
+
+For media functions to work correctly, mozjpeg must be found before the system's cjpeg:
+
+```bash
+# Verify path order
+which -a cjpeg
+# Should show mozjpeg version FIRST:
+# /opt/homebrew/opt/mozjpeg/bin/cjpeg
+# /opt/homebrew/bin/cjpeg
+```
+
+See [troubleshooting](../README.md#troubleshooting) for more.
+
+## Uninstallation
+
+To remove dotfiles:
+
+```bash
+# Remove the source line from ~/.zshrc
+# The loader symlink can stay (harmless)
+# Remove the dotfiles directory
+rm -rf ~/dotfiles
+
+# Optional: remove Brewfile packages manually
+# (Homebrew doesn't have a reverse-bundle command)
+```
+
+## Next Steps
+
+- Check out [functions.md](functions.md) for all available commands
+- Read [architecture.md](architecture.md) to understand how it works
+- Set up your fonts for powerlevel10k (see troubleshooting)
+- Explore optional tools: `fzf`, `zoxide` (add to `~/.zshrc` to enable)
