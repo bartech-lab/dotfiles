@@ -151,27 +151,27 @@ video-encode-gpu screencast.mov  # Encode single file
 
 ## video-to-gif
 
-Convert videos to animated GIF.
+Convert videos to optimized animated GIF with hardware acceleration and duplicate frame removal.
 
 ```bash
-video-to-gif <input.mp4> [output.gif] [fps] [scale]
+video-to-gif <input.mp4> [output.gif] [fps] [width]
 ```
 
 **Arguments:**
 - `input.mp4` - Input video file (required)
-- `output.gif` - Output filename (optional, defaults to input name)
-- `fps` - Frames per second (optional, defaults to 15)
-- `scale` - Width in pixels (optional, defaults to 480)
+- `output.gif` - Output filename (optional, defaults to `<input>.gif`)
+- `fps` - Frames per second (optional, defaults to 12)
+- `width` - Width in pixels (optional, defaults to 420)
 
-**Defaults:**
-- FPS: 15
-- Scale: 480px width (height auto)
-- Color palette: 128 colors
-- Dithering: Bayer
+**Features:**
+- Hardware acceleration (VideoToolbox on macOS)
+- Duplicate frame removal (mpdecimate)
+- Optimized palette with diff mode
+- Prevents overwriting existing files
 
 **Examples:**
 ```bash
-video-to-gif demo.mp4                    # demo.gif, 15fps, 480px
+video-to-gif demo.mp4                    # demo.gif, 12fps, 420px
 video-to-gif demo.mp4 animation.gif      # Custom name
 video-to-gif demo.mp4 output.gif 30      # 30fps
 video-to-gif demo.mp4 output.gif 15 720  # 15fps, 720px width
@@ -184,7 +184,7 @@ video-to-gif demo.mp4 output.gif 15 720  # 15fps, 720px width
 
 **Tips:**
 - Lower FPS = smaller file
-- Lower scale = smaller file
+- Lower width = smaller file
 - For short clips only (GIFs get huge)
 
 ## Performance Comparison
