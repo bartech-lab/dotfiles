@@ -157,6 +157,7 @@ archive() {
         '*.sqlite' '*.db' '*.pid'
         .env '.env.*' '*.local'
         '*.tar' '*.tar.gz' '*.tar.zst' '*.zip' '*.7z'
+        .sisyphus
     )
 
     # Build base tar options (common to both)
@@ -436,11 +437,11 @@ repo-check() {
     if [[ "$in_git_repo" == true ]]; then
         while IFS= read -r file; do
             [[ -n "$file" ]] && tracked_deps+=("$file")
-        done < <(git ls-files 2>/dev/null | grep -E '^(node_modules/|vendor/|.venv/|venv/|__pycache__/)' | head -5)
+        done < <(git ls-files 2>/dev/null | grep -E '^(node_modules/|vendor/|.venv/|venv/|__pycache__/|.sisyphus/)' | head -5)
     fi
 
     # Check filesystem
-    local dep_dirs=("node_modules" "vendor" ".venv" "venv" "__pycache__")
+    local dep_dirs=("node_modules" "vendor" ".venv" "venv" "__pycache__" ".sisyphus")
     local fs_deps=()
     for dir in "${dep_dirs[@]}"; do
         if [[ -d "$dir" ]]; then

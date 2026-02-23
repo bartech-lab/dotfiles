@@ -74,6 +74,9 @@ archive [name] [--dry-run|-n] [-gzip]
 # Dependencies
 node_modules, venv, .venv
 
+# Task runners
+.sisyphus
+
 # Build output
 dist, build, target
 

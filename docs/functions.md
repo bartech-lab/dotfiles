@@ -254,6 +254,7 @@ archive [name] [--dry-run] [-gzip]
 
 **Exclusions:**
 - Development artifacts (.git, .vscode, node_modules)
+- Task runners (.sisyphus)
 - Build output (dist, build, target)
 - Caches and temp files
 - Other archives
