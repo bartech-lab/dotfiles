@@ -191,6 +191,27 @@ Launch OpenCode with specific profile.
 ocx-profile <name>    # Use specific profile
 ```
 
+### opencode-clean / ocfix
+
+Clean up orphaned opencode processes (safe with multiple terminals).
+
+```bash
+opencode-clean        # Clean orphaned processes
+ocfix                 # Alias for opencode-clean
+```
+
+**What it does:**
+- Scans all opencode processes
+- Keeps processes attached to terminals (active sessions)
+- Only terminates orphaned processes (PPID=1, adopted by launchd)
+- Uses graceful termination (TERM) first, then force kill (KILL) if needed
+- Safe to use with multiple Ghostty tabs open
+
+**When to use:**
+- When you notice high kernel_task CPU usage
+- When opencode processes accumulate over time
+- When system feels sluggish due to zombie processes
+
 ## Development Utilities
 
 ### extract
