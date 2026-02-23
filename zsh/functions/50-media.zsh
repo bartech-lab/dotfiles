@@ -291,32 +291,60 @@ video-encode-gpu() {
 
 # Convert video to GIF (useful for documentation/issues)
 video-to-gif() {
-    local input="$1"
-    local output="${2:-output.gif}"
-    local fps="${3:-15}"
-    local scale="${4:-480}"
+    emulate -L zsh
     
+    local input="$1"
+    local output="${2:-${input:r}.gif}"
+    local fps="${3:-12}"
+    local scale="${4:-420}"
+
     if [[ -z "$input" ]]; then
-        echo "Usage: video-to-gif <input.mp4> [output.gif] [fps] [scale]"
+        echo "Usage: video-to-gif <input.mp4> [output.gif] [fps=12] [width=420]"
         return 1
     fi
-    
+
     if [[ ! -f "$input" ]]; then
         echo "❌ File not found: $input"
         return 1
     fi
-    
-    echo "Converting to GIF (${fps}fps, ${scale}px wide)..."
-    
-    ffmpeg -i "$input" \
-        -vf "fps=$fps,scale=$scale:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse" \
+
+    if [[ -f "$output" ]]; then
+        echo "❌ Output already exists: $output"
+        return 1
+    fi
+
+    echo "🎞  Creating optimized GIF"
+    echo "   fps:   $fps"
+    echo "   width: $scale"
+    echo "   input: $input"
+    echo "   output:$output"
+    echo
+
+    local hwaccel_args=(-hwaccel videotoolbox)
+
+    ffmpeg \
+        -hide_banner -loglevel error -stats \
+        "${hwaccel_args[@]}" \
+        -i "$input" \
+        -filter_complex "\
+mpdecimate,\
+setpts=N/FRAME_RATE/TB,\
+fps=${fps},\
+scale=${scale}:-1:flags=lanczos,\
+split[s0][s1];\
+[s0]palettegen=max_colors=96:stats_mode=diff[p];\
+[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
         -loop 0 "$output"
-    
-    if [[ $? -eq 0 ]]; then
-        echo "✅ Created: $output"
+
+    local rc=$?
+
+    if (( rc == 0 )); then
+        echo
+        echo "✅ GIF created:"
         ls -lh "$output"
     else
+        echo
         echo "❌ Conversion failed"
-        return 1
+        return $rc
     fi
 }
