@@ -37,35 +37,34 @@ ocx-profile() {
   fi
 }
 
-# Cleanup orphaned opencode processes (safe with multiple terminals)
+# Cleanup detached opencode processes (safe with multiple terminals)
+# Only removes processes not attached to any terminal (tty == "?")
 opencode-clean() {
   echo "Scanning opencode processes..."
 
-  local found=0
   local killed=0
 
-  while read -r pid ppid tty cmd; do
-    found=1
+  while read -r pid ppid tty; do
+    # Skip empty lines
+    [[ -z "$pid" ]] && continue
+
+    # Validate PID is numeric
+    [[ "$pid" =~ ^[0-9]+$ ]] || continue
 
     # Keep anything attached to a terminal
-    if [[ "$tty" != "?" ]]; then
-      continue
-    fi
+    [[ "$tty" != "?" ]] && continue
 
-    # Only kill if orphaned (adopted by launchd / PID 1)
-    if [[ "$ppid" -eq 1 ]]; then
-      echo "Cleaning orphan PID $pid"
-      kill -TERM "$pid" 2>/dev/null
-      sleep 0.5
-      kill -KILL "$pid" 2>/dev/null
-      ((killed++))
-    fi
+    # Kill detached processes
+    echo "Cleaning detached PID $pid"
+    kill -TERM "$pid" 2>/dev/null
+    sleep 0.5
+    kill -KILL "$pid" 2>/dev/null
+    ((killed++))
 
-  done < <(ps -axo pid,ppid,tty,command | grep '[o]pencode')
+  done < <(ps -axo pid,ppid,tty,command | grep '[o]pencode' | awk '{print $1, $2, $3}')
 
-  [[ $found -eq 0 ]] && echo "No opencode processes found"
-  [[ $killed -eq 0 ]] && echo "No orphan processes detected"
-  [[ $killed -gt 0 ]] && echo "Cleaned $killed orphan processes"
+  [[ $killed -eq 0 ]] && echo "No detached processes detected"
+  [[ $killed -gt 0 ]] && echo "Cleaned $killed detached processes"
 }
 
 # Alias for quick access
