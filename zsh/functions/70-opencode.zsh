@@ -36,3 +36,37 @@ ocx-profile() {
     ocx oc -p "$1"
   fi
 }
+
+# Cleanup orphaned opencode processes (safe with multiple terminals)
+opencode-clean() {
+  echo "Scanning opencode processes..."
+
+  local found=0
+  local killed=0
+
+  while read -r pid ppid tty cmd; do
+    found=1
+
+    # Keep anything attached to a terminal
+    if [[ "$tty" != "?" ]]; then
+      continue
+    fi
+
+    # Only kill if orphaned (adopted by launchd / PID 1)
+    if [[ "$ppid" -eq 1 ]]; then
+      echo "Cleaning orphan PID $pid"
+      kill -TERM "$pid" 2>/dev/null
+      sleep 0.5
+      kill -KILL "$pid" 2>/dev/null
+      ((killed++))
+    fi
+
+  done < <(ps -axo pid,ppid,tty,command | grep '[o]pencode')
+
+  [[ $found -eq 0 ]] && echo "No opencode processes found"
+  [[ $killed -eq 0 ]] && echo "No orphan processes detected"
+  [[ $killed -gt 0 ]] && echo "Cleaned $killed orphan processes"
+}
+
+# Alias for quick access
+alias ocfix='opencode-clean'
