@@ -10,7 +10,7 @@ opencode() {
 # Oh-My-OpenCode profile (with Sisyphus agent, background tasks, etc.)
 # Updates via npm, config preserved in profile directory
 omo() {
-  (cd ~/.config/opencode && bun update oh-my-opencode --silent 2>/dev/null)
+  (cd ~/.config/opencode && rm -f bun.lock && bun install --silent 2>/dev/null)
   ocx oc -p omo
 }
 
