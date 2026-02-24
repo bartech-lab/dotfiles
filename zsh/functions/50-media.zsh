@@ -45,9 +45,7 @@ optimize-images() {
   if [[ $jpeg_count -gt 0 ]]; then
     find . -maxdepth 1 \( -name "*.jpg" -o -name "*.jpeg" \) -print0 | \
       sed 's|^\./||' | \
-      parallel -0 --shell zsh --bar --will-cite '
-        cjpeg -quality 92 -optimize -progressive {} > optimized/{} 2>/dev/null
-      ' >/dev/null 2>&1
+      xargs -0 -P 4 -I{} sh -c 'cjpeg -quality 92 -optimize -progressive "$1" > "optimized/$1" 2>/dev/null' _ {}
   fi
   
   # Process PNG files in parallel
@@ -55,26 +53,24 @@ optimize-images() {
     if [[ $LOSSLESS -eq 1 ]]; then
       find . -maxdepth 1 -name "*.png" -print0 | \
         sed 's|^\./||' | \
-        parallel -0 --shell zsh --bar --will-cite '
-          oxipng -q -o 4 --strip safe -i 0 --out optimized/{} {} 2>/dev/null
-        ' >/dev/null 2>&1
+        xargs -0 -P 4 -I{} sh -c 'oxipng -q -o 4 --strip safe -i 0 --out "optimized/$1" "$1" 2>/dev/null' _ {}
     else
       find . -maxdepth 1 -name "*.png" -print0 | \
         sed 's|^\./||' | \
-        parallel -0 --shell zsh --bar --will-cite '
-          if file {} 2>/dev/null | grep -q "RGBA\|alpha"; then
-            name=$(basename {} .png)
-            ffmpeg -hide_banner -loglevel error -i {} -q:v 2 optimized/${name}.jpg 2>/dev/null
+        xargs -0 -P 4 -I{} sh -c '
+          if file "$1" 2>/dev/null | grep -q "RGBA\|alpha"; then
+            name=$(basename "$1" .png)
+            ffmpeg -hide_banner -loglevel error -i "$1" -q:v 2 "optimized/${name}.jpg" 2>/dev/null
           else
-            pngquant --quality=80-90 --speed 1 --output tmp_{} -- {} 2>/dev/null
-            if [[ -f tmp_{} ]]; then
-              oxipng -q -o 4 --strip safe -i 0 --out optimized/{} tmp_{} 2>/dev/null
-              rm tmp_{} 2>/dev/null
+            pngquant --quality=80-90 --speed 1 --output "tmp_$1" -- "$1" 2>/dev/null
+            if [[ -f "tmp_$1" ]]; then
+              oxipng -q -o 4 --strip safe -i 0 --out "optimized/$1" "tmp_$1" 2>/dev/null
+              rm "tmp_$1" 2>/dev/null
             else
-              oxipng -q -o 4 --strip safe -i 0 --out optimized/{} {} 2>/dev/null
+              oxipng -q -o 4 --strip safe -i 0 --out "optimized/$1" "$1" 2>/dev/null
             fi
           fi
-        ' >/dev/null 2>&1
+        ' _ {}
     fi
   fi
   
@@ -133,17 +129,21 @@ video-remux() {
   echo "Mode: LOSSLESS COPY (no re-encoding)"
   echo ""
   
-  # Use GNU parallel for clean parallel processing
-  printf '%s\0' "${files[@]}" | parallel -0 --shell zsh --bar --will-cite '
-    file="{}"
+  # Process files in parallel using xargs
+  printf '%s\0' "${files[@]}" | xargs -0 -P 4 -I{} sh -c '
+    file="$1"
     base=$(basename "$file")
     name="${base%.*}"
     out="mp4/${name}.mp4"
     
     if [[ ! -f "$out" ]]; then
-      ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart "$out" 2>/dev/null && touch -r "$file" "$out" || echo "FAILED: $base" >> "'$ERROR_LOG'"
+      if ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart "$out" 2>/dev/null; then
+        touch -r "$file" "$out"
+      else
+        echo "FAILED: $base" >> "'$ERROR_LOG'"
+      fi
     fi
-  '
+  ' _ {}
   
   # Show errors if any
   if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
@@ -194,17 +194,21 @@ video-encode-cpu() {
   echo "Mode: CPU H.265 (high quality, slow)"
   echo ""
   
-  # Use GNU parallel for clean parallel processing (2 jobs for CPU)
-  printf '%s\0' "${files[@]}" | parallel -0 -j2 --shell zsh --bar --will-cite '
-    file="{}"
+  # Process files in parallel using xargs (2 jobs for CPU)
+  printf '%s\0' "${files[@]}" | xargs -0 -P 2 -I{} sh -c '
+    file="$1"
     base=$(basename "$file")
     name="${base%.*}"
     out="encoded/${name}.mp4"
     
     if [[ ! -f "$out" ]]; then
-      ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null || echo "FAILED: $base" >> "'$ERROR_LOG'"
+      if ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+        : # success
+      else
+        echo "FAILED: $base" >> "'$ERROR_LOG'"
+      fi
     fi
-  '
+  ' _ {}
   
   # Show errors if any
   if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
@@ -255,9 +259,9 @@ video-encode-gpu() {
   echo "Mode: GPU H.265 (fast encoding)"
   echo ""
   
-  # Use GNU parallel for clean parallel processing (4 jobs for GPU)
-  printf '%s\0' "${files[@]}" | parallel -0 -j4 --shell zsh --bar --will-cite '
-    file="{}"
+  # Process files in parallel using xargs (4 jobs for GPU)
+  printf '%s\0' "${files[@]}" | xargs -0 -P 4 -I{} sh -c '
+    file="$1"
     base=$(basename "$file")
     name="${base%.*}"
     out="encoded/${name}.mp4"
@@ -267,12 +271,20 @@ video-encode-gpu() {
       crop=$(ffmpeg -hide_banner -i "$file" -vf cropdetect=limit=0.1:round=2 -t 8 -f null - 2>&1 | awk -F'"'"'crop='"'"' '"'"'/crop=/{print $2}'"'"' | awk '"'"'{print $1}'"'"' | tail -1)
       
       if [[ -n "$crop" ]]; then
-        ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null || echo "FAILED: $base" >> "'$ERROR_LOG'"
+        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+          : # success
+        else
+          echo "FAILED: $base" >> "'$ERROR_LOG'"
+        fi
       else
-        ffmpeg -hide_banner -loglevel error -i "$file" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null || echo "FAILED: $base" >> "'$ERROR_LOG'"
+        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+          : # success
+        else
+          echo "FAILED: $base" >> "'$ERROR_LOG'"
+        fi
       fi
     fi
-  '
+  ' _ {}
   
   # Show errors if any
   if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
