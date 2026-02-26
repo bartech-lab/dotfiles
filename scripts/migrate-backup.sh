@@ -44,6 +44,8 @@ echo "→ Applying macOS defaults..."
 
 # Dock
 defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock persistent-apps -array
+defaults write com.apple.dock persistent-others -array
 
 # Finder
 defaults write com.apple.finder AppleShowAllFiles -bool true
