@@ -243,13 +243,6 @@ else
     echo "✓ Functions loaded: $func_count"
     echo ""
     echo "Run: dotfiles-doctor if anything fails"
-
-    # Apply macOS defaults (Dock cleanup, Finder settings, etc.)
-    if [[ -f "$DOTFILES_DIR/zsh/functions.zsh" ]]; then
-        echo ""
-        echo "🔧 Applying macOS defaults..."
-        source "$DOTFILES_DIR/zsh/functions.zsh"
-        macos-defaults
-    fi
+    echo "Run: macos-defaults to apply system preferences"
 fi
 echo ""
