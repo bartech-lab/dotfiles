@@ -152,14 +152,18 @@ if [[ "$DRY_RUN" == false && -f "$DOTFILES_DIR/Brewfile" ]]; then
         filter() { grep -E "$1" <<< "$brew_output" 2>/dev/null; }
     fi
 
-    installed=$(match '^Installing')
-    upgraded=$(match '^Upgrading')
-    failed=$(match 'Error|failed|Failure|Warning')
+    installed=$(match '^Installing'); installed=${installed:-0}
+    upgraded=$(match '^Upgrading'); upgraded=${upgraded:-0}
+    failed=$(match 'Error|failed|Failure|Warning'); failed=${failed:-0}
 
-    if (( installed > 0 || upgraded > 0 )); then
-        echo "✓ Brew updated: $installed installed, $upgraded upgraded"
+    if (( brew_status == 0 )); then
+        if (( installed > 0 || upgraded > 0 )); then
+            echo "✓ Brew updated: $installed installed, $upgraded upgraded"
+        else
+            echo "✓ Brew already up to date"
+        fi
     else
-        echo "✓ Brew already up to date"
+        echo "✗ Brew bundle failed (exit code: $brew_status)"
     fi
 
     # Show errors if any
