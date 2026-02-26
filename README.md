@@ -1,14 +1,29 @@
 # Dotfiles
 
-Personal shell functions, aliases, and scripts for macOS. Clean, minimal, and automated setup for new machines.
+Personal shell functions, aliases, and scripts for macOS 14+. Clean, minimal, and automated setup for new machines.
 
 ## Quick Start
 
 ```bash
+# Prerequisite (fresh Mac only)
+xcode-select --install
+
 git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 source ~/.zshrc
+```
+
+The installer is idempotent and safe to re-run.
+
+## Safety First
+
+```bash
+# Preview changes before installing
+./install.sh --dry-run
+
+# Diagnose your environment
+dotfiles-doctor
 ```
 
 ## What's Included
@@ -44,6 +59,20 @@ source ~/.zshrc
 - `macos-defaults` - Apply system preferences
 - `cpwd` - Copy current path to clipboard
 
+## Migration
+
+Moving to a new Mac? Use the migration scripts:
+
+```bash
+# On old machine
+~/dotfiles/scripts/migrate-backup.sh
+
+# On new machine  
+~/dotfiles/scripts/migrate-restore.sh ~/migration-backup.tar.gz
+```
+
+See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
+
 ## Documentation
 
 - [📥 Installation Guide](docs/install.md) - Setup, prerequisites, troubleshooting
@@ -51,16 +80,6 @@ source ~/.zshrc
 - [📚 Functions Reference](docs/functions.md) - Complete command reference
 - [🎬 Media Processing](docs/media.md) - Video/image optimization
 - [🛠️ Development Utilities](docs/dev.md) - Archives, diagnostics, helpers
-
-## Safety First
-
-```bash
-# Preview changes before installing
-./install.sh --dry-run
-
-# Diagnose your environment
-dotfiles-doctor
-```
 
 ## Requirements
 
