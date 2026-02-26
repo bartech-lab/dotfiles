@@ -62,16 +62,20 @@ video-remux [path]
 - `path` - Directory or file to remux (defaults to current directory)
 
 **Supported formats:**
-- MOV → MP4
-- MKV → MP4
-- AVI → MP4
-- FLV → MP4
+- MOV → MP4 (lossless remux)
+- MKV → MP4 (lossless remux)
+- AVI → MP4 (lossless remux)
+- FLV → MP4 (lossless remux)
+- WEBM → MP4 (remux when possible, otherwise H.264/AAC conversion)
+- Animated WEBP → MP4 (H.264 conversion)
 
 **What it does:**
-- No re-encoding (preserves quality)
-- Copies video/audio streams
-- Changes container only
-- Much faster than re-encoding
+- MOV/MKV/AVI: no re-encoding (preserves quality)
+- MOV/MKV/AVI: copies video/audio streams
+- MOV/MKV/AVI: changes container only
+- MOV/MKV/AVI: much faster than re-encoding
+- WEBM: tries lossless stream copy first, falls back to H.264/AAC if needed
+- Animated WEBP: converts frames to MP4 (cannot be losslessly remuxed)
 
 **Examples:**
 ```bash
