@@ -239,5 +239,7 @@ else
     echo ""
     echo "Run: dotfiles-doctor if anything fails"
     echo "Run: macos-defaults to apply system preferences"
+    echo ""
+    echo "📌 TG Pro: install manually → https://www.tunabellysoftware.com/tgpro/"
 fi
 echo ""
