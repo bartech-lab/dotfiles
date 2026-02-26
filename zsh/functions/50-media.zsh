@@ -96,27 +96,51 @@ optimize-images() {
 }
 
 video-remux() {
-  local SOURCE_DIR="${1:-.}"
-  
-  if [[ ! -d "$SOURCE_DIR" ]]; then
-    echo "❌ Error: Directory '$SOURCE_DIR' not found"
+  local SOURCE_PATH="${1:-.}"
+  local INPUT_DIR=""
+  local SINGLE_FILE=""
+
+  if [[ -d "$SOURCE_PATH" ]]; then
+    INPUT_DIR="$SOURCE_PATH"
+  elif [[ -f "$SOURCE_PATH" ]]; then
+    INPUT_DIR="${SOURCE_PATH:h}"
+    SINGLE_FILE="${SOURCE_PATH:t}"
+  else
+    echo "❌ Error: Path '$SOURCE_PATH' not found"
     return 1
   fi
-  
-  cd "$SOURCE_DIR" || return 1
+
+  cd "$INPUT_DIR" || return 1
   mkdir -p mp4
   
   local OUTDIR="mp4"
   local ERROR_LOG="$OUTDIR/remux_errors.log"
+  local SKIP_LOG="$OUTDIR/remux_skipped.log"
   
   # Clear old error log if exists
   rm -f "$ERROR_LOG"
+  rm -f "$SKIP_LOG"
   
   # Count files
   local files=()
-  while IFS= read -r -d '' file; do
-    files+=("$file")
-  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" \) -print0)
+  if [[ -n "$SINGLE_FILE" ]]; then
+    local single_ext="${SINGLE_FILE##*.}"
+    single_ext="${single_ext:l}"
+    case "$single_ext" in
+      mov|mkv|avi|flv|webm|webp)
+        files+=("./$SINGLE_FILE")
+        ;;
+      *)
+        echo "❌ Unsupported file type: $SINGLE_FILE"
+        echo "Supported: .mov, .mkv, .avi, .flv, .webm, .webp"
+        return 1
+        ;;
+    esac
+  else
+    while IFS= read -r -d '' file; do
+      files+=("$file")
+    done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.flv" -o -iname "*.webm" -o -iname "*.webp" \) -print0)
+  fi
   
   local total_files=${#files[@]}
   
@@ -126,7 +150,7 @@ video-remux() {
   fi
   
   echo "Found $total_files files to remux"
-  echo "Mode: LOSSLESS COPY (no re-encoding)"
+  echo "Mode: LOSSLESS COPY for most video containers + animated WEBP conversion"
   echo ""
   
   # Process files in parallel using xargs
@@ -135,12 +159,39 @@ video-remux() {
     base=$(basename "$file")
     name="${base%.*}"
     out="mp4/${name}.mp4"
+    ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
     
     if [[ ! -f "$out" ]]; then
-      if ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart "$out" 2>/dev/null; then
-        touch -r "$file" "$out"
+      if [[ "$ext" == "webp" ]]; then
+        packets=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$file" 2>/dev/null | tr -d "\r")
+
+        if [[ "$packets" == "N/A" || -z "$packets" ]]; then
+          packets=$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 "$file" 2>/dev/null | tr -d "\r")
+        fi
+
+        if [[ "$packets" =~ ^[0-9]+$ ]] && (( packets > 1 )); then
+          if ffmpeg -hide_banner -loglevel error -i "$file" -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$out" 2>/dev/null; then
+            touch -r "$file" "$out"
+          else
+            echo "FAILED: $base" >> "'$ERROR_LOG'"
+          fi
+        else
+          echo "SKIPPED (not animated): $base" >> "'$SKIP_LOG'"
+        fi
       else
-        echo "FAILED: $base" >> "'$ERROR_LOG'"
+        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart "$out" 2>/dev/null; then
+          touch -r "$file" "$out"
+        else
+          if [[ "$ext" == "webm" ]]; then
+            if ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 192k -movflags +faststart "$out" 2>/dev/null; then
+              touch -r "$file" "$out"
+            else
+              echo "FAILED: $base" >> "'$ERROR_LOG'"
+            fi
+          else
+            echo "FAILED: $base" >> "'$ERROR_LOG'"
+          fi
+        fi
       fi
     fi
   ' _ {}
@@ -151,6 +202,13 @@ video-remux() {
     echo ""
     echo "⚠️  $error_count file(s) had issues:"
     cat "$ERROR_LOG"
+  fi
+
+  if [[ -f "$SKIP_LOG" && -s "$SKIP_LOG" ]]; then
+    local skip_count=$(wc -l < "$SKIP_LOG")
+    echo ""
+    echo "ℹ️  $skip_count WEBP file(s) were skipped (not animated):"
+    cat "$SKIP_LOG"
   fi
   
   echo "✅ Done! Remuxed files in: $(pwd)/$OUTDIR/"
