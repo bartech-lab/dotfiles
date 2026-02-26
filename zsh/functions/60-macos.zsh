@@ -8,6 +8,10 @@ macos-defaults() {
     
     # Dock: auto-hide
     defaults write com.apple.dock autohide -bool true
+
+    # Dock: clear default icons (fresh start)
+    defaults write com.apple.dock persistent-apps -array
+    defaults write com.apple.dock persistent-others -array
     
     # Screenshots: save to Downloads, disable shadow
     defaults write com.apple.screencapture location -string "${HOME}/Downloads"
