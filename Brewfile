@@ -84,7 +84,7 @@ cask "keka"                     # Archive extractor (7z, rar support)
 cask "kekaexternalhelper"       # Keka Finder integration
 cask "paintbrush"               # Simple image editor
 cask "stats"                    # System monitor in menu bar
-cask "tg-pro"                   # Temperature monitoring for Mac
+# cask "tg-pro"                 # Temperature monitoring for Mac -> commenting this one out, causing checksum issue
 cask "visual-studio-code"       # Code editor
 cask "localsend"                # Cross-platform file sharing
 
