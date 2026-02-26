@@ -92,11 +92,6 @@ else
     exit 1
 fi
 
-# Persist for future shells (idempotent)
-if ! grep -q 'brew shellenv' ~/.zprofile 2>/dev/null; then
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-fi
-
 echo "✓ Homebrew ready"
 
 # Check Brewfile packages (dry-run only, with more detail)
