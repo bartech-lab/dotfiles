@@ -78,31 +78,26 @@ ensure_backup_dir() {
     fi
 }
 
-# Install Homebrew if not present
-if ! command -v brew &>/dev/null; then
-    if [[ "$DRY_RUN" == true ]]; then
-        echo "Homebrew:"
-        echo "  → Would install Homebrew"
-        echo "  → Would configure PATH for Apple Silicon"
-    else
-        echo "📦 Homebrew not found. Installing..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        
-        # Add to PATH for Apple Silicon Macs
-        if [[ -f /opt/homebrew/bin/brew ]]; then
-            eval "$(/opt/homebrew/bin/brew shellenv)"
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-        elif [[ -f /usr/local/bin/brew ]]; then
-            eval "$(/usr/local/bin/brew shellenv)"
-        fi
-        echo "✓ Homebrew installed"
-    fi
-else
-    if [[ "$DRY_RUN" == true ]]; then
-        echo "Homebrew:"
-        echo "  ✅ Already installed ($(brew --version | head -1))"
-    fi
+# Install Homebrew if missing
+if [[ ! -x /opt/homebrew/bin/brew ]]; then
+    echo "📦 Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
+
+# Hard guarantee brew works in THIS shell
+if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+else
+    echo "❌ Homebrew installation failed"
+    exit 1
+fi
+
+# Persist for future shells (idempotent)
+if ! grep -q 'brew shellenv' ~/.zprofile 2>/dev/null; then
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+fi
+
+echo "✓ Homebrew ready"
 
 # Check Brewfile packages (dry-run only, with more detail)
 if [[ "$DRY_RUN" == true && -f "$DOTFILES_DIR/Brewfile" ]]; then
