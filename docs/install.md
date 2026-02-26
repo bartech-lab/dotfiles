@@ -83,6 +83,46 @@ The installer handles:
 - Verifying critical dependencies
 - Setting up shell integration
 
+## Migrating to a New Mac
+
+Two scripts handle machine-to-machine migration:
+
+### On Old Machine
+
+```bash
+~/dotfiles/scripts/migrate-backup.sh
+```
+
+Creates `~/migration-backup.tar.gz` containing:
+- npm global packages
+- SSH keys (encrypted)
+- Ghostty terminal config
+- macOS defaults script
+- Installed apps list
+
+### On New Machine
+
+```bash
+# Clone dotfiles first (use HTTPS if SSH not set up yet)
+git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
+
+# Run restore with the archive
+~/dotfiles/scripts/migrate-restore.sh ~/migration-backup.tar.gz
+```
+
+The restore script:
+1. Installs Rosetta (Apple Silicon)
+2. Installs Xcode CLI tools
+3. Installs Homebrew
+4. Restores SSH keys
+5. Runs dotfiles installer
+6. Restores configs and applies defaults
+
+### Manual Steps (not automated)
+
+- **Chrome bookmarks**: Export manually at `chrome://bookmarks`
+- **App Store apps**: Review list and redownload with new Apple ID
+
 ## Updating
 
 To update packages:
