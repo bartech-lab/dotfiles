@@ -140,6 +140,9 @@ fi
 if [[ "$DRY_RUN" == false && -f "$DOTFILES_DIR/Brewfile" ]]; then
     echo "📦 Installing Homebrew packages (this may take a minute)..."
 
+    # Ensure bundle tap is available (required for brew bundle)
+    brew tap homebrew/bundle 2>/dev/null || true
+
     brew_output=$(brew bundle --file="$DOTFILES_DIR/Brewfile" 2>&1)
     brew_status=$?
 
@@ -239,5 +242,13 @@ else
     echo "✓ Functions loaded: $func_count"
     echo ""
     echo "Run: dotfiles-doctor if anything fails"
+
+    # Apply macOS defaults (Dock cleanup, Finder settings, etc.)
+    if [[ -f "$DOTFILES_DIR/zsh/functions.zsh" ]]; then
+        echo ""
+        echo "🔧 Applying macOS defaults..."
+        source "$DOTFILES_DIR/zsh/functions.zsh"
+        macos-defaults
+    fi
 fi
 echo ""
