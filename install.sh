@@ -138,8 +138,10 @@ if [[ "$DRY_RUN" == false && -f "$DOTFILES_DIR/Brewfile" ]]; then
     # Ensure bundle tap is available (required for brew bundle)
     brew tap homebrew/bundle 2>/dev/null || true
 
+    set +e
     brew_output=$(brew bundle --file="$DOTFILES_DIR/Brewfile" 2>&1)
     brew_status=$?
+    set -e
 
     # Parse results using ripgrep if available, fallback to grep
     if command -v rg > /dev/null 2>&1; then
