@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 set -euo pipefail
 
 ARCHIVE="${1:-$HOME/migration-backup.tar.gz}"
@@ -82,9 +82,17 @@ if [[ -d "$EXTRACT_DIR/ghostty-config" ]]; then
     cp -r "$EXTRACT_DIR/ghostty-config/"* ~/Library/Application\ Support/com.mitchellh.ghostty/ 2>/dev/null || true
 fi
 
-echo "→ Applying macOS defaults..."
+echo "→ Applying macOS defaults from backup..."
 if [[ -f "$EXTRACT_DIR/macos-defaults.sh" ]]; then
+    echo "  Found comprehensive macOS defaults backup"
     bash "$EXTRACT_DIR/macos-defaults.sh"
+else
+    echo "  No macOS defaults backup found, applying dotfiles defaults..."
+    # The dotfiles installer already added macos-defaults to functions
+    # Just ensure it's applied
+    if command -v macos-defaults >/dev/null 2>&1; then
+        macos-defaults
+    fi
 fi
 
 echo ""

@@ -94,11 +94,18 @@ Two scripts handle machine-to-machine migration:
 ```
 
 Creates `~/migration-backup.tar.gz` containing:
-- npm global packages
-- SSH keys (encrypted)
-- Ghostty terminal config
-- macOS defaults script
-- Installed apps list
+- **npm global packages** - List of globally installed npm packages
+- **SSH keys (encrypted)** - Password-protected zip of your SSH keys
+- **Ghostty terminal config** - Terminal emulator settings
+- **Comprehensive macOS defaults script** - Complete backup of 30+ system preferences including:
+  - Dock behavior (auto-hide, animation speed, recent apps)
+  - Finder settings (path bar, status bar, extensions, .DS_Store behavior)
+  - Screenshot preferences (location, format, shadows)
+  - Keyboard settings (key repeat, press-and-hold, full access)
+  - Typing preferences (auto-correct, smart quotes, auto-capitalization)
+  - UI settings (window resize, scrollbars, save panels)
+  - Trackpad settings (tap to click)
+- **Installed apps list** - For reference when redownloading App Store apps
 
 ### On New Machine
 
@@ -116,7 +123,10 @@ The restore script:
 3. Installs Homebrew
 4. Restores SSH keys
 5. Runs dotfiles installer
-6. Restores configs and applies defaults
+6. Restores Ghostty config
+7. **Applies comprehensive macOS defaults** - Restores all your system preferences from the backup (or applies dotfiles defaults if no backup found)
+
+The macOS defaults restoration includes all your custom settings for Dock, Finder, Screenshots, Keyboard, Trackpad, and UI behavior.
 
 ### Manual Steps (not automated)
 
