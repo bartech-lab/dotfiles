@@ -71,6 +71,9 @@ macos-defaults() {
     # Dock: don't animate opening applications
     defaults write com.apple.dock launchanim -bool false
     
+    # Dock: clear "Others" section (Downloads, etc.) but keep pinned apps
+    defaults write com.apple.dock persistent-others -array
+    
     # Dock: disable all hot corners (set all to 0 = no action)
     defaults write com.apple.dock wvous-tl-corner -int 0
     defaults write com.apple.dock wvous-tl-modifier -int 0

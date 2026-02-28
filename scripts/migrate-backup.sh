@@ -64,6 +64,9 @@ defaults read com.apple.dock mineffect 2>/dev/null && echo "defaults write com.a
 defaults read com.apple.dock minimize-to-application 2>/dev/null && echo "defaults write com.apple.dock minimize-to-application -bool $(defaults read com.apple.dock minimize-to-application)" >> macos-defaults.sh || echo "defaults write com.apple.dock minimize-to-application -bool true" >> macos-defaults.sh
 defaults read com.apple.dock launchanim 2>/dev/null && echo "defaults write com.apple.dock launchanim -bool $(defaults read com.apple.dock launchanim)" >> macos-defaults.sh || echo "defaults write com.apple.dock launchanim -bool false" >> macos-defaults.sh
 
+# Dock: clear "Others" section (Downloads, etc.) but keep pinned apps
+echo "defaults write com.apple.dock persistent-others -array" >> macos-defaults.sh
+
 cat >> macos-defaults.sh << 'SCRIPT_EOF'
 
 # ============================================
