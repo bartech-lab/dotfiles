@@ -40,9 +40,9 @@ macos-defaults() {
     # Dock: auto-hide
     defaults write com.apple.dock autohide -bool true
     
-    # Dock: show almost immediately (no delay, fast animation)
+    # Dock: show almost immediately (no delay, no animation)
     defaults write com.apple.dock autohide-delay -float 0
-    defaults write com.apple.dock autohide-time-modifier -float 0.15
+    defaults write com.apple.dock autohide-time-modifier -float 0
     
     # Dock: set tile size to 66 pixels
     defaults write com.apple.dock tilesize -int 66
@@ -127,7 +127,10 @@ macos-defaults() {
     
     # Finder: avoid creating .DS_Store files on USB volumes
     defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-    
+
+    # Finder: don't show icons on desktop (hide clutter)
+    defaults write com.apple.finder CreateDesktop -bool false
+
     # ============================================
     # SCREENSHOT SETTINGS
     # ============================================
@@ -182,8 +185,14 @@ macos-defaults() {
     # UI / WINDOW SETTINGS
     # ============================================
     
+    # UI: disable window animations globally
+    defaults write -g NSAutomaticWindowAnimationsEnabled -bool false
+    
     # UI: increase window resize speed for Cocoa applications
     defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
+    
+    # UI: disable QuickLook panel animations
+    defaults write -g QLPanelAnimationDuration -float 0
     
     # UI: expand save panel by default (shows sidebar, favorites)
     defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
@@ -198,6 +207,15 @@ macos-defaults() {
     
     # UI: disable the over-the-top focus ring animation
     defaults write NSGlobalDomain NSUseAnimatedFocusRing -bool false
+    
+    # UI: reduce motion (disable animations)
+    defaults write com.apple.universalaccess reduceMotion -bool true
+    
+    # UI: reduce transparency (better performance)
+    defaults write com.apple.universalaccess reduceTransparency -bool true
+    
+    # UI: disable window manager (Stage Manager)
+    defaults write com.apple.WindowManager GloballyEnabled -bool false
     
     # UI: disable the "Are you sure you want to open this application?" dialog
     defaults write com.apple.LaunchServices LSQuarantine -bool false
@@ -298,13 +316,326 @@ macos-defaults() {
     echo "  • Dock auto-hides with immediate appearance (size: 66px)"
     echo "  • All hot corners disabled"
     echo "  • Finder opens to ~/timac/, Library folder visible"
+    echo "  • Desktop icons hidden (clutter-free)"
     echo "  • No .DS_Store files on network/USB drives"
     echo "  • Screenshots saved to Downloads as PNG (no shadow)"
     echo "  • Fast key repeat, no press-and-hold"
     echo "  • Disabled auto-correct, smart quotes, auto-capitalization"
+    echo "  • Reduced motion and transparency (better performance)"
+    echo "  • Window animations disabled globally"
+    echo "  • Stage Manager disabled"
     echo "  • Boot sound disabled"
     echo "  • Chrome backswipe disabled"
     echo "  • Photos won't auto-open on device connect"
+}
+
+# Debloat macOS by removing unnecessary apps and disabling services
+# WARNING: This function makes destructive changes. Review carefully before running.
+# Apps can be re-downloaded from App Store if needed.
+macos-debloat() {
+    echo "⚠️  macOS Debloat - Destructive Operations"
+    echo "=========================================="
+    echo ""
+    echo "This will:"
+    echo "  • Remove optional Apple apps (re-downloadable from App Store)"
+    echo "  • Disable non-essential background services"
+    echo "  • Optionally clean Xcode dev files"
+    echo ""
+    echo "Protected services (will NOT be touched):"
+    echo "  • Notification Center, Mail, Messages, iCloud"
+    echo "  • System security services (trustd, securityd)"
+    echo "  • Networking (mDNSResponder, apsd)"
+    echo ""
+    
+    local confirm
+    echo -n "Type 'debloat' to continue: "
+    read confirm
+    
+    if [[ "$confirm" != "debloat" ]]; then
+        echo "Cancelled."
+        return 1
+    fi
+    
+    echo ""
+    echo "Starting debloat process..."
+    echo ""
+
+    # ============================================
+    # APP REMOVAL (Re-downloadable from App Store)
+    # ============================================
+    
+    echo "📦 Checking for removable Apple apps..."
+    
+    local apps_to_remove=(
+        "GarageBand.app"
+        "iMovie.app"
+        "Keynote.app"
+        "Pages.app"
+        "Numbers.app"
+        "TV.app"
+        "Podcasts.app"
+        "Home.app"
+        "Stocks.app"
+        "News.app"
+        "Tips.app"
+        "Freeform.app"
+        "Chess.app"
+        "Photo Booth.app"
+        "VoiceMemos.app"
+        "Books.app"
+    )
+    
+    local removed_count=0
+    for app in "${apps_to_remove[@]}"; do
+        if [[ -d "/Applications/$app" ]]; then
+            echo "  Removing: $app"
+            sudo rm -rf "/Applications/$app"
+            ((removed_count++))
+        fi
+    done
+    
+    if [[ $removed_count -eq 0 ]]; then
+        echo "  No removable apps found (already removed or not present)"
+    else
+        echo "  Removed $removed_count app(s)"
+    fi
+    
+    echo ""
+
+    # ============================================
+    # SERVICE DISABLING (User-level only)
+    # ============================================
+    
+    echo "🔧 Disabling non-essential background services..."
+    
+    # Tips app - shows "helpful" tips
+    echo "  Disabling: Tips"
+    launchctl disable gui/$(id -u)/com.apple.Tips 2>/dev/null || true
+    
+    # Game Center - gaming social features
+    echo "  Disabling: Game Center"
+    launchctl disable gui/$(id -u)/com.apple.gamed 2>/dev/null || true
+    
+    # Photo analysis - face detection, scene recognition
+    echo "  Disabling: Photo Analysis"
+    launchctl disable gui/$(id -u)/com.apple.photoanalysisd 2>/dev/null || true
+    
+    # Cloud photo daemon - if not using iCloud Photos
+    echo "  Disabling: Cloud Photos"
+    launchctl disable gui/$(id -u)/com.apple.cloudphotod 2>/dev/null || true
+    
+    # Siri - voice assistant
+    echo "  Disabling: Siri"
+    defaults write com.apple.Siri StatusMenuVisible -bool false
+    defaults write com.apple.assistant.support "Assistant Enabled" -bool false
+    launchctl disable gui/$(id -u)/com.apple.siri 2>/dev/null || true
+    
+    echo ""
+
+    # ============================================
+    # XCODE CLEANUP (Optional)
+    # ============================================
+    
+    if [[ -d "$HOME/Library/Developer/Xcode" ]]; then
+        echo "🛠️  Xcode cleanup detected"
+        echo ""
+        echo "The following can be safely cleaned:"
+        echo "  1. DerivedData (build artifacts)"
+        echo "  2. iOS DeviceSupport (old device debug symbols)"
+        echo "  3. Unavailable simulators"
+        echo ""
+        
+        local xcode_choice
+        echo -n "Run Xcode cleanup? (y/N): "
+        read xcode_choice
+        
+        if [[ "$xcode_choice" =~ ^[Yy]$ ]]; then
+            echo ""
+            echo "Cleaning Xcode files..."
+            
+            # DerivedData - build artifacts, safe to delete
+            if [[ -d "$HOME/Library/Developer/Xcode/DerivedData" ]]; then
+                echo "  Cleaning DerivedData..."
+                rm -rf "$HOME/Library/Developer/Xcode/DerivedData"/*
+            fi
+            
+            # iOS DeviceSupport - debug symbols for old devices
+            if [[ -d "$HOME/Library/Developer/Xcode/iOS DeviceSupport" ]]; then
+                echo "  Cleaning old iOS DeviceSupport files..."
+                # Keep only the latest iOS version for each device
+                find "$HOME/Library/Developer/Xcode/iOS DeviceSupport" -maxdepth 1 -type d -mtime +30 -exec rm -rf {} + 2>/dev/null || true
+            fi
+            
+            # Unavailable simulators
+            if command -v xcrun &> /dev/null; then
+                echo "  Removing unavailable simulators..."
+                xcrun simctl delete unavailable 2>/dev/null || true
+            fi
+            
+            echo "  Xcode cleanup complete"
+        else
+            echo "  Skipped Xcode cleanup"
+        fi
+    fi
+    
+    echo ""
+    echo "✅ Debloat complete!"
+    echo ""
+    echo "Summary:"
+    echo "  • Removed $removed_count optional Apple app(s)"
+    echo "  • Disabled: Tips, Game Center, Photo Analysis, Cloud Photos, Siri"
+    echo ""
+    echo "To re-enable any service:"
+    echo "  launchctl enable gui/\$(id -u)/com.apple.SERVICE"
+    echo ""
+    echo "To restore apps: Download from Mac App Store"
+}
+
+# Analyze system launchctl services (diagnostic only)
+# This function provides advisory information about running services.
+# It does NOT make any changes - review output and disable manually if desired.
+macos-system-analysis() {
+    echo "🔍 macOS System Analysis"
+    echo "========================"
+    echo ""
+    echo "This will analyze system services and provide recommendations."
+    echo "No changes will be made automatically."
+    echo ""
+    
+    local confirm
+    echo -n "Continue? (y/N): "
+    read confirm
+    
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo "Cancelled."
+        return 1
+    fi
+    
+    echo ""
+    echo "Gathering system information..."
+    echo ""
+
+    # ============================================
+    # USER SERVICES ANALYSIS
+    # ============================================
+    
+    echo "📊 User Services (gui/$(id -u))"
+    echo "--------------------------------"
+    
+    # Get list of user services
+    local user_services=$(launchctl print gui/$(id -u) 2>/dev/null | grep -E "^\s+[0-9]+" | awk '{print $NF}' | sort -u)
+    
+    local apple_core=()
+    local apple_optional=()
+    local third_party=()
+    
+    while IFS= read -r service; do
+        [[ -z "$service" ]] && continue
+        
+        if [[ "$service" == com.apple.* ]]; then
+            # Classify Apple services
+            case "$service" in
+                # Core system - NEVER disable
+                com.apple.WindowServer|com.apple.distnoted|com.apple.notificationcenterui|\
+                com.apple.apsd|com.apple.cloudd|com.apple.mDNSResponder|\
+                com.apple.trustd|com.apple.securityd|com.apple.identityservicesd|\
+                com.apple.accountsd|com.apple.loginwindow|com.apple.dock|\
+                com.apple.finder|com.apple.systemuiserver)
+                    apple_core+=("$service")
+                    ;;
+                # Optional - can be reviewed
+                *)
+                    apple_optional+=("$service")
+                    ;;
+            esac
+        else
+            third_party+=("$service")
+        fi
+    done <<< "$user_services"
+    
+    echo ""
+    echo "🔒 Apple Core Services (${#apple_core[@]}):"
+    echo "   (Protected - do not disable)"
+    for svc in "${apple_core[@]}"; do
+        echo "     • $svc"
+    done
+    
+    echo ""
+    echo "⚙️  Apple Optional Services (${#apple_optional[@]}):"
+    echo "   (Review these - some can be disabled)"
+    
+    # Highlight commonly disabled services
+    for svc in "${apple_optional[@]}"; do
+        local note=""
+        case "$svc" in
+            *gamed*) note=" ← Game Center (safe to disable if not gaming)" ;;
+            *Tips*) note=" ← Tips app (safe to disable)" ;;
+            *siri*) note=" ← Siri (safe to disable if not using voice)" ;;
+            *photoanalysisd*) note=" ← Photo analysis (safe to disable)" ;;
+            *cloudphotod*) note=" ← iCloud Photos (disable if not using iCloud Photos)" ;;
+        esac
+        echo "     • $svc$note"
+    done
+    
+    echo ""
+    echo "🔌 Third-Party Services (${#third_party[@]}):"
+    for svc in "${third_party[@]}"; do
+        echo "     • $svc"
+    done
+    
+    echo ""
+
+    # ============================================
+    # SYSTEM SERVICES ANALYSIS (requires sudo)
+    # ============================================
+    
+    echo "📊 System Services"
+    echo "------------------"
+    echo ""
+    echo "Note: Full system service list requires sudo."
+    echo "Run manually if needed: sudo launchctl print system"
+    echo ""
+    
+    # Try to get system services without sudo (limited)
+    local system_services=$(launchctl print system 2>/dev/null | head -50)
+    
+    if [[ -n "$system_services" ]]; then
+        echo "System services (first 50 lines):"
+        echo "$system_services"
+    else
+        echo "Unable to read system services without elevated privileges."
+    fi
+    
+    echo ""
+
+    # ============================================
+    # RECOMMENDATIONS
+    # ============================================
+    
+    echo "📋 Recommendations"
+    echo "------------------"
+    echo ""
+    echo "Safe to disable (if not using):"
+    echo "  • com.apple.gamed - Game Center social features"
+    echo "  • com.apple.Tips - Help tips popup"
+    echo "  • com.apple.photoanalysisd - Photo face/scene detection"
+    echo "  • com.apple.cloudphotod - iCloud Photos sync"
+    echo "  • com.apple.siri* - Voice assistant"
+    echo ""
+    echo "⚠️  NEVER disable these (will break system):"
+    echo "  • WindowServer, distnoted, notificationcenterui"
+    echo "  • apsd (push notifications), cloudd (iCloud)"
+    echo "  • mDNSResponder (AirDrop, network discovery)"
+    echo "  • trustd, securityd (security validation)"
+    echo "  • identityservicesd, accountsd (sign-in)"
+    echo ""
+    echo "To disable a service:"
+    echo "  launchctl disable gui/\$(id -u)/com.apple.SERVICE"
+    echo ""
+    echo "To re-enable:"
+    echo "  launchctl enable gui/\$(id -u)/com.apple.SERVICE"
+    echo ""
+    echo "✅ Analysis complete. Review the list above and disable services manually."
 }
 
 # Export current macOS defaults to a shell script
