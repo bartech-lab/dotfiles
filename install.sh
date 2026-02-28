@@ -239,6 +239,8 @@ else
     echo ""
     echo "Run: dotfiles-doctor if anything fails"
     echo "Run: macos-defaults to apply system preferences"
+    echo "Run: macos-debloat to remove bloatware (destructive)"
+    echo "Run: macos-system-analysis to review services"
     echo ""
     echo "📌 TG Pro: install manually → https://www.tunabellysoftware.com/tgpro/"
 fi
