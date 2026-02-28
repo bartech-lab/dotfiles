@@ -56,7 +56,8 @@ dotfiles-doctor
 
 - `git-cleanup` - Clean merged branches
 - `git-open` - Open repo in browser
-- `macos-defaults` - Apply system preferences
+- `macos-defaults` - Apply comprehensive system preferences (Dock, Finder, Screenshots, Keyboard, UI)
+- `macos-defaults-export` - Export current macOS settings to a backup script
 - `cpwd` - Copy current path to clipboard
 
 ## Migration
@@ -64,12 +65,21 @@ dotfiles-doctor
 Moving to a new Mac? Use the migration scripts:
 
 ```bash
-# On old machine
+# On old machine - backs up SSH keys, npm packages, Ghostty config, and ALL macOS defaults
 ~/dotfiles/scripts/migrate-backup.sh
 
-# On new machine  
+# On new machine - restores everything including comprehensive macOS system preferences
 ~/dotfiles/scripts/migrate-restore.sh ~/migration-backup.tar.gz
 ```
+
+**What gets backed up:**
+- SSH keys (password-protected zip)
+- Global npm packages list
+- Ghostty terminal configuration
+- **Comprehensive macOS system preferences** (Dock, Finder, Screenshots, Keyboard, Trackpad, UI settings)
+- List of installed App Store apps
+
+The macOS defaults backup includes 30+ settings covering Dock behavior, Finder visibility options, screenshot preferences, keyboard repeat rates, typing auto-corrections, window animations, and more.
 
 See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
 

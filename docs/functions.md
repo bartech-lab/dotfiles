@@ -107,17 +107,104 @@ git-open              # Open in GitHub/GitLab/Bitbucket
 
 ### macos-defaults
 
-Apply macOS system preferences.
+Apply comprehensive macOS system preferences optimized for development.
 
 ```bash
-macos-defaults        # Apply system defaults
+macos-defaults              # Apply all system defaults
+macos-defaults-export       # Export current settings to a script
 ```
 
 **Changes:**
-- Finder: Show path bar
-- Dock: Auto-hide
-- Screenshots: Save to Downloads, disable shadow
-- Automatically restarts Finder and Dock
+
+#### Dock
+- Auto-hide with immediate appearance (no delay)
+- Tile size: 66 pixels
+- Show indicator lights for open applications
+- Fast animation (0.15s)
+- Translucent icons for hidden applications
+- No recent applications section
+- Fast Mission Control animations (0.1s)
+- Don't auto-rearrange Spaces
+- Scale minimize effect (faster than genie)
+- Minimize to application icon
+- No launch animation
+
+#### Finder
+- Show path bar and status bar
+- Show all filename extensions
+- Keep folders on top when sorting
+- Search current folder by default
+- Disable extension change warnings
+- Disable all animations
+- Show full POSIX path in title bar
+- Allow quitting with ⌘Q
+- New window opens to ~/timac/
+- Show Library folder (~/Library)
+- No .DS_Store files on network or USB volumes
+
+#### Screenshots
+- Save to Downloads folder
+- PNG format (better quality)
+- No window shadow
+
+#### Keyboard & Typing
+- Disable press-and-hold (enables key repeat)
+- Fast key repeat rate (2 = fast, between default and blazing)
+- Short delay before repeat (10 = shortest)
+- Full keyboard access (Tab in dialogs)
+- Disable auto-capitalization
+- Disable smart dashes
+- Disable auto-period (double-space)
+- Disable smart quotes
+- Disable auto-correct
+
+#### UI/UX
+- Fast window resizing (0.001s)
+- Expanded save and print panels
+- Always show scrollbars
+- Disable focus ring animation
+- Disable "Are you sure?" dialog for downloaded apps
+
+#### Trackpad
+- Enable tap to click
+
+#### System
+- Disable boot sound
+- Show IP/hostname/OS version in login window (click clock)
+
+#### Hot Corners
+- All corners disabled (no accidental triggers)
+
+#### Photos
+- Don't auto-open when devices are plugged in
+
+#### Chrome
+- Disable backswipe on trackpad (prevents accidental navigation)
+- Use system-native print dialog
+
+#### VS Code
+- Disable press-and-hold for key repeat
+- Disable native full screen (use macOS full screen)
+
+#### Spotify
+- Disable auto-start on login
+
+#### Docker Desktop
+- Disable automatic startup
+- Disable analytics
+
+#### Slack
+- Disable spell checking
+- Disable smart quotes and dashes
+
+**Exporting settings:**
+```bash
+# Export current settings to a backup script
+macos-defaults-export > ~/macos-backup.sh
+
+# Later, restore on another machine
+zsh ~/macos-backup.sh
+```
 
 ### cpwd
 
