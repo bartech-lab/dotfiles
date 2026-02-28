@@ -348,10 +348,10 @@ macos-debloat() {
     echo ""
     
     local confirm
-    echo -n "Type 'debloat' to continue: "
+    echo -n "Continue? (y/N): "
     read confirm
     
-    if [[ "$confirm" != "debloat" ]]; then
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         echo "Cancelled."
         return 1
     fi
