@@ -211,6 +211,32 @@ else
     fi
 fi
 
+# Ghostty config
+GHOSTTY_CONFIG_DIR="$HOME/Library/Application Support/com.mitchellh.ghostty"
+GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
+
+if [[ -f "$GHOSTTY_CONFIG" && ! -L "$GHOSTTY_CONFIG" ]]; then
+    ensure_backup_dir
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  → Would backup: $GHOSTTY_CONFIG"
+    else
+        cp "$GHOSTTY_CONFIG" "$BACKUP_DIR/ghostty-config"
+        echo "✓ Backed up existing Ghostty config"
+    fi
+fi
+
+if [[ "$DRY_RUN" == true ]]; then
+    if [[ -L "$GHOSTTY_CONFIG" ]]; then
+        echo "  → Would update: $GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+    else
+        echo "  → Would create: $GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+    fi
+else
+    mkdir -p "$GHOSTTY_CONFIG_DIR"
+    ln -sf "$DOTFILES_DIR/ghostty/config" "$GHOSTTY_CONFIG"
+    echo "✓ Linked Ghostty config"
+fi
+
 # Add to .zshrc if not present
 if ! grep -q "zsh-dotfiles-loader.zsh" ~/.zshrc 2>/dev/null; then
     if [[ "$DRY_RUN" == true ]]; then
