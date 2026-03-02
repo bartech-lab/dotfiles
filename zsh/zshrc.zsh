@@ -72,6 +72,11 @@ zstyle ':completion:*' cache-path ~/.zsh/cache
 # bun completions
 [ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun"
 
+# fnm (Fast Node Manager)
+if command -v fnm &>/dev/null; then
+  eval "$(fnm env --use-on-cd)"
+fi
+
 # Clean up PATH - remove unwanted paths inherited from parent environment
 path=(${path:#${HOME}/.rvm/bin})
 export PATH
