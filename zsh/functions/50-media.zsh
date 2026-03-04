@@ -28,8 +28,8 @@ optimize-images() {
   mkdir -p optimized
   
   # Count files to process
-  local jpeg_count=$(find . -maxdepth 1 \( -name "*.jpg" -o -name "*.jpeg" \) | wc -l)
-  local png_count=$(find . -maxdepth 1 -name "*.png" | wc -l)
+  local jpeg_count=$(find . -maxdepth 1 \( -iname "*.jpg" -o -iname "*.jpeg" \) | wc -l)
+  local png_count=$(find . -maxdepth 1 -iname "*.png" | wc -l)
   local total_count=$((jpeg_count + png_count))
   
   if [[ $total_count -eq 0 ]]; then
@@ -43,7 +43,7 @@ optimize-images() {
   
   # Process JPEG files in parallel
   if [[ $jpeg_count -gt 0 ]]; then
-    find . -maxdepth 1 \( -name "*.jpg" -o -name "*.jpeg" \) -print0 | \
+    find . -maxdepth 1 \( -iname "*.jpg" -o -iname "*.jpeg" \) -print0 | \
       sed 's|^\./||' | \
       xargs -0 -P 4 -I{} sh -c 'cjpeg -quality 92 -optimize -progressive "$1" > "optimized/$1" 2>/dev/null' _ {}
   fi
@@ -51,11 +51,11 @@ optimize-images() {
   # Process PNG files in parallel
   if [[ $png_count -gt 0 ]]; then
     if [[ $LOSSLESS -eq 1 ]]; then
-      find . -maxdepth 1 -name "*.png" -print0 | \
+      find . -maxdepth 1 -iname "*.png" -print0 | \
         sed 's|^\./||' | \
         xargs -0 -P 4 -I{} sh -c 'oxipng -q -o 4 --strip safe -i 0 --out "optimized/$1" "$1" 2>/dev/null' _ {}
     else
-      find . -maxdepth 1 -name "*.png" -print0 | \
+      find . -maxdepth 1 -iname "*.png" -print0 | \
         sed 's|^\./||' | \
         xargs -0 -P 4 -I{} sh -c '
           if file "$1" 2>/dev/null | grep -q "RGBA\|alpha"; then
