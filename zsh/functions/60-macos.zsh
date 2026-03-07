@@ -153,10 +153,10 @@ macos-defaults() {
     defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
     
     # Keyboard: set fast but comfortable key repeat rate (2 = fast, 6 = default)
-    defaults write NSGlobalDomain KeyRepeat -int 2
+    defaults write NSGlobalDomain KeyRepeat -int 5
     
     # Keyboard: set short delay before key repeat starts (10 = shortest)
-    defaults write NSGlobalDomain InitialKeyRepeat -int 10
+    defaults write NSGlobalDomain InitialKeyRepeat -int 25
     
     # Keyboard: enable full keyboard access for all controls
     # Allows Tab to work in modal dialogs, not just text fields
