@@ -52,8 +52,11 @@ fi
   export HISTSIZE=100000
   export SAVEHIST=100000
   export PKG_CONFIG_PATH="/opt/homebrew/opt/blaze/share/pkgconfig:$PKG_CONFIG_PATH"
-  export CC="/opt/homebrew/bin/clang"
-  export CXX="/opt/homebrew/bin/clang++"
+  # Use system clang from Xcode Command Line Tools
+  # Uncomment and install llvm via brew if Homebrew clang is needed:
+  # brew install llvm
+  # export CC="/opt/homebrew/opt/llvm/bin/clang"
+  # export CXX="/opt/homebrew/opt/llvm/bin/clang++"
   export HOMEBREW_CASK_OPTS="--no-quarantine"
   export HOMEBREW_NO_ENV_HINTS=1
 }

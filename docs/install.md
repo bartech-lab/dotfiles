@@ -76,6 +76,13 @@ On a completely fresh macOS machine:
 
 3. **Restart terminal** - Everything will be ready!
 
+4. **Validate setup** (optional but recommended):
+   ```bash
+   ~/dotfiles/scripts/validate-setup.sh
+   ```
+   
+   This verifies all components are installed correctly and checks for instant prompt compatibility.
+
 The installer handles:
 - Installing Homebrew
 - Installing all Brewfile dependencies

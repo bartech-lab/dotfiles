@@ -251,6 +251,36 @@ if ! grep -q "zsh-dotfiles-loader.zsh" ~/.zshrc 2>/dev/null; then
     fi
 fi
 
+# Pre-download gitstatus binary to prevent console output on first run
+# This ensures gitstatusd is ready before the first interactive shell session
+if [[ "$DRY_RUN" == false ]]; then
+    GITSTATUS_CACHE="$HOME/.cache/gitstatus"
+    ARCH=$(uname -m)
+    
+    if [[ ! -f "$GITSTATUS_CACHE/gitstatusd-darwin-$ARCH" ]]; then
+        # Try multiple locations where powerlevel10k might be installed
+        p10k_paths=(
+            "$HOME/.zinit/plugins/romkatv---powerlevel10k"
+            "/opt/homebrew/opt/powerlevel10k"
+            "/usr/local/opt/powerlevel10k"
+        )
+        
+        for p10k_path in "${p10k_paths[@]}"; do
+            if [[ -f "$p10k_path/gitstatus/install" ]]; then
+                echo "Pre-caching gitstatus binary..."
+                mkdir -p "$GITSTATUS_CACHE"
+                # Run install script silently (downloads prebuilt binary)
+                (cd "$p10k_path/gitstatus" && CC= CXX= ./install -f >/dev/null 2>&1) || true
+                
+                if [[ -f "$GITSTATUS_CACHE/gitstatusd-darwin-$ARCH" ]]; then
+                    echo "✓ Gitstatus binary cached"
+                fi
+                break
+            fi
+        done
+    fi
+fi
+
 # Count available functions
 func_count=$(find "$DOTFILES_DIR/zsh/functions" -name "*.zsh" -type f 2>/dev/null | wc -l | tr -d ' ')
 

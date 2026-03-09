@@ -16,6 +16,22 @@ source ~/.zshrc
 
 The installer is idempotent and safe to re-run.
 
+## Validation
+
+After installation, verify everything is working:
+
+```bash
+~/dotfiles/scripts/validate-setup.sh
+```
+
+This checks:
+- System requirements (macOS version, Command Line Tools)
+- Homebrew and critical packages
+- Dotfiles structure and symlinks
+- Shell integration
+- Powerlevel10k and gitstatus setup
+- Console output compatibility (instant prompt)
+
 ## Safety First
 
 ```bash
