@@ -82,7 +82,7 @@ cask "handbrake-app"            # Video transcoder (GUI for ffmpeg tasks)
 cask "iina"                     # Modern macOS video player
 cask "keka"                     # Archive extractor (7z, rar support)
 cask "kekaexternalhelper"       # Keka Finder integration
-cask "paintbrush"               # Simple image editor
+cask "pinta"                    # Image editor (Paint.NET alternative)
 cask "stats"                    # System monitor in menu bar
 # cask "tg-pro"                 # Temperature monitoring for Mac -> commenting this one out, causing checksum issue
 cask "visual-studio-code"       # Code editor
