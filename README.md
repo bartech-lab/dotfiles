@@ -74,6 +74,7 @@ dotfiles-doctor
 - `git-open` - Open repo in browser
 - `macos-defaults` - Apply comprehensive system preferences (Dock, Finder, Screenshots, Keyboard, UI)
 - `macos-defaults-export` - Export current macOS settings to a backup script
+- `macos-disable-notification-sounds` - Turn off notification sounds across apps, skipping locked entries
 - `cpwd` - Copy current path to clipboard
 
 ## Migration

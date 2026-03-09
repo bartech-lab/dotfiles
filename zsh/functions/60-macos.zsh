@@ -799,6 +799,20 @@ macos-defaults-export() {
     echo 'echo "✅ macOS defaults restored!"'
 }
 
+# Disable notification sounds for macOS apps listed in System Settings.
+# Uses Accessibility automation, skips locked or MDM-managed apps, and
+# supports dry-run and exact-name exclusions.
+macos-disable-notification-sounds() {
+    local script_path="${DOTFILES_DIR:-$HOME/dotfiles}/scripts/macos-disable-notification-sounds.sh"
+
+    if [[ ! -x "$script_path" ]]; then
+        echo "❌ Script not found or not executable: $script_path"
+        return 1
+    fi
+
+    "$script_path" "$@"
+}
+
 # Copy current directory to clipboard
 cpwd() {
     pwd | tr -d '\n' | pbcopy
