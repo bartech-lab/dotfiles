@@ -112,6 +112,7 @@ Apply comprehensive macOS system preferences optimized for development.
 ```bash
 macos-defaults              # Apply all system defaults
 macos-defaults-export       # Export current settings to a script
+macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 ```
 
 **Changes:**
@@ -205,6 +206,29 @@ macos-defaults-export > ~/macos-backup.sh
 # Later, restore on another machine
 zsh ~/macos-backup.sh
 ```
+
+### macos-disable-notification-sounds
+
+Disable `Play sound for notification` for every app listed in `System Settings > Notifications`.
+
+```bash
+macos-disable-notification-sounds
+macos-disable-notification-sounds --dry-run --verbose
+macos-disable-notification-sounds --exclude "Microsoft Defender"
+macos-disable-notification-sounds --list
+```
+
+Options:
+- `--dry-run` - report what would change without toggling anything
+- `--verbose` - print per-app progress, including already-off entries
+- `--exclude "App Name"` - skip an exact app name as shown in Notifications; repeat as needed
+- `--list` - print discovered notification entries and exit
+
+Behavior:
+- Opens the Notifications pane automatically and walks each app entry
+- Turns off notification sounds where macOS allows it
+- Skips apps that are locked, disabled, or managed by MDM instead of failing the whole run
+- Requires Accessibility access for your terminal app because it automates System Settings
 
 ### cpwd
 
