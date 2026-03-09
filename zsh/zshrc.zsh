@@ -77,7 +77,7 @@ zstyle ':completion:*' cache-path ~/.zsh/cache
 
 # fnm (Fast Node Manager)
 if command -v fnm &>/dev/null; then
-  eval "$(fnm env --use-on-cd)"
+  eval "$(fnm env --use-on-cd --log-level quiet)"
 fi
 
 # Clean up PATH - remove unwanted paths inherited from parent environment
