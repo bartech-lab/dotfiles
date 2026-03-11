@@ -94,6 +94,8 @@ fi
 
 echo "✓ Homebrew ready"
 
+AUTOUPDATE_INTERVAL=86400
+
 # Check Brewfile packages (dry-run only, with more detail)
 if [[ "$DRY_RUN" == true && -f "$DOTFILES_DIR/Brewfile" ]]; then
     echo ""
@@ -166,6 +168,38 @@ if [[ "$DRY_RUN" == false && -f "$DOTFILES_DIR/Brewfile" ]]; then
         echo ""
         echo "⚠️ Brew reported issues:"
         filter 'Error|failed|Failure|Warning'
+    fi
+fi
+
+# Configure Homebrew autoupdate (once per day)
+autoupdate_status=$(brew autoupdate status 2>&1 || true)
+
+if [[ "$DRY_RUN" == true ]]; then
+    echo ""
+    echo "Homebrew autoupdate:"
+    if [[ "$autoupdate_status" == *"installed and running"* ]]; then
+        echo "  → Already running; would keep existing autoupdate settings"
+    else
+        echo "  → Would run: brew autoupdate start $AUTOUPDATE_INTERVAL --upgrade --cleanup"
+    fi
+else
+    echo ""
+    echo "🔄 Configuring Homebrew autoupdate..."
+
+    if [[ "$autoupdate_status" == *"installed and running"* ]]; then
+        echo "✓ Homebrew autoupdate already running"
+    else
+        set +e
+        autoupdate_start_output=$(brew autoupdate start "$AUTOUPDATE_INTERVAL" --upgrade --cleanup 2>&1)
+        autoupdate_start_status=$?
+        set -e
+
+        if (( autoupdate_start_status == 0 )); then
+            echo "✓ Homebrew autoupdate enabled (daily upgrade + cleanup)"
+        else
+            echo "⚠️ Failed to enable Homebrew autoupdate"
+            echo "$autoupdate_start_output"
+        fi
     fi
 fi
 
