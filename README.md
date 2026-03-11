@@ -16,6 +16,8 @@ source ~/.zshrc
 
 The installer is idempotent and safe to re-run.
 
+It also enables daily Homebrew autoupdate with `brew autoupdate start 86400 --upgrade --cleanup` when autoupdate is not already running.
+
 ## Global Git Ignore
 
 Global Git ignore rules are managed from `git/gitignore_global` and linked to `~/.gitignore_global` by `./install.sh`.
@@ -44,6 +46,7 @@ After installation, verify everything is working:
 This checks:
 - System requirements (macOS version, Command Line Tools)
 - Homebrew and critical packages
+- Homebrew autoupdate status
 - Dotfiles structure and symlinks
 - Shell integration
 - Powerlevel10k and gitstatus setup

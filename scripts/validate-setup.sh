@@ -83,6 +83,13 @@ if command -v brew &>/dev/null; then
             fail "Brew package missing: $pkg"
         fi
     done
+
+    autoupdate_status=$(brew autoupdate status 2>&1 || true)
+    if [[ "$autoupdate_status" == *"installed and running"* ]]; then
+        pass "Homebrew autoupdate running"
+    else
+        warn "Homebrew autoupdate not running - run: brew autoupdate start 86400 --upgrade --cleanup"
+    fi
 else
     fail "Homebrew not installed"
 fi

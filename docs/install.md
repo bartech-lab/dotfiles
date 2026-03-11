@@ -23,6 +23,7 @@ source ~/.zshrc
 The installer will:
 - Install Homebrew (if not present)
 - Install all dependencies via `brew bundle`
+- Enable daily Homebrew autoupdate with upgrade + cleanup
 - Link dotfiles functions loader
 - Link `~/.gitignore_global` to the tracked file in `~/dotfiles/git/gitignore_global`
 - Auto-install any missing critical dependencies
@@ -110,6 +111,7 @@ On a completely fresh macOS machine:
 The installer handles:
 - Installing Homebrew
 - Installing all Brewfile dependencies
+- Starting `brew autoupdate` once per day with `--upgrade --cleanup` (if not already running)
 - Linking all function files
 - Verifying critical dependencies
 - Setting up shell integration
@@ -169,6 +171,12 @@ The macOS defaults restoration includes all your custom settings for Dock, Finde
 To update packages:
 ```bash
 brew bundle --file=~/dotfiles/Brewfile
+```
+
+To enable the same automatic daily updates manually:
+
+```bash
+brew autoupdate start 86400 --upgrade --cleanup
 ```
 
 To get latest dotfiles changes:
