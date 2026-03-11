@@ -57,10 +57,10 @@ font-synthetic-style = false
 theme = pro
 
 # ---------- Window ----------
+# Keep a default size for fresh windows, but avoid forcing a fixed
+# macOS position so new tabs can stay on the current window frame.
 window-width = 140
 window-height = 45
-window-position-x = 100
-window-position-y = 100
 window-padding-balance = true
 window-padding-x = 10
 window-padding-y = 10
