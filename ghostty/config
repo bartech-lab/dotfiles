@@ -61,6 +61,9 @@ theme = pro
 # macOS position so new tabs can stay on the current window frame.
 window-width = 140
 window-height = 45
+# Never save/restore window state - prevents macOS from persisting
+# corrupted window geometry that causes resize on new tabs
+window-save-state = never
 window-padding-balance = true
 window-padding-x = 10
 window-padding-y = 10
