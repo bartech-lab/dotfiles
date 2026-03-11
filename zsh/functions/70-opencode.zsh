@@ -14,13 +14,6 @@ omo() {
   ocx oc -p omo
 }
 
-# OpenAgentsControl profile (pattern-aware agents, approval-based execution)
-# Auto-updates on every use, checks GitHub for latest release
-oac() {
-  ocx-auto-update oac 2>/dev/null
-  ocx oc -p oac
-}
-
 # List all available profiles
 ocp() {
   ocx profile list

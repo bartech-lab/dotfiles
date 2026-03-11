@@ -278,14 +278,6 @@ Launch Oh-My-OpenCode profile.
 omo                   # Oh-My-OpenCode
 ```
 
-### oac
-
-Launch OpenAgentsControl profile.
-
-```bash
-oac                   # OpenAgentsControl
-```
-
 ### ocp
 
 List all available OpenCode profiles.
