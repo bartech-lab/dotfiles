@@ -181,6 +181,17 @@ if [[ ! -d ~/.config ]]; then
     fi
 fi
 
+# Backup existing global gitignore if present (not symlink)
+if [[ -f ~/.gitignore_global && ! -L ~/.gitignore_global ]]; then
+    ensure_backup_dir
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  → Would backup: ~/.gitignore_global"
+    else
+        cp ~/.gitignore_global "$BACKUP_DIR/"
+        echo "✓ Backed up existing .gitignore_global"
+    fi
+fi
+
 # Backup existing loader if present (not symlink)
 if [[ -f ~/.config/zsh-dotfiles-loader.zsh && ! -L ~/.config/zsh-dotfiles-loader.zsh ]]; then
     ensure_backup_dir
@@ -196,12 +207,25 @@ fi
 if [[ "$DRY_RUN" == true ]]; then
     echo ""
     echo "Symlinks:"
+    if [[ -L ~/.gitignore_global ]]; then
+        echo "  → Would update: ~/.gitignore_global → $DOTFILES_DIR/git/gitignore_global"
+    else
+        echo "  → Would create: ~/.gitignore_global → $DOTFILES_DIR/git/gitignore_global"
+    fi
     if [[ -L ~/.config/zsh-dotfiles-loader.zsh ]]; then
         echo "  → Would update: ~/.config/zsh-dotfiles-loader.zsh → $DOTFILES_DIR/zsh/functions.zsh"
     else
         echo "  → Would create: ~/.config/zsh-dotfiles-loader.zsh → $DOTFILES_DIR/zsh/functions.zsh"
     fi
 else
+    if [[ -L ~/.gitignore_global ]]; then
+        ln -sf "$DOTFILES_DIR/git/gitignore_global" ~/.gitignore_global
+        echo "✓ Updated global gitignore symlink"
+    else
+        ln -sf "$DOTFILES_DIR/git/gitignore_global" ~/.gitignore_global
+        echo "✓ Linked global gitignore"
+    fi
+
     if [[ -L ~/.config/zsh-dotfiles-loader.zsh ]]; then
         ln -sf "$DOTFILES_DIR/zsh/functions.zsh" ~/.config/zsh-dotfiles-loader.zsh
         echo "✓ Updated loader symlink"

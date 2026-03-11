@@ -24,8 +24,32 @@ The installer will:
 - Install Homebrew (if not present)
 - Install all dependencies via `brew bundle`
 - Link dotfiles functions loader
+- Link `~/.gitignore_global` to the tracked file in `~/dotfiles/git/gitignore_global`
 - Auto-install any missing critical dependencies
 - Check and report status
+
+## Global Git Ignore
+
+The repo tracks a global Git ignore file at `git/gitignore_global`.
+
+During install, `./install.sh`:
+- Backs up an existing non-symlink `~/.gitignore_global`
+- Symlinks `~/.gitignore_global` to `~/dotfiles/git/gitignore_global`
+
+This keeps your personal global ignore rules versioned in dotfiles while preserving the standard Git location.
+
+Current defaults include:
+- OS files: `.DS_Store`, `._*`, `Thumbs.db`
+- Editor temp files: `*~`, `*.swp`, `*.swo`
+- Python bytecode: `__pycache__/`, `*.pyc`
+- Local AI/tool directories: `.sisyphus`, `.opencode`, `.agents/`, `.agent-browser/`, `.skill-lock.json`, `.llm/`
+- Agent instruction files: `agents.md`, `AGENTS.md`
+
+If Git is not already using `~/.gitignore_global`, set it once with:
+
+```bash
+git config --global core.excludesfile ~/.gitignore_global
+```
 
 ## What Gets Installed
 
