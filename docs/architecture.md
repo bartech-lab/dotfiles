@@ -12,6 +12,8 @@ dotfiles/
 │   ├── functions.md          # Function reference
 │   ├── media.md              # Media functions
 │   └── dev.md                # Development utilities
+├── git/
+│   └── gitignore_global      # Global Git ignore rules
 ├── zsh/
 │   ├── functions.zsh         # Main loader (sources all files)
 │   └── functions/            # Individual function files
@@ -50,6 +52,7 @@ The numbered prefix ensures consistent loading regardless of filesystem order.
 ### 1. Symlink Creation
 
 ```bash
+~/.gitignore_global → ~/dotfiles/git/gitignore_global
 ~/.config/zsh-dotfiles-loader.zsh → ~/dotfiles/zsh/functions.zsh
 ```
 
