@@ -57,10 +57,8 @@ font-synthetic-style = false
 theme = pro
 
 # ---------- Window ----------
-# Keep a default size for fresh windows, but avoid forcing a fixed
-# macOS position so new tabs can stay on the current window frame.
-window-width = 140
-window-height = 45
+# Removed window-width/height to avoid Ghostty 1.3.0 bug where tab operations
+# trigger unwanted window resizing. Let Ghostty use sensible defaults instead.
 # Never save/restore window state - prevents macOS from persisting
 # corrupted window geometry that causes resize on new tabs
 window-save-state = never
