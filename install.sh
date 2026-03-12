@@ -295,6 +295,32 @@ else
     echo "✓ Linked Ghostty config"
 fi
 
+# Ghostty XDG config (in addition to macOS path)
+XDG_GHOSTTY_DIR="$HOME/.config/ghostty"
+XDG_GHOSTTY_CONFIG="$XDG_GHOSTTY_DIR/config"
+
+if [[ -f "$XDG_GHOSTTY_CONFIG" && ! -L "$XDG_GHOSTTY_CONFIG" ]]; then
+    ensure_backup_dir
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  → Would backup: $XDG_GHOSTTY_CONFIG"
+    else
+        cp "$XDG_GHOSTTY_CONFIG" "$BACKUP_DIR/ghostty-xdg-config"
+        echo "✓ Backed up existing XDG Ghostty config"
+    fi
+fi
+
+if [[ "$DRY_RUN" == true ]]; then
+    if [[ -L "$XDG_GHOSTTY_CONFIG" ]]; then
+        echo "  → Would update: $XDG_GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+    else
+        echo "  → Would create: $XDG_GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+    fi
+else
+    mkdir -p "$XDG_GHOSTTY_DIR"
+    ln -sf "$DOTFILES_DIR/ghostty/config" "$XDG_GHOSTTY_CONFIG"
+    echo "✓ Linked XDG Ghostty config"
+fi
+
 # Add to .zshrc if not present
 if ! grep -q "zsh-dotfiles-loader.zsh" ~/.zshrc 2>/dev/null; then
     if [[ "$DRY_RUN" == true ]]; then
