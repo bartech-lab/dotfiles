@@ -315,6 +315,84 @@ ocfix                 # Alias for opencode-clean
 - When opencode processes accumulate over time
 - When system feels sluggish due to zombie processes
 
+### ecc
+
+Launch Everything Claude Code (ECC) profile with auto-update check.
+
+```bash
+ecc                   # Start ECC (checks for updates first)
+```
+
+**Features:**
+- Automatically checks for ECC updates on launch
+- Prompts to update if new version available
+- Preserves your model settings during updates
+- Full ECC workflow: planning, TDD, code review, security
+
+**Available commands in ECC:**
+- `/plan` — Create implementation plans
+- `/tdd` — Test-driven development workflow
+- `/code-review` — Code quality review
+- `/security` — Security vulnerability scan
+- `/build-fix` — Fix build errors
+- `/e2e` — Playwright E2E tests
+- Plus 20+ more commands
+
+**Configuration:**
+- Settings stored in: `~/.config/opencode/profiles/ecc/user-settings.json`
+- Models: Claude Opus for planning/security/TDD, Sonnet for reviews
+- Auto-merges your settings during updates
+
+### ecc-update
+
+Force update ECC to latest version (preserves your settings).
+
+```bash
+ecc-update            # Update ECC now
+```
+
+**What it does:**
+- Pulls latest ECC from GitHub
+- Reinstalls commands, agents, and tools
+- Backs up current config before update
+- Merges your `user-settings.json` into new config
+- Uses `jq` for safe JSON merging
+
+### ecc-status
+
+Check ECC repository status and update availability.
+
+```bash
+ecc-status            # Show ECC status
+```
+
+**Output:**
+- Current commit hash
+- Branch name
+- Update availability status
+
+### ecc-clean
+
+Clean up ECC backup files.
+
+```bash
+ecc-clean             # Remove old backups
+```
+
+**Backup location:** `~/.config/opencode/profiles/ecc/.backup/`
+
+**When to use:**
+- After successful updates to free disk space
+- When backups accumulate over time
+
+### ecc-upgrade
+
+Alias for `ecc-update`.
+
+```bash
+ecc-upgrade           # Same as ecc-update
+```
+
 ## Development Utilities
 
 ### extract
