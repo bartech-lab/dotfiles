@@ -143,10 +143,12 @@ macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 - Show Library folder (~/Library)
 - No .DS_Store files on network or USB volumes
 
-#### Screenshots
-- Save to Downloads folder
+#### Screenshots & Screen Recording
+- **Screenshots**: Go to clipboard (⌘V to paste)
+- **Screen Recordings**: Save to file in ~/Downloads
 - PNG format (better quality)
 - No window shadow
+- No floating thumbnail (captures immediately)
 
 #### Keyboard & Typing
 - Disable press-and-hold (enables key repeat)
