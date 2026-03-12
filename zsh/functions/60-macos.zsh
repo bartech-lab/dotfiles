@@ -135,14 +135,18 @@ macos-defaults() {
     # SCREENSHOT SETTINGS
     # ============================================
     
-    # Screenshots: save to Downloads
+    # Screenshots: screenshots to clipboard, videos to Downloads
     defaults write com.apple.screencapture location -string "${HOME}/Downloads"
-    
+    defaults write com.apple.screencapture target -string "clipboard"
+
     # Screenshots: disable shadow around windows
     defaults write com.apple.screencapture disable-shadow -bool true
-    
+
     # Screenshots: save in PNG format (better quality than JPG)
     defaults write com.apple.screencapture type -string "png"
+
+    # Screenshots: disable floating thumbnail
+    defaults write com.apple.screencapture show-thumbnail -bool false
     
     # ============================================
     # KEYBOARD SETTINGS
@@ -706,6 +710,8 @@ macos-defaults-export() {
     defaults read com.apple.screencapture location 2>/dev/null && echo "defaults write com.apple.screencapture location -string '$(defaults read com.apple.screencapture location)'"
     defaults read com.apple.screencapture disable-shadow 2>/dev/null && echo "defaults write com.apple.screencapture disable-shadow -bool $(defaults read com.apple.screencapture disable-shadow)"
     defaults read com.apple.screencapture type 2>/dev/null && echo "defaults write com.apple.screencapture type -string '$(defaults read com.apple.screencapture type)'"
+    defaults read com.apple.screencapture target 2>/dev/null && echo "defaults write com.apple.screencapture target -string '$(defaults read com.apple.screencapture target)'"
+    defaults read com.apple.screencapture show-thumbnail 2>/dev/null && echo "defaults write com.apple.screencapture show-thumbnail -bool $(defaults read com.apple.screencapture show-thumbnail)"
     
     echo ""
     
