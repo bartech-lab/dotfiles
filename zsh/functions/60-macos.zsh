@@ -135,9 +135,8 @@ macos-defaults() {
     # SCREENSHOT SETTINGS
     # ============================================
     
-    # Screenshots: screenshots to clipboard, videos to Downloads
+    # Screenshots: videos to Downloads (screenshots to clipboard via keyboard shortcut remap)
     defaults write com.apple.screencapture location -string "${HOME}/Downloads"
-    defaults write com.apple.screencapture target -string "clipboard"
 
     # Screenshots: disable shadow around windows
     defaults write com.apple.screencapture disable-shadow -bool true
