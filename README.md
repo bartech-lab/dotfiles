@@ -81,6 +81,14 @@ dotfiles-doctor
 - `video-remux [path]` - Lossless container conversion
 - `video-encode-cpu/gpu [path]` - H.265 encoding
 
+### OpenCode Profiles
+
+- `opencode` - Clean OpenCode (vanilla)
+- `omo` - Oh-My-OpenCode with Sisyphus agent
+- `ecc` - Everything Claude Code (full ECC workflow with auto-update)
+- `ocp` - List all OpenCode profiles
+- `ocfix` - Clean detached opencode processes
+
 ### Development Utilities
 
 - `extract <archive>` - Universal archive extractor
