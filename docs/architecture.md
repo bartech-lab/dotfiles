@@ -14,6 +14,10 @@ dotfiles/
 │   └── dev.md                # Development utilities
 ├── git/
 │   └── gitignore_global      # Global Git ignore rules
+├── git-auto-pull/            # Automatic git repo syncing
+│   ├── pull.sh               # Main syncing script
+│   ├── setup.sh              # One-time setup for new machines
+│   └── README.md             # Component documentation
 ├── zsh/
 │   ├── functions.zsh         # Main loader (sources all files)
 │   └── functions/            # Individual function files
