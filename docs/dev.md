@@ -395,6 +395,94 @@ path=(
 )
 ```
 
+## Git Auto-Pull
+
+Automatic background syncing for git repositories. Keeps local repos in sync with remote without manual intervention.
+
+### Setup
+
+One-time setup for new machines:
+
+```bash
+cd ~/dotfiles/git-auto-pull
+bash setup.sh
+```
+
+This creates:
+- `~/.config/git-auto-pull/repos.conf` - Config file for repositories
+- LaunchAgent to run every 6 hours
+- Empty log files
+
+### Configuration
+
+Edit the config file:
+
+```bash
+nano ~/.config/git-auto-pull/repos.conf
+```
+
+Format: one repo per line as `path:branch`
+
+```
+~/Projects/my-app:main
+~/work/api:master
+~/side-project:develop
+```
+
+### How It Works
+
+- **Interval:** 6 hours (21600 seconds)
+- **Silent operation:** No output unless updates occur
+- **Parallel processing:** All repos checked simultaneously
+- **Smart pulling:** Only fetches when local is behind remote
+- **Logs:** `~/.config/git-auto-pull/pull.log` (only shows actual updates)
+
+### Testing
+
+Run manually:
+
+```bash
+bash ~/.config/git-auto-pull/pull.sh
+```
+
+Check status:
+
+```bash
+# See what was updated
+cat ~/.config/git-auto-pull/pull.log
+
+# Verify service is running
+launchctl list | grep gitautopull
+```
+
+### Management
+
+```bash
+# Stop service
+launchctl unload ~/Library/LaunchAgents/com.user.gitautopull.plist
+
+# Start service
+launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
+
+# Restart after config changes
+launchctl unload ~/Library/LaunchAgents/com.user.gitautopull.plist
+launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
+```
+
+### Uninstall
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.user.gitautopull.plist
+rm ~/Library/LaunchAgents/com.user.gitautopull.plist
+rm -rf ~/.config/git-auto-pull
+```
+
+### Machine-Specific Configs
+
+The repos.conf is **not** in dotfiles - it's machine-specific. This allows different repos on different machines while sharing the same script and setup process.
+
+See [git-auto-pull/README.md](../git-auto-pull/README.md) for full documentation.
+
 ## Future Additions
 
 Possible new utilities:

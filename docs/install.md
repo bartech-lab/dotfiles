@@ -80,8 +80,26 @@ Ready-to-use video/image processing:
 - `archive` - Create reproducible archives
 - `git-cleanup`, `git-open` - Git helpers
 - `brewup` - Homebrew maintenance
+- `git-auto-pull` - Automatic background repo syncing
 
 See [functions.md](functions.md) for full command reference.
+
+## Optional: Git Auto-Pull Setup
+
+After installing dotfiles, you can optionally set up automatic git repository syncing:
+
+```bash
+cd ~/dotfiles/git-auto-pull
+bash setup.sh
+```
+
+This sets up a background service that:
+- Pulls updates from configured repos every 6 hours
+- Works silently (only logs when updates occur)
+- Supports different main branches per repo
+- Is machine-specific (configure once per machine)
+
+See [dev.md](dev.md#git-auto-pull) for configuration details.
 
 ## Fresh macOS Setup
 

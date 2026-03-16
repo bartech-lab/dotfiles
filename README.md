@@ -105,6 +105,17 @@ dotfiles-doctor
 - `macos-disable-notification-sounds` - Turn off notification sounds across apps, skipping locked entries
 - `cpwd` - Copy current path to clipboard
 
+### Git Auto-Pull
+
+Automatic background syncing for git repositories.
+
+- `setup.sh` - One-time setup for new machines
+- Runs every 6 hours, silently pulls updates
+- Configurable per-machine repos with different main branches
+- Logs only when updates occur
+
+See [Git Auto-Pull README](git-auto-pull/README.md) for setup details.
+
 ## Migration
 
 Moving to a new Mac? Use the migration scripts:
