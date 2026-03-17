@@ -551,7 +551,7 @@ See [dev.md](dev.md) for full documentation.
 | Dev | `40-dev.zsh` | Development utilities |
 | Media | `50-media.zsh` | Image/video processing |
 | macOS | `60-macos.zsh` | System functions |
-| Discord | `66-discord.zsh` | OpenAsar setup/status helpers |
+| Discord | `61-discord.zsh` | OpenAsar setup/status helpers |
 | OpenCode | `70-opencode.zsh` | OpenCode helpers |
 
 ## Adding Custom Functions

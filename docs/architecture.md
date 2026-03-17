@@ -34,7 +34,7 @@ dotfiles/
 │       ├── 40-dev.zsh        # Development utilities
 │       ├── 50-media.zsh      # Media processing
 │       ├── 60-macos.zsh      # macOS system functions
-│       ├── 66-discord.zsh    # Discord OpenAsar helpers
+│       ├── 61-discord.zsh    # Discord OpenAsar helpers
 │       └── 70-opencode.zsh   # OpenCode helpers
 ├── install.sh                # One-command installer
 ├── Brewfile                  # Homebrew dependencies
@@ -53,7 +53,7 @@ Functions load in a specific sequence controlled by filenames:
 40-*.zsh         → Fifth (dev)
 50-*.zsh         → Sixth (media)
 60-*.zsh         → Seventh (macos)
-66-*.zsh         → Eighth (discord)
+61-*.zsh         → Eighth (discord)
 70-*.zsh         → Ninth (opencode)
 ```
 
