@@ -55,7 +55,6 @@ brew "parallel"         # GNU parallel for batch processing images
 brew "zstd"             # Fast compression for archive() function
 brew "gnu-tar"          # Reproducible archives (--sort=name, --mtime)
 brew "unar"             # Universal archive extractor (zip, rar, 7z)
-brew "scrcpy"           # Android screen mirroring/control
 brew "mozjpeg"          # Provides cjpeg binary for image optimization
 brew "yt-dlp"           # YouTube video downloader (ffmpeg companion)
 

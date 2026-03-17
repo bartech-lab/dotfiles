@@ -11,7 +11,13 @@ dotfiles/
 │   ├── architecture.md       # This file
 │   ├── functions.md          # Function reference
 │   ├── media.md              # Media functions
-│   └── dev.md                # Development utilities
+│   ├── dev.md                # Development utilities
+│   └── discord-openasar.md   # Optional Discord OpenAsar setup
+├── discord/
+│   └── openasar/
+│       ├── aggressive-minimal.css          # Optional OpenAsar custom CSS
+│       ├── dev.openasar.reapply.plist.template  # LaunchAgent template
+│       └── reapply-openasar.sh             # Reapply script for updates
 ├── git/
 │   └── gitignore_global      # Global Git ignore rules
 ├── git-auto-pull/            # Automatic git repo syncing
@@ -28,6 +34,7 @@ dotfiles/
 │       ├── 40-dev.zsh        # Development utilities
 │       ├── 50-media.zsh      # Media processing
 │       ├── 60-macos.zsh      # macOS system functions
+│       ├── 66-discord.zsh    # Discord OpenAsar helpers
 │       └── 70-opencode.zsh   # OpenCode helpers
 ├── install.sh                # One-command installer
 ├── Brewfile                  # Homebrew dependencies
@@ -46,7 +53,8 @@ Functions load in a specific sequence controlled by filenames:
 40-*.zsh         → Fifth (dev)
 50-*.zsh         → Sixth (media)
 60-*.zsh         → Seventh (macos)
-70-*.zsh         → Eighth (opencode)
+66-*.zsh         → Eighth (discord)
+70-*.zsh         → Ninth (opencode)
 ```
 
 The numbered prefix ensures consistent loading regardless of filesystem order.

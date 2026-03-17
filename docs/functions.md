@@ -459,6 +459,31 @@ Pre-archive sanity checker (see [dev.md](dev.md)).
 repo-check              # Check for issues before archiving
 ```
 
+## Discord Utilities
+
+### discord-openasar-setup
+
+Manual, opt-in setup for persistent OpenAsar on Discord updates.
+
+```bash
+discord-openasar-setup [--app <Discord.app path>] [--refresh-openasar] [--no-theme]
+```
+
+**Options:**
+- `--app <path>` - Target app bundle (`/Applications/Discord.app` by default)
+- `--refresh-openasar` - Re-download latest OpenAsar nightly
+- `--no-theme` - Skip syncing custom CSS to OpenAsar settings
+
+### discord-openasar-status
+
+Show LaunchAgent state for automatic OpenAsar reapply.
+
+```bash
+discord-openasar-status
+```
+
+For the full workflow and file paths, see [discord-openasar.md](discord-openasar.md).
+
 ## Optional Tools
 
 These tools are installed but **not activated** for interactive use:
@@ -526,6 +551,7 @@ See [dev.md](dev.md) for full documentation.
 | Dev | `40-dev.zsh` | Development utilities |
 | Media | `50-media.zsh` | Image/video processing |
 | macOS | `60-macos.zsh` | System functions |
+| Discord | `66-discord.zsh` | OpenAsar setup/status helpers |
 | OpenCode | `70-opencode.zsh` | OpenCode helpers |
 
 ## Adding Custom Functions

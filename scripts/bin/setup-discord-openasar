@@ -1,0 +1,140 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+APP_PATH="/Applications/Discord.app"
+REFRESH_OPENASAR=false
+SYNC_THEME=true
+
+while (( $# > 0 )); do
+  case "$1" in
+    --app)
+      if (( $# < 2 )); then
+        echo "Missing value for --app" >&2
+        exit 1
+      fi
+      APP_PATH="$2"
+      shift 2
+      ;;
+    --refresh-openasar)
+      REFRESH_OPENASAR=true
+      shift
+      ;;
+    --no-theme)
+      SYNC_THEME=false
+      shift
+      ;;
+    --help|-h)
+      echo "Usage: setup-discord-openasar [--app <Discord.app path>] [--refresh-openasar] [--no-theme]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+OPENASAR_URL="https://github.com/GooseMod/OpenAsar/releases/download/nightly/app.asar"
+PERSIST_DIR="$HOME/Library/OpenAsarPersist"
+LOG_DIR="$HOME/Library/Logs/OpenAsarPersist"
+OPENASAR_FILE="$PERSIST_DIR/openasar.app.asar"
+STOCK_BACKUP="$PERSIST_DIR/discord-stock.app.asar.backup"
+DISCORD_ASAR="$APP_PATH/Contents/Resources/app.asar"
+AGENT_LABEL="dev.openasar.reapply"
+AGENT_PLIST="$HOME/Library/LaunchAgents/$AGENT_LABEL.plist"
+PLIST_TEMPLATE="$DOTFILES_DIR/discord/openasar/dev.openasar.reapply.plist.template"
+REAPPLY_SCRIPT="$DOTFILES_DIR/discord/openasar/reapply-openasar.sh"
+THEME_CSS="$DOTFILES_DIR/discord/openasar/aggressive-minimal.css"
+
+if [ ! -d "$APP_PATH" ]; then
+  echo "Discord app not found: $APP_PATH" >&2
+  exit 1
+fi
+
+if [ ! -f "$DISCORD_ASAR" ]; then
+  echo "Discord app.asar not found: $DISCORD_ASAR" >&2
+  exit 1
+fi
+
+if [ ! -f "$PLIST_TEMPLATE" ]; then
+  echo "Missing plist template: $PLIST_TEMPLATE" >&2
+  exit 1
+fi
+
+if [ ! -f "$REAPPLY_SCRIPT" ]; then
+  echo "Missing reapply script: $REAPPLY_SCRIPT" >&2
+  exit 1
+fi
+
+mkdir -p "$PERSIST_DIR" "$LOG_DIR" "$HOME/Library/LaunchAgents"
+
+if [ ! -f "$OPENASAR_FILE" ] || [ "$REFRESH_OPENASAR" = true ]; then
+  echo "Downloading OpenAsar..."
+  /usr/bin/curl -fL "$OPENASAR_URL" -o "$OPENASAR_FILE"
+fi
+
+if [ ! -f "$STOCK_BACKUP" ]; then
+  echo "Backing up stock Discord app.asar..."
+  /bin/cp "$DISCORD_ASAR" "$STOCK_BACKUP"
+fi
+
+echo "Applying OpenAsar to Discord..."
+/bin/cp "$OPENASAR_FILE" "$DISCORD_ASAR"
+
+if [ "$SYNC_THEME" = true ] && [ -f "$THEME_CSS" ]; then
+  app_name="$(basename "$APP_PATH")"
+  case "$app_name" in
+    "Discord.app")
+      user_data_dir="$HOME/Library/Application Support/discord"
+      ;;
+    "Discord PTB.app")
+      user_data_dir="$HOME/Library/Application Support/discordptb"
+      ;;
+    "Discord Canary.app")
+      user_data_dir="$HOME/Library/Application Support/discordcanary"
+      ;;
+    *)
+      user_data_dir="$HOME/Library/Application Support/discord"
+      ;;
+  esac
+
+  settings_json="$user_data_dir/settings.json"
+
+  if [ -f "$settings_json" ]; then
+    echo "Syncing OpenAsar theme CSS..."
+    python3 - <<PY
+import json
+from pathlib import Path
+
+settings_path = Path(r"$settings_json")
+theme_css = Path(r"$THEME_CSS").read_text()
+
+settings = json.loads(settings_path.read_text())
+openasar = settings.get('openasar', {})
+openasar['setup'] = True
+openasar['css'] = theme_css
+settings['openasar'] = openasar
+settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+PY
+  else
+    echo "Skipping theme sync (settings not found): $settings_json"
+  fi
+fi
+
+escaped_home="${HOME//\//\\/}"
+escaped_app_path="${APP_PATH//\//\\/}"
+/usr/bin/sed -e "s/__HOME__/$escaped_home/g" -e "s/__DISCORD_APP_PATH__/$escaped_app_path/g" "$PLIST_TEMPLATE" > "$AGENT_PLIST"
+
+/bin/chmod +x "$REAPPLY_SCRIPT"
+
+launchctl bootout "gui/$(id -u)" "$AGENT_PLIST" >/dev/null 2>&1 || true
+launchctl bootstrap "gui/$(id -u)" "$AGENT_PLIST"
+launchctl enable "gui/$(id -u)/$AGENT_LABEL"
+launchctl kickstart -k "gui/$(id -u)/$AGENT_LABEL"
+
+echo "Done."
+echo "- Discord: $APP_PATH"
+echo "- Agent:   $AGENT_PLIST"
+echo "- Theme:   $THEME_CSS"
+echo "- Source:  $OPENASAR_FILE"
