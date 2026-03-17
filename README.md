@@ -70,6 +70,10 @@ dotfiles-doctor
 |---------|-------------|-----|
 | `ls`, `ll`, `lt` | `eza` | Icons, git status, tree view |
 | `grep` | `rg` (ripgrep) | Fast search, smart defaults |
+| `find` | `fd` | Simpler syntax, fast file discovery |
+| `sed` (simple edits) | `sd` | More intuitive find/replace |
+| JSON parsing | `jq` | Deterministic machine-readable transforms |
+| YAML parsing | `yq` | Structured YAML queries and edits |
 | `top` | `btm` (bottom) | Visual system monitor |
 | `du` | `dust` | Visual disk usage |
 | `df` | `duf` | Colorful disk free |

@@ -26,6 +26,9 @@ brew "coreutils"        # GNU core utilities (gcp, gmv, gdate, etc.)
 
 brew "eza"              # Modern ls replacement (icons, git status, tree)
 brew "ripgrep"          # Modern grep replacement (rg command, fast search)
+brew "jq"               # JSON parser/transformer for machine-readable workflows
+brew "yq"               # YAML parser/transformer with jq-like syntax
+brew "sd"               # Intuitive sed replacement for simple substitutions
 brew "dust"             # Modern du replacement (visual disk usage)
 brew "bottom"           # Modern top replacement (btm command, graphs)
 brew "duf"              # Modern df replacement (colorful disk free)
