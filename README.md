@@ -95,6 +95,8 @@ dotfiles-doctor
 - `archive [name] [--dry-run] [-gzip]` - Create reproducible archives
 - `repo-check` - Pre-archive sanity checker
 - `dotfiles-doctor` - Environment health check
+- `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
+- `discord-openasar-status` - Check OpenAsar LaunchAgent status
 
 ### Git & macOS Helpers
 
@@ -146,6 +148,7 @@ See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
 - [📚 Functions Reference](docs/functions.md) - Complete command reference
 - [🎬 Media Processing](docs/media.md) - Video/image optimization
 - [🛠️ Development Utilities](docs/dev.md) - Archives, diagnostics, helpers
+- [💬 Discord OpenAsar](docs/discord-openasar.md) - Persistent OpenAsar + minimal CSS setup
 
 ## Requirements
 

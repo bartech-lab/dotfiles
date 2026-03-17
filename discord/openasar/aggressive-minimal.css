@@ -1,0 +1,106 @@
+:root {
+  --lean-sidebar-width: 230px;
+  --lean-guildbar-width: 58px;
+  --lean-member-width: 220px;
+  --lean-gap: 6px;
+  --lean-radius: 6px;
+}
+
+nav[class*="guilds"] {
+  width: var(--lean-guildbar-width) !important;
+}
+
+aside[class*="sidebar"] {
+  width: var(--lean-sidebar-width) !important;
+  min-width: var(--lean-sidebar-width) !important;
+}
+
+div[class*="membersWrap"] {
+  min-width: var(--lean-member-width) !important;
+  width: var(--lean-member-width) !important;
+}
+
+section[class*="panels"] {
+  padding: 4px var(--lean-gap) var(--lean-gap) var(--lean-gap) !important;
+  gap: 4px !important;
+}
+
+div[class*="chatContent"],
+div[class*="messagesWrapper"] {
+  border-radius: var(--lean-radius) !important;
+}
+
+li[class*="messageListItem"] {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+div[class*="cozyMessage"] {
+  padding-top: 0.16rem !important;
+  padding-bottom: 0.16rem !important;
+}
+
+div[class*="groupStart"] {
+  margin-top: 0.28rem !important;
+}
+
+div[class*="markup"] {
+  line-height: 1.28 !important;
+}
+
+div[class*="channelTextArea"] {
+  margin: 0 10px 8px 10px !important;
+}
+
+div[class*="scrollableContainer"] {
+  min-height: 40px !important;
+}
+
+div[class*="form"] {
+  margin-top: 0 !important;
+}
+
+div[class*="wrapper"][class*="modeSelected"],
+div[class*="item"][class*="selected"] {
+  border-radius: var(--lean-radius) !important;
+}
+
+div[class*="numberBadge"],
+div[class*="iconBadge"] {
+  transform: scale(0.9);
+  transform-origin: center;
+}
+
+div[class*="divider"],
+div[class*="separator"] {
+  opacity: 0.4 !important;
+}
+
+div[class*="activityPanel"],
+div[class*="nowPlayingColumn"],
+button[class*="stickerButton"],
+button[class*="gifButton"],
+button[class*="channelAppLauncher"],
+div[class*="profileEffects"] {
+  display: none !important;
+}
+
+button[aria-label="Send a gift"],
+button[aria-label="Open GIF picker"],
+button[aria-label="Open sticker picker"] {
+  display: none !important;
+}
+
+[data-list-item-id*="shop"],
+[data-list-item-id*="nitro"],
+[data-list-item-id*="guildsnav___shop"],
+[data-list-item-id*="guildsnav___discover"] {
+  display: none !important;
+}
+
+div[class*="premiumPromo"],
+div[class*="upsell"],
+div[class*="shopBanner"],
+div[class*="guildBoostSlot"] {
+  display: none !important;
+}
