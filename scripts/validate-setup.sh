@@ -97,6 +97,24 @@ fi
 echo ""
 
 # ============================================================================
+# Automation Toolchain
+# ============================================================================
+
+echo "Automation Toolchain:"
+
+required_cli_tools=("rg" "fd" "sd" "jq" "yq" "git" "gh")
+for tool in "${required_cli_tools[@]}"; do
+    if command -v "$tool" &>/dev/null; then
+        tool_path=$(command -v "$tool")
+        pass "CLI tool available: $tool ($tool_path)"
+    else
+        fail "CLI tool missing: $tool"
+    fi
+done
+
+echo ""
+
+# ============================================================================
 # Dotfiles Structure
 # ============================================================================
 

@@ -62,9 +62,23 @@ Your commands are automatically upgraded:
 |---------|--------------|-----------------|
 | `ls`, `ll`, `lt` | `eza` | Icons, git status, tree view |
 | `rg` | ripgrep | Fast grep replacement (use `rg`, not aliased to `grep`)
+| `find` | `fd` | Simpler syntax, very fast file discovery |
+| `sed` (simple replace) | `sd` | Cleaner find/replace workflow |
+| JSON parsing | `jq` | Machine-readable JSON transformations |
+| YAML parsing | `yq` | Structured YAML queries and updates |
 | `top` | `btm` (bottom) | Graphs, process tree, mouse support |
 | `du` | `dust` | Visual disk usage, sorted by size |
 | `df` | `duf` | Colorful, sortable disk free |
+
+### Automation Toolchain Verification
+
+After install, verify the preferred CLI automation stack is available:
+
+```bash
+which rg fd sd jq yq git gh
+```
+
+All commands should resolve to valid paths.
 
 ### Media Processing
 
