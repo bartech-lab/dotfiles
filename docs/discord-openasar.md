@@ -41,3 +41,5 @@ Optional flags:
 - This flow repatches `app.asar` after updates; it does not modify your dotfiles installer.
 - OpenAsar custom CSS is synced into the channel-specific Discord settings file when available.
 - If Discord is in a different location, pass `--app`.
+- LaunchAgent is update-driven via `WatchPaths` with a 24h fallback interval (`StartInterval=86400`).
+- `RunAtLoad` is intentionally disabled.
