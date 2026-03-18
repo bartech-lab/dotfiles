@@ -410,7 +410,7 @@ bash setup.sh
 
 This creates:
 - `~/.config/git-auto-pull/repos.conf` - Config file for repositories
-- LaunchAgent to run every 6 hours
+- LaunchAgent to run every 4 hours
 - Empty log files
 
 ### Configuration
@@ -431,11 +431,11 @@ Format: one repo per line as `path:branch`
 
 ### How It Works
 
-- **Interval:** 6 hours (21600 seconds)
-- **Silent operation:** No output unless updates occur
+- **Interval:** 4 hours (14400 seconds)
+- **Lightweight logging:** Run start/finish and update/error events
 - **Parallel processing:** All repos checked simultaneously
 - **Smart pulling:** Only fetches when local is behind remote
-- **Logs:** `~/.config/git-auto-pull/pull.log` (only shows actual updates)
+- **Logs:** `~/.config/git-auto-pull/pull.log` and `~/.config/git-auto-pull/error.log`
 
 ### Testing
 
@@ -482,6 +482,43 @@ rm -rf ~/.config/git-auto-pull
 The repos.conf is **not** in dotfiles - it's machine-specific. This allows different repos on different machines while sharing the same script and setup process.
 
 See [git-auto-pull/README.md](../git-auto-pull/README.md) for full documentation.
+
+## LaunchAgent Heartbeat
+
+Lightweight monitor for user LaunchAgents to verify they are loading and running.
+
+### Setup
+
+```bash
+cd ~/dotfiles/launchd-heartbeat
+bash setup.sh
+```
+
+### Configuration
+
+Edit monitored labels:
+
+```bash
+nano ~/.config/launchd-heartbeat/monitored-labels.conf
+```
+
+Format: one label per line.
+
+### How It Works
+
+- **Interval:** 1 hour (3600 seconds)
+- **Checks:** `launchctl print gui/$(id -u)/<label>` for each configured label
+- **Heartbeat log:** `~/.config/launchd-heartbeat/heartbeat.log`
+- **Error log:** `~/.config/launchd-heartbeat/error.log`
+
+### Testing
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.user.launchdheartbeat
+cat ~/.config/launchd-heartbeat/heartbeat.log
+```
+
+See [launchd-heartbeat/README.md](../launchd-heartbeat/README.md) for full documentation.
 
 ## Future Additions
 

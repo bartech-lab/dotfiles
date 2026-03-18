@@ -24,6 +24,10 @@ dotfiles/
 │   ├── pull.sh               # Main syncing script
 │   ├── setup.sh              # One-time setup for new machines
 │   └── README.md             # Component documentation
+├── launchd-heartbeat/        # LaunchAgent health heartbeat
+│   ├── heartbeat.sh          # Main heartbeat script
+│   ├── setup.sh              # One-time setup for new machines
+│   └── README.md             # Component documentation
 ├── zsh/
 │   ├── functions.zsh         # Main loader (sources all files)
 │   └── functions/            # Individual function files

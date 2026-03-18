@@ -116,11 +116,21 @@ dotfiles-doctor
 Automatic background syncing for git repositories.
 
 - `setup.sh` - One-time setup for new machines
-- Runs every 6 hours, silently pulls updates
+- Runs every 4 hours
 - Configurable per-machine repos with different main branches
-- Logs only when updates occur
+- Lightweight run/update/error logs for visibility
 
 See [Git Auto-Pull README](git-auto-pull/README.md) for setup details.
+
+### LaunchAgent Heartbeat
+
+Optional lightweight monitor for user LaunchAgents.
+
+- `launchd-heartbeat/setup.sh` - One-time setup
+- Runs every hour
+- Logs `loaded`/`missing` status for configured LaunchAgent labels
+
+See [LaunchAgent Heartbeat README](launchd-heartbeat/README.md) for setup details.
 
 ## Migration
 
