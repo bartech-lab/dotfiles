@@ -118,7 +118,7 @@ Automatic background syncing for git repositories.
 - `setup.sh` - One-time setup for new machines
 - Runs every 4 hours
 - Configurable per-machine repos with different main branches
-- Lightweight run/update/error logs for visibility
+- Logs updates to `pull.log` and failures to `error.log`
 
 See [Git Auto-Pull README](git-auto-pull/README.md) for setup details.
 

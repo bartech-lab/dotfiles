@@ -432,7 +432,7 @@ Format: one repo per line as `path:branch`
 ### How It Works
 
 - **Interval:** 4 hours (14400 seconds)
-- **Lightweight logging:** Run start/finish and update/error events
+- **Logging:** Updates to `pull.log` and failures to `error.log`
 - **Parallel processing:** All repos checked simultaneously
 - **Smart pulling:** Only fetches when local is behind remote
 - **Logs:** `~/.config/git-auto-pull/pull.log` and `~/.config/git-auto-pull/error.log`
