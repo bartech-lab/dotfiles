@@ -18,8 +18,6 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     exit 1
 fi
 
-echo "$(timestamp): Run started" >> "$LOG_FILE"
-
 # Process each repo
 while IFS=':' read -r repo_path branch_name; do
     # Skip empty lines and comments
@@ -73,5 +71,3 @@ done < "$CONFIG_FILE"
 
 # Wait for all background jobs to complete
 wait
-
-echo "$(timestamp): Run finished" >> "$LOG_FILE"
