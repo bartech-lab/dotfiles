@@ -108,12 +108,28 @@ bash setup.sh
 ```
 
 This sets up a background service that:
-- Pulls updates from configured repos every 6 hours
-- Works silently (only logs when updates occur)
+- Pulls updates from configured repos every 4 hours
+- Uses lightweight run/update/error logs for visibility
 - Supports different main branches per repo
 - Is machine-specific (configure once per machine)
 
 See [dev.md](dev.md#git-auto-pull) for configuration details.
+
+## Optional: LaunchAgent Heartbeat Setup
+
+If you want a quick way to confirm user LaunchAgents are alive on this machine:
+
+```bash
+cd ~/dotfiles/launchd-heartbeat
+bash setup.sh
+```
+
+This sets up a background service that:
+- Runs every hour
+- Checks selected LaunchAgent labels
+- Writes status snapshots to `~/.config/launchd-heartbeat/heartbeat.log`
+
+See [LaunchAgent Heartbeat README](../launchd-heartbeat/README.md) for details.
 
 ## Fresh macOS Setup
 

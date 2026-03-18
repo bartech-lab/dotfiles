@@ -50,7 +50,7 @@ cat > "$PLIST_PATH" << EOF
         <string>$HOME/.config/git-auto-pull/pull.sh</string>
     </array>
     <key>StartInterval</key>
-    <integer>21600</integer>
+    <integer>14400</integer>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
@@ -65,10 +65,29 @@ EOF
 
 echo "✅ Created LaunchAgent at $PLIST_PATH"
 
-# Load the LaunchAgent
-launchctl load "$PLIST_PATH" 2>/dev/null || {
-    echo "⚠️  LaunchAgent may already be loaded or there was an error"
-}
+# Load the LaunchAgent (refresh if already present)
+LAUNCH_DOMAIN="gui/$(id -u)"
+launchctl bootout "$LAUNCH_DOMAIN"/com.user.gitautopull >/dev/null 2>&1 || true
+
+if launchctl bootstrap "$LAUNCH_DOMAIN" "$PLIST_PATH" >/dev/null 2>&1; then
+    echo "✅ LaunchAgent bootstrapped"
+else
+    echo "⚠️  Failed to bootstrap LaunchAgent"
+fi
+
+# Verify LaunchAgent is loaded and configured
+if launchctl print "$LAUNCH_DOMAIN"/com.user.gitautopull >/dev/null 2>&1; then
+    echo "✅ LaunchAgent load verified"
+else
+    echo "⚠️  LaunchAgent not visible in launchctl print"
+fi
+
+# Trigger one immediate run for startup verification
+if launchctl kickstart -k "$LAUNCH_DOMAIN"/com.user.gitautopull >/dev/null 2>&1; then
+    echo "✅ LaunchAgent startup run triggered"
+else
+    echo "⚠️  Could not kickstart LaunchAgent"
+fi
 
 echo ""
 echo "✨ Setup complete!"
@@ -78,5 +97,5 @@ echo "1. Edit ~/.config/git-auto-pull/repos.conf to add your repositories"
 echo "2. Format: /path/to/repo:branch-name"
 echo "3. Test with: bash ~/.config/git-auto-pull/pull.sh"
 echo ""
-echo "The script runs every 6 hours automatically."
+echo "The script runs every 4 hours automatically."
 echo "Logs: ~/.config/git-auto-pull/pull.log"
