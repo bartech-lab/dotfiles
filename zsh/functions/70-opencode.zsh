@@ -30,34 +30,66 @@ ocx-profile() {
   fi
 }
 
-# Cleanup detached opencode processes (safe with multiple terminals)
-# Only removes processes not attached to any terminal (tty == "?")
+# Cleanup orphaned opencode processes (safe with multiple terminals)
+# Only removes exact `opencode` processes reparented to launchd (PPID 1)
+# and no longer attached to any terminal (tty == "??")
 opencode-clean() {
-  echo "Scanning opencode processes..."
+  echo "Scanning orphaned opencode processes..."
 
-  local killed=0
+  local -a candidates surviving
+  local pid ppid tty command
 
-  while read -r pid ppid tty; do
-    # Skip empty lines
+  while read -r pid ppid tty command; do
     [[ -z "$pid" ]] && continue
-
-    # Validate PID is numeric
     [[ "$pid" =~ ^[0-9]+$ ]] || continue
+    [[ "$ppid" == "1" ]] || continue
+    [[ "$tty" == "??" ]] || continue
+    [[ "$command" == "opencode" ]] || continue
+    candidates+=("$pid")
+  done < <(ps -axo pid=,ppid=,tty=,comm=)
 
-    # Keep anything attached to a terminal
-    [[ "$tty" != "?" ]] && continue
+  if (( ${#candidates[@]} == 0 )); then
+    echo "No orphaned opencode processes detected"
+    return 0
+  fi
 
-    # Kill detached processes
-    echo "Cleaning detached PID $pid"
-    kill -TERM "$pid" 2>/dev/null
+  echo "Found ${#candidates[@]} orphaned process(es): ${candidates[*]}"
+
+  for pid in "${candidates[@]}"; do
+    echo "Sending TERM to PID $pid"
+    kill -TERM "$pid" 2>/dev/null || true
+  done
+
+  sleep 1
+
+  for pid in "${candidates[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      surviving+=("$pid")
+    fi
+  done
+
+  if (( ${#surviving[@]} > 0 )); then
+    echo "Escalating to KILL for: ${surviving[*]}"
+    for pid in "${surviving[@]}"; do
+      kill -KILL "$pid" 2>/dev/null || true
+    done
     sleep 0.5
-    kill -KILL "$pid" 2>/dev/null
-    ((killed++))
+  fi
 
-  done < <(ps -axo pid,ppid,tty,command | grep '[o]pencode' | awk '{print $1, $2, $3}')
+  local -a remaining
+  for pid in "${candidates[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      remaining+=("$pid")
+    fi
+  done
 
-  [[ $killed -eq 0 ]] && echo "No detached processes detected"
-  [[ $killed -gt 0 ]] && echo "Cleaned $killed detached processes"
+  if (( ${#remaining[@]} == 0 )); then
+    echo "Cleaned ${#candidates[@]} orphaned opencode process(es)"
+    return 0
+  fi
+
+  echo "Failed to clean: ${remaining[*]}"
+  return 1
 }
 
 # Alias for quick access

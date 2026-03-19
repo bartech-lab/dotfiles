@@ -91,7 +91,7 @@ dotfiles-doctor
 - `omo` - Oh-My-OpenCode with Sisyphus agent
 - `ecc` - Everything Claude Code (full ECC workflow with auto-update)
 - `ocp` - List all OpenCode profiles
-- `ocfix` - Clean detached opencode processes
+- `ocfix` - Clean orphaned opencode processes
 
 ### Development Utilities
 
