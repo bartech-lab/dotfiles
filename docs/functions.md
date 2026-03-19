@@ -298,7 +298,7 @@ ocx-profile <name>    # Use specific profile
 
 ### opencode-clean / ocfix
 
-Clean up detached opencode processes (safe with multiple terminals).
+Clean up orphaned opencode processes (safe with multiple terminals).
 
 ```bash
 opencode-clean        # Clean detached processes
@@ -306,11 +306,11 @@ ocfix                 # Alias for opencode-clean
 ```
 
 **What it does:**
-- Scans all opencode processes
-- Keeps processes attached to terminals (active sessions)
-- Only terminates detached processes (not attached to any TTY)
-- Uses graceful termination (TERM) first, then force kill (KILL) if needed
-- Safe to use with multiple Ghostty tabs open
+- Scans for exact `opencode` processes only
+- Keeps active terminal-attached sessions alone
+- Only terminates orphaned processes with `PPID` `1` and `TTY` `??`
+- Uses graceful termination (`TERM`) first, then force kill (`KILL`) only for survivors
+- Prints the candidate PIDs it found before cleaning them
 
 **When to use:**
 - When you notice high kernel_task CPU usage
