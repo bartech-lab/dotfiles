@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Git Auto-Pull Script
-# Runs in background every 4 hours
+# Runs in background every hour
 # Reads repo configuration from repos.conf
 
 CONFIG_FILE="$HOME/.config/git-auto-pull/repos.conf"

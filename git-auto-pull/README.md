@@ -1,6 +1,6 @@
 # Git Auto-Pull
 
-Automatically pull updates from git repositories every 4 hours on macOS.
+Automatically pull updates from git repositories every hour on macOS.
 
 ## Overview
 
@@ -62,7 +62,7 @@ cat ~/.config/git-auto-pull/pull.log
 
 ## Configuration
 
-- **Interval:** 4 hours (14400 seconds)
+- **Interval:** 1 hour (3600 seconds)
 - **Log location:** `~/.config/git-auto-pull/pull.log`
 - **Error log:** `~/.config/git-auto-pull/error.log`
 
@@ -91,7 +91,7 @@ launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
 
 ## How It Works
 
-1. **LaunchAgent** (macOS service scheduler) triggers the script every 4 hours
+1. **LaunchAgent** (macOS service scheduler) triggers the script every hour
 2. **pull.sh** reads `repos.conf` and for each repo:
    - Fetches the remote branch quietly
    - Compares local vs remote commits

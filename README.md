@@ -116,7 +116,7 @@ dotfiles-doctor
 Automatic background syncing for git repositories.
 
 - `setup.sh` - One-time setup for new machines
-- Runs every 4 hours
+- Runs every hour
 - Configurable per-machine repos with different main branches
 - Logs updates to `pull.log` and failures to `error.log`
 
