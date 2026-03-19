@@ -50,7 +50,7 @@ cat > "$PLIST_PATH" << EOF
         <string>$HOME/.config/git-auto-pull/pull.sh</string>
     </array>
     <key>StartInterval</key>
-    <integer>14400</integer>
+    <integer>3600</integer>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
@@ -97,5 +97,5 @@ echo "1. Edit ~/.config/git-auto-pull/repos.conf to add your repositories"
 echo "2. Format: /path/to/repo:branch-name"
 echo "3. Test with: bash ~/.config/git-auto-pull/pull.sh"
 echo ""
-echo "The script runs every 4 hours automatically."
+echo "The script runs every hour automatically."
 echo "Logs: ~/.config/git-auto-pull/pull.log"

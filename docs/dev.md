@@ -410,7 +410,7 @@ bash setup.sh
 
 This creates:
 - `~/.config/git-auto-pull/repos.conf` - Config file for repositories
-- LaunchAgent to run every 4 hours
+- LaunchAgent to run every hour
 - Empty log files
 
 ### Configuration
@@ -431,7 +431,7 @@ Format: one repo per line as `path:branch`
 
 ### How It Works
 
-- **Interval:** 4 hours (14400 seconds)
+- **Interval:** 1 hour (3600 seconds)
 - **Logging:** Updates to `pull.log` and failures to `error.log`
 - **Parallel processing:** All repos checked simultaneously
 - **Smart pulling:** Only fetches when local is behind remote
