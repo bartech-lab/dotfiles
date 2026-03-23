@@ -269,7 +269,7 @@ brewup                # Update, upgrade, cleanup
 Launch OpenCode with default profile.
 
 ```bash
-opencode              # Start OpenCode
+ocode                 # Start OpenCode
 ```
 
 ### omo
