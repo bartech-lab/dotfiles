@@ -82,8 +82,8 @@ dotfiles-doctor
 
 - `optimize-images [path]` - Batch optimize JPEG/PNG
 - `video-to-gif <input>` - Convert videos to GIF
-- `video-remux [path]` - Lossless container conversion
-- `video-encode-cpu/gpu [path]` - H.265 encoding
+- `video-remux [path] [--subdir]` - Lossless container conversion
+- `video-encode-cpu/gpu [path] [--subdir]` - H.265 encoding
 
 ### OpenCode Profiles
 

@@ -55,11 +55,12 @@ optimize-images ./assets --lossless  # Lossless PNG optimization
 Losslessly remux videos to MP4 container.
 
 ```bash
-video-remux [path]
+video-remux [path] [--subdir]
 ```
 
 **Arguments:**
 - `path` - Directory or file to remux (defaults to current directory)
+- `--subdir` - Create `mp4/` subdirectory (legacy behavior)
 
 **Supported formats:**
 - MOV → MP4 (lossless remux)
@@ -77,16 +78,22 @@ video-remux [path]
 - WEBM: tries lossless stream copy first, falls back to H.264/AAC if needed
 - Animated WEBP: converts frames to MP4 (cannot be losslessly remuxed)
 
+**File naming:**
+- Source files with non-MP4 extension → same basename with `.mp4`
+- Source files with `.mp4` extension → basename with `_remuxed.mp4` suffix
+
 **Examples:**
 ```bash
 video-remux                   # Remux all videos in current dir
 video-remux ./recordings      # Remux specific directory
-video-remux video.mov         # Remux single file
+video-remux video.mov         # Remux single file (outputs video.mp4)
+video-remux clip.mp4          # Remux MP4 (outputs clip_remuxed.mp4)
+video-remux --subdir          # Use mp4/ subdirectory
 ```
 
 **Output:**
-- Creates `mp4/` directory
-- Files named `original_name.mp4`
+- By default: same directory, smart naming
+- With `--subdir`: creates `mp4/` directory
 - Original files preserved
 
 ## video-encode-cpu
@@ -94,11 +101,12 @@ video-remux video.mov         # Remux single file
 High-quality H.265 CPU encoding.
 
 ```bash
-video-encode-cpu [path]
+video-encode-cpu [path] [--subdir]
 ```
 
 **Arguments:**
 - `path` - Directory or file to encode (defaults to current directory)
+- `--subdir` - Create `encoded/` subdirectory (legacy behavior)
 
 **Codec:** libx265 (H.265/HEVC)
 
@@ -109,16 +117,22 @@ video-encode-cpu [path]
 - When quality matters more than speed
 - Scenes with lots of detail/motion
 
+**File naming:**
+- Source files with non-MP4 extension → same basename with `.mp4`
+- Source files with `.mp4` extension → basename with `_h265.mp4` suffix
+
 **Examples:**
 ```bash
 video-encode-cpu              # Encode all videos in current dir
 video-encode-cpu ./videos     # Encode specific directory
-video-encode-cpu input.mov    # Encode single file
+video-encode-cpu input.mov    # Encode single file (outputs input.mp4)
+video-encode-cpu clip.mp4     # Encode MP4 (outputs clip_h265.mp4)
+video-encode-cpu --subdir     # Use encoded/ subdirectory
 ```
 
 **Output:**
-- Creates `encoded/` directory
-- Files named `original_name.mp4`
+- By default: same directory, smart naming
+- With `--subdir`: creates `encoded/` directory
 - H.265 codec for better compression
 
 ## video-encode-gpu
@@ -126,11 +140,12 @@ video-encode-cpu input.mov    # Encode single file
 Fast H.265 GPU encoding using Apple VideoToolbox.
 
 ```bash
-video-encode-gpu [path]
+video-encode-gpu [path] [--subdir]
 ```
 
 **Arguments:**
 - `path` - Directory or file to encode (defaults to current directory)
+- `--subdir` - Create `encoded/` subdirectory (legacy behavior)
 
 **Codec:** hevc_videotoolbox (hardware accelerated)
 
@@ -141,16 +156,22 @@ video-encode-gpu [path]
 - Screen recordings
 - When speed matters more than max quality
 
+**File naming:**
+- Source files with non-MP4 extension → same basename with `.mp4`
+- Source files with `.mp4` extension → basename with `_h265.mp4` suffix
+
 **Examples:**
 ```bash
 video-encode-gpu              # Encode all videos in current dir
 video-encode-gpu ./recordings # Encode specific directory
-video-encode-gpu screencast.mov  # Encode single file
+video-encode-gpu screencast.mov  # Encode single file (outputs screencast.mp4)
+video-encode-gpu clip.mp4     # Encode MP4 (outputs clip_h265.mp4)
+video-encode-gpu --subdir     # Use encoded/ subdirectory
 ```
 
 **Output:**
-- Creates `encoded/` directory
-- Files named `original_name.mp4`
+- By default: same directory, smart naming
+- With `--subdir`: creates `encoded/` directory
 - H.265 codec, hardware accelerated
 
 ## video-to-gif
@@ -216,11 +237,13 @@ video-encode-cpu video1.mov video2.mov video3.mov
 
 ## Output Directories
 
-| Function | Output Directory |
-|----------|------------------|
-| `optimize-images` | `optimized/` |
-| `video-remux` | `mp4/` |
-| `video-encode-*` | `encoded/` |
+| Function | Default Output | With `--subdir` flag |
+|----------|----------------|---------------------|
+| `optimize-images` | `optimized/` | N/A |
+| `video-remux` | Same directory* | `mp4/` |
+| `video-encode-*` | Same directory* | `encoded/` |
+
+\* Smart naming: files with non-MP4 source extensions use same basename; MP4 sources get suffix (`_remuxed` or `_h265`)
 
 ## Troubleshooting
 
