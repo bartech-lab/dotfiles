@@ -132,6 +132,17 @@ Optional lightweight monitor for user LaunchAgents.
 
 See [LaunchAgent Heartbeat README](launchd-heartbeat/README.md) for setup details.
 
+### Calendar Ghost Invite Fix
+
+Automatic fix for recurring ghost RSVP invites in macOS Calendar that keep reappearing even after accepting them in Google Calendar.
+
+- `calendar-ghost-fix/setup.sh` - One-time setup
+- Runs every hour
+- Automatically resets ghost invites to accepted state
+- Logs all fixes to `fix.log`
+
+See [Calendar Ghost Fix README](calendar-ghost-fix/README.md) for setup details.
+
 ## Migration
 
 Moving to a new Mac? Use the migration scripts:
