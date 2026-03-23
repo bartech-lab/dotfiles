@@ -3,7 +3,7 @@
 
 # Default profile - Clean OpenCode (no plugins)
 # Use this for vanilla OpenCode experience
-opencode() {
+ocode() {
   ocx oc -p default
 }
 
