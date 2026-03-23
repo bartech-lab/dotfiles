@@ -99,6 +99,21 @@ video-remux() {
   local SOURCE_PATH="${1:-.}"
   local INPUT_DIR=""
   local SINGLE_FILE=""
+  local USE_SUBDIR=0
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --subdir)
+        USE_SUBDIR=1
+        shift
+        ;;
+      *)
+        SOURCE_PATH="$1"
+        shift
+        ;;
+    esac
+  done
 
   if [[ -d "$SOURCE_PATH" ]]; then
     INPUT_DIR="$SOURCE_PATH"
@@ -111,11 +126,17 @@ video-remux() {
   fi
 
   cd "$INPUT_DIR" || return 1
-  mkdir -p mp4
   
-  local OUTDIR="mp4"
-  local ERROR_LOG="$OUTDIR/remux_errors.log"
-  local SKIP_LOG="$OUTDIR/remux_skipped.log"
+  local OUTDIR="."
+  local ERROR_LOG="./remux_errors.log"
+  local SKIP_LOG="./remux_skipped.log"
+  
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    mkdir -p mp4
+    OUTDIR="mp4"
+    ERROR_LOG="$OUTDIR/remux_errors.log"
+    SKIP_LOG="$OUTDIR/remux_skipped.log"
+  fi
   
   # Clear old error log if exists
   rm -f "$ERROR_LOG"
@@ -158,8 +179,16 @@ video-remux() {
     file="$1"
     base=$(basename "$file")
     name="${base%.*}"
-    out="mp4/${name}.mp4"
     ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
+    
+    # Determine output filename
+    if [[ "'$USE_SUBDIR'" == "1" ]]; then
+      out="'${OUTDIR}'/${name}.mp4"
+    elif [[ "$ext" == "mp4" ]]; then
+      out="${name}_remuxed.mp4"
+    else
+      out="${name}.mp4"
+    fi
     
     if [[ ! -f "$out" ]]; then
       if [[ "$ext" == "webp" ]]; then
@@ -211,7 +240,11 @@ video-remux() {
     cat "$SKIP_LOG"
   fi
   
-  echo "✅ Done! Remuxed files in: $(pwd)/$OUTDIR/"
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    echo "✅ Done! Remuxed files in: $(pwd)/$OUTDIR/"
+  else
+    echo "✅ Done! Remuxed files in current directory"
+  fi
   
   if command -v osascript &>/dev/null; then
     osascript -e 'display notification "Video remux complete!" with title "video-remux"'
@@ -220,6 +253,21 @@ video-remux() {
 
 video-encode-cpu() {
   local SOURCE_DIR="${1:-.}"
+  local USE_SUBDIR=0
+  
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --subdir)
+        USE_SUBDIR=1
+        shift
+        ;;
+      *)
+        SOURCE_DIR="$1"
+        shift
+        ;;
+    esac
+  done
   
   if [[ ! -d "$SOURCE_DIR" ]]; then
     echo "❌ Error: Directory '$SOURCE_DIR' not found"
@@ -227,10 +275,15 @@ video-encode-cpu() {
   fi
   
   cd "$SOURCE_DIR" || return 1
-  mkdir -p encoded
   
-  local OUTDIR="encoded"
-  local ERROR_LOG="$OUTDIR/encode_errors.log"
+  local OUTDIR="."
+  local ERROR_LOG="./encode_errors.log"
+  
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    mkdir -p encoded
+    OUTDIR="encoded"
+    ERROR_LOG="$OUTDIR/encode_errors.log"
+  fi
   
   # Clear old error log if exists
   rm -f "$ERROR_LOG"
@@ -257,7 +310,16 @@ video-encode-cpu() {
     file="$1"
     base=$(basename "$file")
     name="${base%.*}"
-    out="encoded/${name}.mp4"
+    ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
+    
+    # Determine output filename
+    if [[ "'$USE_SUBDIR'" == "1" ]]; then
+      out="'${OUTDIR}'/${name}.mp4"
+    elif [[ "$ext" == "mp4" ]]; then
+      out="${name}_h265.mp4"
+    else
+      out="${name}.mp4"
+    fi
     
     if [[ ! -f "$out" ]]; then
       if ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
@@ -276,7 +338,11 @@ video-encode-cpu() {
     cat "$ERROR_LOG"
   fi
   
-  echo "✅ Done! Encoded files in: $(pwd)/$OUTDIR/"
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    echo "✅ Done! Encoded files in: $(pwd)/$OUTDIR/"
+  else
+    echo "✅ Done! Encoded files in current directory"
+  fi
   
   if command -v osascript &>/dev/null; then
     osascript -e 'display notification "CPU encoding complete!" with title "video-encode-cpu"'
@@ -285,6 +351,21 @@ video-encode-cpu() {
 
 video-encode-gpu() {
   local SOURCE_DIR="${1:-.}"
+  local USE_SUBDIR=0
+  
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --subdir)
+        USE_SUBDIR=1
+        shift
+        ;;
+      *)
+        SOURCE_DIR="$1"
+        shift
+        ;;
+    esac
+  done
   
   if [[ ! -d "$SOURCE_DIR" ]]; then
     echo "❌ Error: Directory '$SOURCE_DIR' not found"
@@ -292,10 +373,15 @@ video-encode-gpu() {
   fi
   
   cd "$SOURCE_DIR" || return 1
-  mkdir -p encoded
   
-  local OUTDIR="encoded"
-  local ERROR_LOG="$OUTDIR/encode_errors.log"
+  local OUTDIR="."
+  local ERROR_LOG="./encode_errors.log"
+  
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    mkdir -p encoded
+    OUTDIR="encoded"
+    ERROR_LOG="$OUTDIR/encode_errors.log"
+  fi
   
   # Clear old error log if exists
   rm -f "$ERROR_LOG"
@@ -322,7 +408,16 @@ video-encode-gpu() {
     file="$1"
     base=$(basename "$file")
     name="${base%.*}"
-    out="encoded/${name}.mp4"
+    ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
+    
+    # Determine output filename
+    if [[ "'"$USE_SUBDIR"'" == "1" ]]; then
+      out="'"$OUTDIR"'/${name}.mp4"
+    elif [[ "$ext" == "mp4" ]]; then
+      out="${name}_h265.mp4"
+    else
+      out="${name}.mp4"
+    fi
     
     if [[ ! -f "$out" ]]; then
       q=52
@@ -332,13 +427,13 @@ video-encode-gpu() {
         if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
           : # success
         else
-          echo "FAILED: $base" >> "'$ERROR_LOG'"
+          echo "FAILED: $base" >> "'"$ERROR_LOG"'"
         fi
       else
         if ffmpeg -hide_banner -loglevel error -i "$file" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
           : # success
         else
-          echo "FAILED: $base" >> "'$ERROR_LOG'"
+          echo "FAILED: $base" >> "'"$ERROR_LOG"'"
         fi
       fi
     fi
@@ -352,7 +447,11 @@ video-encode-gpu() {
     cat "$ERROR_LOG"
   fi
   
-  echo "✅ Done! Encoded files in: $(pwd)/$OUTDIR/"
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    echo "✅ Done! Encoded files in: $(pwd)/$OUTDIR/"
+  else
+    echo "✅ Done! Encoded files in current directory"
+  fi
   
   if command -v osascript &>/dev/null; then
     osascript -e 'display notification "GPU encoding complete!" with title "video-encode-gpu"'
