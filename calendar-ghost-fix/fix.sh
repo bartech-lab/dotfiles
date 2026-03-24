@@ -42,9 +42,13 @@ TOTAL_FIXED=0
 
 # Fix 1: CalendarItem invitation_status
 if [[ "$BEFORE_COUNT" -gt 0 ]]; then
+    # Get Cocoa timestamp for last_modified update
+    CURRENT_COCOA_TIME=$(echo "$(date '+%s') - 978307200" | bc)
+    
     sqlite3 "$CALENDAR_DB" <<EOF 2>/dev/null
 BEGIN;
 UPDATE CalendarItem SET invitation_status=0 WHERE invitation_status=3;
+UPDATE CalendarItem SET last_modified = $CURRENT_COCOA_TIME WHERE invitation_status=0 AND last_modified < $CURRENT_COCOA_TIME - 3600;
 COMMIT;
 EOF
     
@@ -52,7 +56,7 @@ EOF
         AFTER_COUNT=$(sqlite3 "$CALENDAR_DB" "SELECT COUNT(*) FROM CalendarItem WHERE invitation_status=3;" 2>/dev/null || echo "0")
         FIXED_COUNT=$((BEFORE_COUNT - AFTER_COUNT))
         TOTAL_FIXED=$((TOTAL_FIXED + FIXED_COUNT))
-        log_info "Fixed $FIXED_COUNT CalendarItem records"
+        log_info "Fixed $FIXED_COUNT CalendarItem records and updated timestamps"
     else
         log_error "Failed to fix CalendarItem records"
     fi
@@ -60,8 +64,11 @@ fi
 
 # Fix 2: Participant status for the user (this is what causes grayed out UI)
 if [[ "$PENDING_PARTICIPANTS" -gt 0 ]]; then
-    # Get list of events that will be fixed
+    # Get list of events that will be fixed and their IDs
     EVENTS_TO_FIX=$(sqlite3 "$CALENDAR_DB" "SELECT DISTINCT ci.summary, datetime(ci.start_date+978307200,'unixepoch','localtime') FROM CalendarItem ci JOIN Participant p ON ci.ROWID=p.owner_id WHERE p.email='$USER_EMAIL' AND p.status=0 AND ci.start_date > strftime('%s','now','-30 days')-978307200 ORDER BY ci.start_date DESC LIMIT 20;" 2>/dev/null)
+    
+    # Get Cocoa timestamp for last_modified update
+    CURRENT_COCOA_TIME=$(echo "$(date '+%s') - 978307200" | bc)
     
     sqlite3 "$CALENDAR_DB" <<EOF 2>/dev/null
 BEGIN;
@@ -76,6 +83,23 @@ EOF
         FIXED_PARTICIPANTS=$((PENDING_PARTICIPANTS - AFTER_PENDING))
         TOTAL_FIXED=$((TOTAL_FIXED + FIXED_PARTICIPANTS))
         log_info "Fixed $FIXED_PARTICIPANTS Participant records for $USER_EMAIL"
+        
+        # Update last_modified on affected CalendarItems to force UI refresh
+        sqlite3 "$CALENDAR_DB" <<EOF 2>/dev/null
+BEGIN;
+UPDATE CalendarItem 
+SET last_modified = $CURRENT_COCOA_TIME 
+WHERE ROWID IN (
+    SELECT DISTINCT owner_id 
+    FROM Participant 
+    WHERE email='$USER_EMAIL' AND status=1
+) AND last_modified < $CURRENT_COCOA_TIME - 3600;
+COMMIT;
+EOF
+        
+        if [[ $? -eq 0 ]]; then
+            log_info "Updated last_modified timestamps to force UI refresh"
+        fi
         
         # Log the specific events fixed
         if [[ -n "$EVENTS_TO_FIX" ]]; then
