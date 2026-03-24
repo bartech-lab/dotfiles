@@ -20,6 +20,7 @@ optimize-images [path] [--lossless]
 - Transparent PNGs → JPEG (better compression)
 - Non-transparent PNGs → optimized PNG
 - JPEGs → mozjpeg optimized
+- Output in same directory with smart `-opt` suffixing (no `optimized/` folder)
 
 **Lossless mode:**
 - PNGs → oxipng optimized (preserves transparency)
@@ -34,21 +35,21 @@ optimize-images ./assets --lossless  # Lossless PNG optimization
 ```
 
 **Requirements:**
-- `parallel` - Parallel processing
 - `mozjpeg` (provides `cjpeg`) - JPEG optimization
 - `oxipng` - PNG optimization
 - `pngquant` - PNG quantization
 - `ffmpeg` - Image conversion
 
 **Performance:**
-- Uses all CPU cores via GNU parallel
-- Processes multiple images simultaneously
-- Shows progress bar
+- Processes multiple images simultaneously (4 workers)
+- Uses parallel workers for JPEG and PNG batches
 
 **File naming:**
-- Original files are overwritten
-- Creates backups in `optimized/` directory
-- Final files keep original names
+- Original files are preserved (never overwritten)
+- JPEG/JPG sources → `name-opt.jpg` / `name-opt.jpeg`
+- PNG sources in lossless mode → `name-opt.png`
+- Transparent PNGs in default mode → `name.jpg` when available, otherwise `name-opt.jpg`
+- Existing targets auto-increment (`name-opt2.jpg`, `name-opt3.jpg`, ...)
 
 ## video-remux
 
@@ -80,14 +81,14 @@ video-remux [path] [--subdir]
 
 **File naming:**
 - Source files with non-MP4 extension → same basename with `.mp4`
-- Source files with `.mp4` extension → basename with `_remuxed.mp4` suffix
+- Source files with `.mp4` extension → basename with `-remuxed.mp4` suffix
 
 **Examples:**
 ```bash
 video-remux                   # Remux all videos in current dir
 video-remux ./recordings      # Remux specific directory
 video-remux video.mov         # Remux single file (outputs video.mp4)
-video-remux clip.mp4          # Remux MP4 (outputs clip_remuxed.mp4)
+video-remux clip.mp4          # Remux MP4 (outputs clip-remuxed.mp4)
 video-remux --subdir          # Use mp4/ subdirectory
 ```
 
@@ -119,14 +120,14 @@ video-encode-cpu [path] [--subdir]
 
 **File naming:**
 - Source files with non-MP4 extension → same basename with `.mp4`
-- Source files with `.mp4` extension → basename with `_h265.mp4` suffix
+- Source files with `.mp4` extension → basename with `-h265.mp4` suffix
 
 **Examples:**
 ```bash
 video-encode-cpu              # Encode all videos in current dir
 video-encode-cpu ./videos     # Encode specific directory
 video-encode-cpu input.mov    # Encode single file (outputs input.mp4)
-video-encode-cpu clip.mp4     # Encode MP4 (outputs clip_h265.mp4)
+video-encode-cpu clip.mp4     # Encode MP4 (outputs clip-h265.mp4)
 video-encode-cpu --subdir     # Use encoded/ subdirectory
 ```
 
@@ -158,14 +159,14 @@ video-encode-gpu [path] [--subdir]
 
 **File naming:**
 - Source files with non-MP4 extension → same basename with `.mp4`
-- Source files with `.mp4` extension → basename with `_h265.mp4` suffix
+- Source files with `.mp4` extension → basename with `-h265.mp4` suffix
 
 **Examples:**
 ```bash
 video-encode-gpu              # Encode all videos in current dir
 video-encode-gpu ./recordings # Encode specific directory
 video-encode-gpu screencast.mov  # Encode single file (outputs screencast.mp4)
-video-encode-gpu clip.mp4     # Encode MP4 (outputs clip_h265.mp4)
+video-encode-gpu clip.mp4     # Encode MP4 (outputs clip-h265.mp4)
 video-encode-gpu --subdir     # Use encoded/ subdirectory
 ```
 
@@ -239,11 +240,11 @@ video-encode-cpu video1.mov video2.mov video3.mov
 
 | Function | Default Output | With `--subdir` flag |
 |----------|----------------|---------------------|
-| `optimize-images` | `optimized/` | N/A |
+| `optimize-images` | Same directory* | N/A |
 | `video-remux` | Same directory* | `mp4/` |
 | `video-encode-*` | Same directory* | `encoded/` |
 
-\* Smart naming: files with non-MP4 source extensions use same basename; MP4 sources get suffix (`_remuxed` or `_h265`)
+\* Smart naming: media outputs stay in-place and avoid overwrites with suffixes (`-opt`, `-remuxed`, `-h265`, with numeric fallback when needed)
 
 ## Troubleshooting
 
@@ -272,12 +273,12 @@ path=(
 brew bundle --file=~/dotfiles/Brewfile
 
 # Or manually:
-brew install ffmpeg parallel mozjpeg oxipng pngquant
+brew install ffmpeg mozjpeg oxipng pngquant
 ```
 
 ### Slow performance
 
-- `optimize-images` uses all CPU cores by default
+- `optimize-images` runs 4 workers by default
 - For very large batches, consider splitting into chunks
 - GPU encoding is much faster for video
 
@@ -288,7 +289,6 @@ All tools are installed via Brewfile:
 ```ruby
 # Media processing
 brew "ffmpeg"       # Video/image processing
-brew "parallel"     # Parallel processing
 brew "mozjpeg"      # JPEG optimization
 
 # Image optimization tools

@@ -2,7 +2,9 @@
 # optimize-images, video-remux, video-encode-cpu, video-encode-gpu
 
 optimize-images() {
-  local SOURCE_DIR="."
+  local SOURCE_PATH="."
+  local INPUT_DIR=""
+  local SINGLE_FILE=""
   local LOSSLESS=0
   
   # Parse arguments
@@ -13,23 +15,60 @@ optimize-images() {
         shift
         ;;
       *)
-        SOURCE_DIR="$1"
+        SOURCE_PATH="$1"
         shift
         ;;
     esac
   done
   
-  if [[ ! -d "$SOURCE_DIR" ]]; then
-    echo "❌ Error: Directory '$SOURCE_DIR' not found"
+  if [[ -d "$SOURCE_PATH" ]]; then
+    INPUT_DIR="$SOURCE_PATH"
+  elif [[ -f "$SOURCE_PATH" ]]; then
+    INPUT_DIR="${SOURCE_PATH:h}"
+    SINGLE_FILE="${SOURCE_PATH:t}"
+  else
+    echo "❌ Error: Path '$SOURCE_PATH' not found"
     return 1
   fi
   
-  cd "$SOURCE_DIR" || return 1
-  mkdir -p optimized
+  cd "$INPUT_DIR" || return 1
+
+  local ERROR_LOG="./optimize_images_errors.log"
+  rm -f "$ERROR_LOG"
+
+  local jpeg_files=()
+  local png_files=()
+
+  if [[ -n "$SINGLE_FILE" ]]; then
+    local single_ext="${SINGLE_FILE##*.}"
+    single_ext="${single_ext:l}"
+
+    case "$single_ext" in
+      jpg|jpeg)
+        jpeg_files+=("./$SINGLE_FILE")
+        ;;
+      png)
+        png_files+=("./$SINGLE_FILE")
+        ;;
+      *)
+        echo "❌ Unsupported file type: $SINGLE_FILE"
+        echo "Supported: .jpg, .jpeg, .png"
+        return 1
+        ;;
+    esac
+  else
+    while IFS= read -r -d '' file; do
+      jpeg_files+=("$file")
+    done < <(find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" \) -print0)
+
+    while IFS= read -r -d '' file; do
+      png_files+=("$file")
+    done < <(find . -maxdepth 1 -type f -iname "*.png" -print0)
+  fi
   
   # Count files to process
-  local jpeg_count=$(find . -maxdepth 1 \( -iname "*.jpg" -o -iname "*.jpeg" \) | wc -l)
-  local png_count=$(find . -maxdepth 1 -iname "*.png" | wc -l)
+  local jpeg_count=${#jpeg_files[@]}
+  local png_count=${#png_files[@]}
   local total_count=$((jpeg_count + png_count))
   
   if [[ $total_count -eq 0 ]]; then
@@ -43,31 +82,113 @@ optimize-images() {
   
   # Process JPEG files in parallel
   if [[ $jpeg_count -gt 0 ]]; then
-    find . -maxdepth 1 \( -iname "*.jpg" -o -iname "*.jpeg" \) -print0 | \
-      sed 's|^\./||' | \
-      xargs -0 -P 4 -I{} sh -c 'cjpeg -quality 92 -optimize -progressive "$1" > "optimized/$1" 2>/dev/null' _ {}
+    printf '%s\0' "${jpeg_files[@]}" | xargs -0 -P 4 -I{} sh -c '
+      file="$1"
+      base=$(basename "$file")
+      name="${base%.*}"
+      ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
+      prefix="${name}-opt"
+      out="${prefix}.${ext}"
+      n=2
+
+      while [[ -e "$out" ]]; do
+        out="${prefix}${n}.${ext}"
+        n=$((n + 1))
+      done
+
+      tmp=".optimize_tmp_${$}_${RANDOM}_${name}.jpg"
+
+      if cjpeg -quality 92 -optimize -progressive "$file" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$out"
+        touch -r "$file" "$out"
+      else
+        rm -f "$tmp" 2>/dev/null
+        echo "FAILED: $base" >> "'$ERROR_LOG'"
+      fi
+    ' _ {}
   fi
   
   # Process PNG files in parallel
   if [[ $png_count -gt 0 ]]; then
     if [[ $LOSSLESS -eq 1 ]]; then
-      find . -maxdepth 1 -iname "*.png" -print0 | \
-        sed 's|^\./||' | \
-        xargs -0 -P 4 -I{} sh -c 'oxipng -q -o 4 --strip safe -i 0 --out "optimized/$1" "$1" 2>/dev/null' _ {}
+      printf '%s\0' "${png_files[@]}" | xargs -0 -P 4 -I{} sh -c '
+        file="$1"
+        base=$(basename "$file")
+        name="${base%.*}"
+        prefix="${name}-opt"
+        out="${prefix}.png"
+        n=2
+
+        while [[ -e "$out" ]]; do
+          out="${prefix}${n}.png"
+          n=$((n + 1))
+        done
+
+        tmp=".optimize_tmp_${$}_${RANDOM}_${name}.png"
+
+        if oxipng -q -o 4 --strip safe -i 0 --out "$tmp" "$file" 2>/dev/null; then
+          mv "$tmp" "$out"
+          touch -r "$file" "$out"
+        else
+          rm -f "$tmp" 2>/dev/null
+          echo "FAILED: $base" >> "'$ERROR_LOG'"
+        fi
+      ' _ {}
     else
-      find . -maxdepth 1 -iname "*.png" -print0 | \
-        sed 's|^\./||' | \
-        xargs -0 -P 4 -I{} sh -c '
-          if file "$1" 2>/dev/null | grep -q "RGBA\|alpha"; then
-            name=$(basename "$1" .png)
-            ffmpeg -hide_banner -loglevel error -i "$1" -q:v 2 "optimized/${name}.jpg" 2>/dev/null
-          else
-            pngquant --quality=80-90 --speed 1 --output "tmp_$1" -- "$1" 2>/dev/null
-            if [[ -f "tmp_$1" ]]; then
-              oxipng -q -o 4 --strip safe -i 0 --out "optimized/$1" "tmp_$1" 2>/dev/null
-              rm "tmp_$1" 2>/dev/null
+      printf '%s\0' "${png_files[@]}" | xargs -0 -P 4 -I{} sh -c '
+          file="$1"
+          base=$(basename "$file")
+          name="${base%.*}"
+          tmp_jpg=".optimize_tmp_${$}_${RANDOM}_${name}.jpg"
+          tmp_png=".optimize_tmp_${$}_${RANDOM}_${name}.png"
+
+          if file "$file" 2>/dev/null | grep -q "RGBA\|alpha"; then
+            out="${name}.jpg"
+            if [[ -e "$out" ]]; then
+              out="${name}-opt.jpg"
+              n=2
+              while [[ -e "$out" ]]; do
+                out="${name}-opt${n}.jpg"
+                n=$((n + 1))
+              done
+            fi
+
+            if ffmpeg -hide_banner -loglevel error -i "$file" -q:v 2 "$tmp_jpg" 2>/dev/null; then
+              mv "$tmp_jpg" "$out"
+              touch -r "$file" "$out"
             else
-              oxipng -q -o 4 --strip safe -i 0 --out "optimized/$1" "$1" 2>/dev/null
+              rm -f "$tmp_jpg" 2>/dev/null
+              echo "FAILED: $base" >> "'$ERROR_LOG'"
+            fi
+          else
+            prefix="${name}-opt"
+            out="${prefix}.png"
+            n=2
+
+            while [[ -e "$out" ]]; do
+              out="${prefix}${n}.png"
+              n=$((n + 1))
+            done
+
+            tmp_quant=".optimize_quant_tmp_${$}_${RANDOM}_${base}"
+            pngquant --quality=80-90 --speed 1 --output "$tmp_quant" -- "$file" 2>/dev/null
+
+            if [[ -f "$tmp_quant" ]]; then
+              if oxipng -q -o 4 --strip safe -i 0 --out "$tmp_png" "$tmp_quant" 2>/dev/null; then
+                mv "$tmp_png" "$out"
+                touch -r "$file" "$out"
+              else
+                echo "FAILED: $base" >> "'$ERROR_LOG'"
+              fi
+              rm -f "$tmp_quant" "$tmp_png" 2>/dev/null
+            else
+              if oxipng -q -o 4 --strip safe -i 0 --out "$tmp_png" "$file" 2>/dev/null; then
+                mv "$tmp_png" "$out"
+                touch -r "$file" "$out"
+              else
+                rm -f "$tmp_png" 2>/dev/null
+                echo "FAILED: $base" >> "'$ERROR_LOG'"
+              fi
             fi
           fi
         ' _ {}
@@ -92,7 +213,14 @@ optimize-images() {
     echo ""
   fi
   
-  echo "✅ Done! Optimized $total_count files in: $(pwd)/optimized/"
+  if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
+    local error_count=$(wc -l < "$ERROR_LOG")
+    echo "⚠️  $error_count file(s) had issues:"
+    cat "$ERROR_LOG"
+    echo ""
+  fi
+
+  echo "✅ Done! Optimized $total_count files in current directory"
 }
 
 video-remux() {
@@ -185,7 +313,7 @@ video-remux() {
     if [[ "'$USE_SUBDIR'" == "1" ]]; then
       out="'${OUTDIR}'/${name}.mp4"
     elif [[ "$ext" == "mp4" ]]; then
-      out="${name}_remuxed.mp4"
+      out="${name}-remuxed.mp4"
     else
       out="${name}.mp4"
     fi
@@ -316,7 +444,7 @@ video-encode-cpu() {
     if [[ "'$USE_SUBDIR'" == "1" ]]; then
       out="'${OUTDIR}'/${name}.mp4"
     elif [[ "$ext" == "mp4" ]]; then
-      out="${name}_h265.mp4"
+      out="${name}-h265.mp4"
     else
       out="${name}.mp4"
     fi
@@ -414,7 +542,7 @@ video-encode-gpu() {
     if [[ "'"$USE_SUBDIR"'" == "1" ]]; then
       out="'"$OUTDIR"'/${name}.mp4"
     elif [[ "$ext" == "mp4" ]]; then
-      out="${name}_h265.mp4"
+      out="${name}-h265.mp4"
     else
       out="${name}.mp4"
     fi
