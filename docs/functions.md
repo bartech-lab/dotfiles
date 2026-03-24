@@ -264,12 +264,12 @@ brewup                # Update, upgrade, cleanup
 
 ## OpenCode Functions
 
-### opencode
+### oco
 
 Launch OpenCode with default profile.
 
 ```bash
-ocode                 # Start OpenCode
+oco                   # Start OpenCode
 ```
 
 ### omo
