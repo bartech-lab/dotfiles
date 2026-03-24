@@ -87,7 +87,7 @@ dotfiles-doctor
 
 ### OpenCode Profiles
 
-- `ocode` - Clean OpenCode (vanilla)
+- `oco` - Clean OpenCode (vanilla)
 - `omo` - Oh-My-OpenCode with Sisyphus agent
 - `ecc` - Everything Claude Code (full ECC workflow with auto-update)
 - `ocp` - List all OpenCode profiles
