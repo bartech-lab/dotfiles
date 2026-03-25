@@ -522,6 +522,14 @@ z foo bar  # Jump to directory matching "foo" and "bar"
 
 ## Environment Diagnostics
 
+### calfix
+
+Repairs macOS Calendar ghost invite state and refreshes Calendar/Dock UI cache.
+
+```bash
+calfix
+```
+
 ### dotfiles-doctor
 
 Comprehensive health check for your dotfiles environment.
