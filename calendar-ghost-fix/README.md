@@ -13,7 +13,7 @@ This happens because Google CalDAV sync reports incorrect RSVP state for some ev
 
 ## Solution
 
-This fix monitors your Calendar database every hour and automatically resets ghost invites back to accepted state. It's a workaround for the underlying Google CalDAV sync issue.
+This fix monitors your Calendar database every hour and automatically resets ghost invites back to accepted state. It also includes retry and locking logic so runs are reliable even while Calendar is syncing.
 
 ## Setup
 
@@ -29,10 +29,10 @@ This will:
 
 ## How It Works
 
-Every hour, the script:
+On each run, the script:
 1. Checks Calendar database for events with `invitation_status=3` (needs response)
 2. Resets them to `invitation_status=0` (accepted)
-3. Fixes the self-attendee status to show as accepted
+3. Fixes the self-attendee `status` and `pending_status` to accepted
 4. Logs all activity
 
 ## Logs
