@@ -22,6 +22,15 @@ log_error() {
     echo "$(timestamp): $1" >> "$ERROR_LOG"
 }
 
+refresh_calendar_ui() {
+    if pgrep -x Calendar >/dev/null 2>&1; then
+        osascript -e 'tell application "Calendar" to quit' >/dev/null 2>&1 || true
+        sleep 2
+        open -a Calendar >/dev/null 2>&1 || true
+        log_info "Refreshed Calendar UI"
+    fi
+}
+
 if [[ ! -f "$CALENDAR_DB" ]]; then
     log_error "Calendar database not found at $CALENDAR_DB"
     exit 1
@@ -121,6 +130,7 @@ if [[ "$TOTAL_FIXED" -eq 0 ]]; then
     log_info "No ghost invites found"
 else
     log_info "Total fixed: $TOTAL_FIXED records"
+    refresh_calendar_ui
 fi
 
 log_info "Run completed"

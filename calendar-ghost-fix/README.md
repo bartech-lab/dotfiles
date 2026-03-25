@@ -33,7 +33,8 @@ On each run, the script:
 1. Checks Calendar database for events with `invitation_status=3` (needs response)
 2. Resets them to `invitation_status=0` (accepted)
 3. Fixes the self-attendee `status` and `pending_status` to accepted
-4. Logs all activity
+4. Refreshes the Calendar app UI if changes were made
+5. Logs all activity
 
 ## Logs
 
@@ -79,6 +80,7 @@ This will:
 - **Database**: `~/Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb`
 - **Process type**: Background (low resource usage)
 - **Safe**: Only modifies local database, doesn't touch Google Calendar
+- **UI refresh**: Relaunches Calendar only when it actually repairs rows
 
 ## When to Use
 
