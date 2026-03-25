@@ -524,10 +524,12 @@ z foo bar  # Jump to directory matching "foo" and "bar"
 
 ### calfix
 
-Repairs macOS Calendar ghost invite state and refreshes Calendar/Dock UI cache.
+Repairs macOS Calendar ghost invite state and restarts Calendar in the background.
 
 ```bash
 calfix
+# optional: also reset Dock badge cache
+calfix --reset-dock
 ```
 
 ### dotfiles-doctor

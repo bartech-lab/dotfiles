@@ -844,5 +844,5 @@ dotfiles-doctor() {
 
 # Manually repair macOS Calendar ghost invite state
 calfix() {
-    "$HOME/dotfiles/calendar-ghost-fix/run-now.sh"
+    "$HOME/dotfiles/calendar-ghost-fix/run-now.sh" "$@"
 }
