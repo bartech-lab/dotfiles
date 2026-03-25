@@ -4,6 +4,35 @@ set -euo pipefail
 
 CALENDAR_DB="${HOME}/Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb"
 USER_EMAIL="b.kowalski@tidio.net"
+RESET_DOCK=false
+
+usage() {
+    cat <<'EOF'
+Usage: run-now.sh [--reset-dock]
+
+Options:
+  --reset-dock  Restart Dock after repair to refresh badge cache.
+  -h, --help    Show this help message.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --reset-dock)
+            RESET_DOCK=true
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
 
 if [[ ! -f "$CALENDAR_DB" ]]; then
     echo "Calendar database not found: $CALENDAR_DB"
@@ -86,8 +115,12 @@ for _ in 1 2 3 4 5; do
     sleep 1
 done
 
-open -a Calendar >/dev/null 2>&1 || true
+open -gj -a Calendar >/dev/null 2>&1 || true
 sleep 5
-killall Dock >/dev/null 2>&1 || true
 
-echo "UI refresh: Calendar restarted, Dock badge cache reset"
+if [[ "$RESET_DOCK" == true ]]; then
+    killall Dock >/dev/null 2>&1 || true
+    echo "UI refresh: Calendar restarted in background, Dock badge cache reset"
+else
+    echo "UI refresh: Calendar restarted in background (Dock not reset)"
+fi
