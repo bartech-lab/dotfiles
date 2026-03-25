@@ -134,12 +134,9 @@ See [LaunchAgent Heartbeat README](launchd-heartbeat/README.md) for setup detail
 
 ### Calendar Ghost Invite Fix
 
-Automatic fix for recurring ghost RSVP invites in macOS Calendar that keep reappearing even after accepting them in Google Calendar.
+Manual one-command fix for recurring ghost RSVP invites in macOS Calendar.
 
-- `calendar-ghost-fix/setup.sh` - One-time setup
-- Runs every hour
-- Automatically resets ghost invites to accepted state
-- Logs all fixes to `fix.log`
+- `calendar-ghost-fix/run-now.sh` - Runs the repair immediately
 
 See [Calendar Ghost Fix README](calendar-ghost-fix/README.md) for setup details.
 
