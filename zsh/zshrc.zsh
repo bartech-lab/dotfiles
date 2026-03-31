@@ -11,7 +11,7 @@ fi
 # ====== Performance Critical Section ======
 {
   # ====== Zsh Options ======
-  setopt INC_APPEND_HISTORY EXTENDED_HISTORY HIST_IGNORE_SPACE
+  setopt INC_APPEND_HISTORY EXTENDED_HISTORY HIST_IGNORE_SPACE NONOMATCH
   unsetopt SHARE_HISTORY
   ZSH_DISABLE_COMPFIX=true
 
