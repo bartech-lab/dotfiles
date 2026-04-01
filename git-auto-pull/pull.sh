@@ -40,29 +40,50 @@ while IFS=':' read -r repo_path branch_name; do
         continue
     fi
     
-    # Change to repo and pull
+    # Change to repo and update configured branch
     (
         cd "$repo_path" || exit
+
+        current_branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
         
         if ! fetch_output=$(git fetch --quiet origin "$branch_name" 2>&1); then
             echo "$(timestamp): Fetch failed for $repo_path ($branch_name): $fetch_output" >> "$ERROR_LOG"
             exit
         fi
-        
-        # Check if we're behind
-        LOCAL=$(git rev-parse "$branch_name" 2>/dev/null)
-        REMOTE=$(git rev-parse "origin/$branch_name" 2>/dev/null)
 
-        if [[ -z "$LOCAL" || -z "$REMOTE" ]]; then
-            echo "$(timestamp): Unable to resolve refs for $repo_path ($branch_name)" >> "$ERROR_LOG"
+        LOCAL=$(git rev-parse "refs/heads/$branch_name" 2>/dev/null || true)
+        REMOTE=$(git rev-parse "refs/remotes/origin/$branch_name" 2>/dev/null || true)
+
+        if [[ -z "$REMOTE" ]]; then
+            echo "$(timestamp): Unable to resolve remote ref for $repo_path ($branch_name)" >> "$ERROR_LOG"
+            exit
+        fi
+
+        # Create missing local branch from fetched remote ref.
+        if [[ -z "$LOCAL" ]]; then
+            if git update-ref "refs/heads/$branch_name" "$REMOTE" 2>/dev/null; then
+                echo "$(timestamp): Created local branch $branch_name for $repo_path" >> "$LOG_FILE"
+            else
+                echo "$(timestamp): Failed to create local branch $branch_name for $repo_path" >> "$ERROR_LOG"
+            fi
             exit
         fi
         
         if [[ "$LOCAL" != "$REMOTE" ]]; then
-            if pull_output=$(git pull --ff-only --quiet origin "$branch_name" 2>&1); then
-                echo "$(timestamp): Updated $repo_path ($branch_name)" >> "$LOG_FILE"
+            if git merge-base --is-ancestor "$LOCAL" "$REMOTE"; then
+                if [[ "$current_branch" == "$branch_name" ]]; then
+                    if pull_output=$(git merge --ff-only --quiet "origin/$branch_name" 2>&1); then
+                        echo "$(timestamp): Updated $repo_path ($branch_name)" >> "$LOG_FILE"
+                    else
+                        echo "$(timestamp): Fast-forward failed for checked out branch in $repo_path ($branch_name): $pull_output" >> "$ERROR_LOG"
+                    fi
+                elif git update-ref "refs/heads/$branch_name" "$REMOTE" "$LOCAL" 2>/dev/null; then
+                    echo "$(timestamp): Updated $repo_path ($branch_name)" >> "$LOG_FILE"
+                else
+                    echo "$(timestamp): Failed to update branch ref for $repo_path ($branch_name)" >> "$ERROR_LOG"
+                fi
             else
-                echo "$(timestamp): Pull failed for $repo_path ($branch_name): $pull_output" >> "$ERROR_LOG"
+                echo "$(timestamp): Skipped diverged branch for $repo_path ($branch_name)" >> "$ERROR_LOG"
             fi
         fi
     ) &

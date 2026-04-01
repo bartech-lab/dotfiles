@@ -4,7 +4,7 @@ Automatically pull updates from git repositories every hour on macOS.
 
 ## Overview
 
-This setup creates a LaunchAgent that runs a shell script periodically to fetch and pull updates from configured git repositories. It runs silently in the background with minimal resource usage.
+This setup creates a LaunchAgent that runs a shell script periodically to fetch and fast-forward configured branches in git repositories. It runs silently in the background with minimal resource usage.
 
 ## Components
 
@@ -93,9 +93,10 @@ launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
 
 1. **LaunchAgent** (macOS service scheduler) triggers the script every hour
 2. **pull.sh** reads `repos.conf` and for each repo:
-   - Fetches the remote branch quietly
-   - Compares local vs remote commits
-   - Pulls only if there are new commits
+   - Fetches the configured remote branch quietly
+   - Compares local branch ref vs remote branch ref
+   - Fast-forwards only the configured branch (never auto-merges/rebases)
+   - Keeps your currently checked out branch unchanged unless it matches the configured branch
    - Logs updates to `pull.log`
 3. All repos are processed in parallel (background jobs)
 4. No output if nothing changed (silent operation)
@@ -107,6 +108,7 @@ launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
 - Very low resource usage (~0.1% CPU for 1-2 seconds per repo)
 - Runs as background process (won't interrupt your work)
 - Only works when you're online (fails silently if no internet)
+- Diverged branches are skipped and logged in `error.log` (no automatic merge)
 
 ## Uninstallation
 
