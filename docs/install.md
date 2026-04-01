@@ -108,7 +108,7 @@ bash setup.sh
 ```
 
 This sets up a background service that:
-- Pulls updates from configured repos every hour
+- Fast-forwards configured branches in repos every hour
 - Logs updates to `pull.log` and failures to `error.log`
 - Supports different main branches per repo
 - Is machine-specific (configure once per machine)

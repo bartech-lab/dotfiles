@@ -434,7 +434,8 @@ Format: one repo per line as `path:branch`
 - **Interval:** 1 hour (3600 seconds)
 - **Logging:** Updates to `pull.log` and failures to `error.log`
 - **Parallel processing:** All repos checked simultaneously
-- **Smart pulling:** Only fetches when local is behind remote
+- **Branch-safe updates:** Only fast-forwards the configured branch per repo
+- **Divergence handling:** Diverged branches are skipped and logged (no auto-merge)
 - **Logs:** `~/.config/git-auto-pull/pull.log` and `~/.config/git-auto-pull/error.log`
 
 ### Testing
