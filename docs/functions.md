@@ -266,26 +266,18 @@ brewup                # Update, upgrade, cleanup
 
 ### oco
 
-Launch OpenCode with default profile.
+Launch OpenCode.
 
 ```bash
 oco                   # Start OpenCode
 ```
 
-### omo
+### ocfix
 
-Launch Oh-My-OpenCode profile.
-
-```bash
-omo                   # Oh-My-OpenCode
-```
-
-### ocp
-
-List all available OpenCode profiles.
+Clean orphaned opencode processes.
 
 ```bash
-ocp                   # List profiles
+ocfix                 # Kill orphaned opencode processes
 ```
 
 ### ocx-profile

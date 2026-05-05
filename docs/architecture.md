@@ -39,7 +39,7 @@ dotfiles/
 │       ├── 50-media.zsh      # Media processing
 │       ├── 60-macos.zsh      # macOS system functions
 │       ├── 61-discord.zsh    # Discord OpenAsar helpers
-│       └── 70-opencode.zsh   # OpenCode helpers
+│       └── 70-opencode.zsh   # OpenCode helpers (launch + cleanup)
 ├── install.sh                # One-command installer
 ├── Brewfile                  # Homebrew dependencies
 └── README.md                 # Project entry point
