@@ -17,7 +17,7 @@
   </dict>
 
   <key>StartInterval</key>
-  <integer>86400</integer>
+  <integer>3600</integer>
 
   <key>WatchPaths</key>
   <array>
