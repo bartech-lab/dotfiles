@@ -85,12 +85,9 @@ dotfiles-doctor
 - `video-remux [path] [--subdir]` - Lossless container conversion
 - `video-encode-cpu/gpu [path] [--subdir]` - H.265 encoding
 
-### OpenCode Profiles
+### OpenCode
 
-- `oco` - Clean OpenCode (vanilla)
-- `omo` - Oh-My-OpenCode with Sisyphus agent
-- `ecc` - Everything Claude Code (full ECC workflow with auto-update)
-- `ocp` - List all OpenCode profiles
+- `oco` - Launch OpenCode
 - `ocfix` - Clean orphaned opencode processes
 
 ### Development Utilities
