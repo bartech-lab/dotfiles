@@ -1,45 +1,77 @@
-# Discord OpenAsar (Manual Setup)
+# Discord OpenAsar (Manual)
 
-This is an opt-in setup for keeping OpenAsar persistent across Discord updates on macOS.
+Opt-in manual OpenAsar application for Discord on macOS. No automation — you run it when you want it.
 
-It is intentionally **not** part of `install.sh`.
+Intentionally **not** part of `install.sh`.
 
-## What it installs
+## What it is
 
-- LaunchAgent: `~/Library/LaunchAgents/dev.openasar.reapply.plist`
-- Reapply script: `~/dotfiles/discord/openasar/reapply-openasar.sh`
-- Theme CSS source: `~/dotfiles/discord/openasar/aggressive-minimal.css`
-- OpenAsar binary cache: `~/Library/OpenAsarPersist/openasar.app.asar`
-- Backup of stock asar: `~/Library/OpenAsarPersist/discord-stock.app.asar.backup`
+- **`apply-openasar.sh`** — Downloads latest OpenAsar nightly, backs up current stock asar, applies OpenAsar + theme CSS, runs a 6-second smoke test, and auto-recovers if Discord crashes.
+- **`recover-discord.sh`** — Restores stock Discord from a timestamped backup, removes OpenAsar config, nukes modules to trigger fresh downloads.
+- **`aggressive-minimal.css`** — Compact sidebar/guildbar, hidden nitro/shop noise, tighter message spacing.
 
-## Setup
-
-```bash
-~/dotfiles/scripts/bin/setup-discord-openasar
-```
-
-Optional flags:
-
-```bash
-# Re-download latest OpenAsar nightly
-~/dotfiles/scripts/bin/setup-discord-openasar --refresh-openasar
-
-# Use Discord PTB or Canary app path
-~/dotfiles/scripts/bin/setup-discord-openasar --app "/Applications/Discord PTB.app"
-
-# Skip syncing custom CSS into OpenAsar settings.json
-~/dotfiles/scripts/bin/setup-discord-openasar --no-theme
-```
+No launchd agent. No automatic reapply. No WatchPaths. You control when OpenAsar gets applied.
 
 ## Commands
 
-- Run setup via shell function: `discord-openasar-setup`
-- Check LaunchAgent status: `discord-openasar-status`
+```bash
+discord-openasar-apply           # apply OpenAsar with smoke test
+discord-openasar-apply --force   # skip version mismatch warning
+discord-openasar-apply --yes     # skip confirmation prompts
+discord-openasar-apply --skip-smoke  # skip smoke test (not recommended)
 
-## Notes
+discord-openasar-recover         # restore latest backup
+discord-openasar-recover --launch  # restore + launch Discord
 
-- This flow repatches `app.asar` after updates; it does not modify your dotfiles installer.
-- OpenAsar custom CSS is synced into the channel-specific Discord settings file when available.
-- If Discord is in a different location, pass `--app`.
-- LaunchAgent is update-driven via `WatchPaths` with a 24h fallback interval (`StartInterval=86400`).
-- `RunAtLoad` is intentionally disabled.
+discord-openasar-status          # show current state
+```
+
+## Workflow
+
+### Apply OpenAsar
+
+```bash
+discord-openasar-apply
+```
+
+The script will:
+1. Compare Discord version date with OpenAsar nightly build date
+2. Warn if Discord is newer (use `--force` to proceed anyway)
+3. Download latest nightly
+4. Back up current stock asar to `~/Library/OpenAsarPersist/backups/`
+5. Apply OpenAsar + theme CSS + settings
+6. Launch Discord for 6 seconds as a smoke test
+7. If Discord crashes, automatically restore the backup, nuke modules, and launch stock Discord
+
+### Recover from a broken state
+
+```bash
+discord-openasar-recover --launch
+```
+
+Picks the latest backup, restores it, removes OpenAsar config, and launches Discord to re-download modules.
+
+### After a Discord update
+
+Discord updates itself (via the new updater) and overwrites `app.asar`. After updating, re-run:
+
+```bash
+discord-openasar-apply
+```
+
+If the new Discord version broke OpenAsar nightly, the smoke test catches it and auto-recovers.
+
+## Files
+
+| Path | Purpose |
+|------|---------|
+| `~/dotfiles/discord/openasar/apply-openasar.sh` | Apply script |
+| `~/dotfiles/discord/openasar/recover-discord.sh` | Recovery script |
+| `~/dotfiles/discord/openasar/aggressive-minimal.css` | Theme CSS |
+| `~/dotfiles/zsh/functions/61-discord.zsh` | Shell wrappers |
+| `~/Library/OpenAsarPersist/` | Cached nightly + backups |
+| `~/Library/Logs/OpenAsarPersist/` | Smoke test logs |
+
+## Theme
+
+The CSS applies a compact layout and hides annoying elements (nitro shop, gift/sticker/gif buttons, activity panel, profile effects). Edit `aggressive-minimal.css` to tweak.
