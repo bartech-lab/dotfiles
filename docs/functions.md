@@ -344,6 +344,18 @@ Pre-archive sanity checker (see [dev.md](dev.md)).
 repo-check              # Check for issues before archiving
 ```
 
+## Download Utilities
+
+### ytdl
+
+yt-dlp with 16 concurrent fragment downloads.
+
+```bash
+ytdl <url> [extra yt-dlp args...]
+```
+
+Defaults: `-N 16`, `--fragment-retries infinite`, `--http-chunk-size 10M`, `-4`. Best for HLS/DASH streams (Twitch, livestreams).
+
 ## Discord Utilities
 
 ### discord-openasar-setup
@@ -445,6 +457,7 @@ See [dev.md](dev.md) for full documentation.
 | Git | `30-git.zsh` | Git helpers |
 | Dev | `40-dev.zsh` | Development utilities |
 | Media | `50-media.zsh` | Image/video processing |
+| Download | `51-download.zsh` | yt-dlp video downloading |
 | macOS | `60-macos.zsh` | System functions |
 | Discord | `61-discord.zsh` | OpenAsar setup/status helpers |
 | OpenCode | `70-opencode.zsh` | OpenCode helpers |

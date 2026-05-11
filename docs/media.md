@@ -175,6 +175,27 @@ video-encode-gpu --subdir     # Use encoded/ subdirectory
 - With `--subdir`: creates `encoded/` directory
 - H.265 codec, hardware accelerated
 
+## ytdl
+
+yt-dlp with concurrent fragment downloads for faster HLS/DASH streaming.
+
+```bash
+ytdl <url> [extra yt-dlp args...]
+```
+
+**What it does:**
+- Downloads 16 fragments in parallel (`-N 16`)
+- Retries failed fragments indefinitely
+- Uses 10MB HTTP chunk size to bypass CDN throttling
+- Forces IPv4 for connection stability
+- Best for: Twitch VODs, HLS livestream archives, DASH streams
+
+**Example:**
+```bash
+ytdl https://www.twitch.tv/videos/2769023499
+ytdl -f "bestvideo+bestaudio" https://www.youtube.com/watch?v=...
+```
+
 ## video-to-gif
 
 Convert videos to optimized animated GIF with hardware acceleration and duplicate frame removal.

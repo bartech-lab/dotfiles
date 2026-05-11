@@ -60,6 +60,7 @@ brew "gnu-tar"          # Reproducible archives (--sort=name, --mtime)
 brew "unar"             # Universal archive extractor (zip, rar, 7z)
 brew "mozjpeg"          # Provides cjpeg binary for image optimization
 brew "yt-dlp"           # YouTube video downloader (ffmpeg companion)
+brew "aria2"           # Multi-connection download accelerator (yt-dlp companion)
 
 # Image optimization tools (used by optimize-images)
 brew "oxipng"           # PNG optimizer (lossless)
