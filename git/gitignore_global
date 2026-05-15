@@ -19,6 +19,7 @@ __pycache__/
 .agent-browser/
 .skill-lock.json
 .llm/
+.commandcode/
 
 # Agent instruction files
 agents.md
