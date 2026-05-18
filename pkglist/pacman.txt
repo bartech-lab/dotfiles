@@ -1,0 +1,58 @@
+# Core CLI
+git
+gh
+curl
+wget
+openssh
+
+# Build tools
+base-devel
+
+# Modern CLI replacements
+eza
+ripgrep
+jq
+yq
+sd
+dust
+bottom
+duf
+fzf
+zoxide
+fd
+
+# Shell
+zsh
+zsh-completions
+
+# Media pipeline
+ffmpeg
+parallel
+zstd
+unar
+yt-dlp
+aria2
+
+# Image optimization
+oxipng
+pngquant
+
+# Dev tools
+pipx
+python-pip
+python
+nodejs
+npm
+gcc
+make
+
+# GUI apps
+ghostty
+handbrake
+localsend
+code
+android-tools
+
+# System utilities
+pacman-contrib
+reflector

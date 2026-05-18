@@ -1,9 +1,12 @@
 #!/bin/bash
 
 # Git Auto-Pull Setup Script
-# Run this on new machines to set up automatic git pulling
+# Run this on macOS to set up automatic git pulling via LaunchAgents.
+# On Linux, systemd timers are set up by install.sh.
 
 set -e
+
+[[ "$(uname -s)" != Darwin ]] && { echo "Use install.sh for Linux setup (systemd timer)"; exit 0; }
 
 echo "🔄 Setting up Git Auto-Pull..."
 

@@ -17,3 +17,20 @@ alias df='duf'
 
 # Note: coreutils are available but not aliased to avoid conflicts
 # Use g-prefix for GNU versions: gls, gcat, etc.
+
+# Copy current directory to clipboard (platform-aware)
+cpwd() {
+    local clip
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        clip="pbcopy"
+    elif command -v wl-copy &>/dev/null; then
+        clip="wl-copy"
+    elif command -v xclip &>/dev/null; then
+        clip="xclip -selection clipboard"
+    else
+        echo "❌ Clipboard tool not found. Install wl-copy or xclip."
+        return 1
+    fi
+    pwd | tr -d '\n' | eval "$clip"
+    echo "📋 Path copied: $(pwd)"
+}

@@ -10,6 +10,10 @@ fi
 
 # 2. Source all function files (00-core.zsh sets up zinit)
 for func_file in "$DOTFILES_DIR/zsh/functions/"*.zsh(N); do
+  # Skip macOS-only functions on Linux
+  if [[ "$DOTFILES_OS" == linux && "$func_file" == *"/60-macos.zsh" ]]; then
+    continue
+  fi
   source "$func_file" || print -u2 "⚠️  Failed to load $func_file"
 done
 

@@ -1,6 +1,6 @@
 # Dotfiles
 
-Personal shell functions, aliases, and scripts for macOS 14+. Clean, minimal, and automated setup for new machines.
+Personal shell functions, aliases, and scripts for macOS 14+ and Linux (EndeavourOS/Arch). Clean, minimal, and automated setup for new machines.
 
 ## Quick Start
 

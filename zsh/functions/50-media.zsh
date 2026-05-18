@@ -374,7 +374,7 @@ video-remux() {
     echo "✅ Done! Remuxed files in current directory"
   fi
   
-  if command -v osascript &>/dev/null; then
+  if [[ "$DOTFILES_OS" == macos ]] && command -v osascript &>/dev/null; then
     osascript -e 'display notification "Video remux complete!" with title "video-remux"'
   fi
 }
@@ -472,7 +472,7 @@ video-encode-cpu() {
     echo "✅ Done! Encoded files in current directory"
   fi
   
-  if command -v osascript &>/dev/null; then
+  if [[ "$DOTFILES_OS" == macos ]] && command -v osascript &>/dev/null; then
     osascript -e 'display notification "CPU encoding complete!" with title "video-encode-cpu"'
   fi
 }
@@ -530,6 +530,15 @@ video-encode-gpu() {
   echo "Found $total_files files to encode"
   echo "Mode: GPU H.265 (fast encoding)"
   echo ""
+
+  # Platform-aware encoder
+  local encoder
+  if [[ "$DOTFILES_OS" == macos ]]; then
+    encoder="hevc_videotoolbox"
+  else
+    encoder="hevc_vaapi"
+  fi
+  export DOTFILES_ENCODER="$encoder"
   
   # Process files in parallel using xargs (4 jobs for GPU)
   printf '%s\0' "${files[@]}" | xargs -0 -P 4 -I{} sh -c '
@@ -552,13 +561,13 @@ video-encode-gpu() {
       crop=$(ffmpeg -hide_banner -i "$file" -vf cropdetect=limit=0.1:round=2 -t 8 -f null - 2>&1 | awk -F'"'"'crop='"'"' '"'"'/crop=/{print $2}'"'"' | awk '"'"'{print $1}'"'"' | tail -1)
       
       if [[ -n "$crop" ]]; then
-        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v "$DOTFILES_ENCODER" -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
           : # success
         else
           echo "FAILED: $base" >> "'"$ERROR_LOG"'"
         fi
       else
-        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v hevc_videotoolbox -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v "$DOTFILES_ENCODER" -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
           : # success
         else
           echo "FAILED: $base" >> "'"$ERROR_LOG"'"
@@ -581,7 +590,7 @@ video-encode-gpu() {
     echo "✅ Done! Encoded files in current directory"
   fi
   
-  if command -v osascript &>/dev/null; then
+  if [[ "$DOTFILES_OS" == macos ]] && command -v osascript &>/dev/null; then
     osascript -e 'display notification "GPU encoding complete!" with title "video-encode-gpu"'
   fi
 }
@@ -617,7 +626,10 @@ video-to-gif() {
     echo "   output:$output"
     echo
 
-    local hwaccel_args=(-hwaccel videotoolbox)
+    local hwaccel_args=()
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        hwaccel_args=(-hwaccel videotoolbox)
+    fi
 
     ffmpeg \
         -hide_banner -loglevel error -stats \

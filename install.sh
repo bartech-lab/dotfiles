@@ -48,6 +48,13 @@ else
     set -e
 fi
 
+# Platform detection
+case "$(uname -s)" in
+  Darwin) DOTFILES_OS=macos ;;
+  Linux)  DOTFILES_OS=linux ;;
+  *)      print -u2 "❌ Unsupported OS: $(uname -s)"; exit 1 ;;
+esac
+
 # Check runtime-critical dependencies
 for dep in "${CRITICAL_DEPS[@]}"; do
     if ! command -v "$dep" &> /dev/null; then
@@ -78,7 +85,8 @@ ensure_backup_dir() {
     fi
 }
 
-# Install Homebrew if missing
+# Install Homebrew if missing (macOS only)
+if [[ "$DOTFILES_OS" == macos ]]; then
 if [[ ! -x /opt/homebrew/bin/brew ]]; then
     echo "📦 Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -203,6 +211,143 @@ else
     fi
 fi
 
+# Linux package installation (pacman/yay)
+elif [[ "$DOTFILES_OS" == linux ]]; then
+
+    # --- Ensure base-devel + git (needed for yay build) ---
+    if [[ "$DRY_RUN" == false ]]; then
+        sudo pacman -S --needed --noconfirm base-devel git
+    fi
+
+    # --- Install yay AUR helper ---
+    if ! command -v yay &>/dev/null; then
+        if [[ "$DRY_RUN" == false ]]; then
+            echo "📦 Installing yay AUR helper..."
+            local yay_tmp=$(mktemp -d)
+            git clone https://aur.archlinux.org/yay.git "$yay_tmp"
+            (cd "$yay_tmp" && makepkg -si --noconfirm)
+            rm -rf "$yay_tmp"
+            echo "✓ yay installed"
+        fi
+    fi
+
+    # --- Install official packages ---
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "Pacman packages to install (from pkglist/pacman.txt):"
+        while IFS= read -r pkg; do
+            [[ -z "$pkg" || "$pkg" == \#* ]] && continue
+            pacman -Qi "$pkg" &>/dev/null || echo "  → $pkg"
+        done < "$DOTFILES_DIR/pkglist/pacman.txt"
+    else
+        echo "📦 Installing pacman packages..."
+        local pkgs=()
+        while IFS= read -r pkg; do
+            [[ -z "$pkg" || "$pkg" == \#* ]] && continue
+            pkgs+=("$pkg")
+        done < "$DOTFILES_DIR/pkglist/pacman.txt"
+        sudo pacman -S --needed --noconfirm "${pkgs[@]}"
+        echo "✓ Pacman packages installed"
+    fi
+
+    # --- Install AUR packages ---
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "AUR packages to install (from pkglist/aur.txt):"
+        while IFS= read -r pkg; do
+            [[ -z "$pkg" || "$pkg" == \#* ]] && continue
+            yay -Qi "$pkg" &>/dev/null || echo "  → $pkg"
+        done < "$DOTFILES_DIR/pkglist/aur.txt"
+    else
+        echo "📦 Installing AUR packages..."
+        local aur_pkgs=()
+        while IFS= read -r pkg; do
+            [[ -z "$pkg" || "$pkg" == \#* ]] && continue
+            aur_pkgs+=("$pkg")
+        done < "$DOTFILES_DIR/pkglist/aur.txt"
+        yay -S --needed --noconfirm "${aur_pkgs[@]}"
+        echo "✓ AUR packages installed"
+    fi
+
+    # --- fnm (Fast Node Manager) ---
+    if ! command -v fnm &>/dev/null; then
+        if [[ "$DRY_RUN" == false ]]; then
+            echo "📦 Installing fnm..."
+            curl -fsSL https://fnm.vercel.app/install | bash
+            echo "✓ fnm installed"
+        fi
+    fi
+
+    # --- Set zsh as default shell ---
+    if [[ "$SHELL" != *zsh ]]; then
+        if [[ "$DRY_RUN" == false ]]; then
+            echo "Setting zsh as default shell..."
+            chsh -s /usr/bin/zsh
+        fi
+    fi
+
+    # --- pipx ensurepath ---
+    if command -v pipx &>/dev/null; then
+        if [[ "$DRY_RUN" == false ]]; then
+            pipx ensurepath 2>/dev/null || true
+        fi
+    fi
+
+    # --- git-auto-pull setup (script + config) ---
+    mkdir -p ~/.config/git-auto-pull
+    if [[ "$DRY_RUN" == false ]]; then
+        cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/pull.sh
+        chmod +x ~/.config/git-auto-pull/pull.sh
+    fi
+
+    if [[ ! -f ~/.config/git-auto-pull/repos.conf ]]; then
+        if [[ "$DRY_RUN" == false ]]; then
+            cat > ~/.config/git-auto-pull/repos.conf << 'GITCONF'
+# Git Auto-Pull Configuration
+# Format: /path/to/repo:branch-name
+# Lines starting with # are ignored
+#
+# Example:
+# ~/Projects/my-app:main
+GITCONF
+            echo "✓ Created git-auto-pull config"
+        fi
+    fi
+
+    # --- heartbeat setup (script + config) ---
+    mkdir -p ~/.config/launchd-heartbeat
+    if [[ "$DRY_RUN" == false ]]; then
+        cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/heartbeat.sh
+        chmod +x ~/.config/launchd-heartbeat/heartbeat.sh
+    fi
+
+    if [[ ! -f ~/.config/launchd-heartbeat/monitored-labels.conf ]]; then
+        if [[ "$DRY_RUN" == false ]]; then
+            cat > ~/.config/launchd-heartbeat/monitored-labels.conf << 'HEARTBEATCONF'
+# Monitored systemd user services
+# One unit name per line
+git-auto-pull.service
+launchd-heartbeat.service
+HEARTBEATCONF
+            echo "✓ Created heartbeat config"
+        fi
+    fi
+
+    # --- systemd user timers ---
+    if [[ "$DRY_RUN" == false ]]; then
+        echo "⚙️  Setting up systemd user timers..."
+        mkdir -p ~/.config/systemd/user
+        cp "$DOTFILES_DIR/git-auto-pull/systemd/git-auto-pull.service" ~/.config/systemd/user/
+        cp "$DOTFILES_DIR/git-auto-pull/systemd/git-auto-pull.timer" ~/.config/systemd/user/
+        cp "$DOTFILES_DIR/launchd-heartbeat/systemd/launchd-heartbeat.service" ~/.config/systemd/user/
+        cp "$DOTFILES_DIR/launchd-heartbeat/systemd/launchd-heartbeat.timer" ~/.config/systemd/user/
+        systemctl --user daemon-reload
+        systemctl --user enable --now git-auto-pull.timer launchd-heartbeat.timer
+        echo "✓ systemd user timers enabled"
+    fi
+
+fi  # End Linux package install
+
 # Create ~/.config if needed
 if [[ ! -d ~/.config ]]; then
     if [[ "$DRY_RUN" == true ]]; then
@@ -269,7 +414,8 @@ else
     fi
 fi
 
-# Ghostty config
+# Ghostty config (macOS path)
+if [[ "$DOTFILES_OS" == macos ]]; then
 GHOSTTY_CONFIG_DIR="$HOME/Library/Application Support/com.mitchellh.ghostty"
 GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
 
@@ -294,6 +440,8 @@ else
     ln -sf "$DOTFILES_DIR/ghostty/config" "$GHOSTTY_CONFIG"
     echo "✓ Linked Ghostty config"
 fi
+
+fi  # End macOS Ghostty config
 
 # Ghostty XDG config (in addition to macOS path)
 XDG_GHOSTTY_DIR="$HOME/.config/ghostty"
@@ -341,12 +489,19 @@ if [[ "$DRY_RUN" == false ]]; then
     GITSTATUS_CACHE="$HOME/.cache/gitstatus"
     ARCH=$(uname -m)
     
-    if [[ ! -f "$GITSTATUS_CACHE/gitstatusd-darwin-$ARCH" ]]; then
+    # Platform-aware binary name
+    case "$DOTFILES_OS" in
+        macos) local gs_os="darwin" ;;
+        linux) local gs_os="linux" ;;
+    esac
+    
+    if [[ ! -f "$GITSTATUS_CACHE/gitstatusd-${gs_os}-$ARCH" ]]; then
         # Try multiple locations where powerlevel10k might be installed
         p10k_paths=(
             "$HOME/.zinit/plugins/romkatv---powerlevel10k"
             "/opt/homebrew/opt/powerlevel10k"
             "/usr/local/opt/powerlevel10k"
+            "/usr/share/zsh/plugins/powerlevel10k"
         )
         
         for p10k_path in "${p10k_paths[@]}"; do
@@ -356,7 +511,7 @@ if [[ "$DRY_RUN" == false ]]; then
                 # Run install script silently (downloads prebuilt binary)
                 (cd "$p10k_path/gitstatus" && CC= CXX= ./install -f >/dev/null 2>&1) || true
                 
-                if [[ -f "$GITSTATUS_CACHE/gitstatusd-darwin-$ARCH" ]]; then
+                if [[ -f "$GITSTATUS_CACHE/gitstatusd-${gs_os}-$ARCH" ]]; then
                     echo "✓ Gitstatus binary cached"
                 fi
                 break
@@ -378,10 +533,15 @@ else
     echo "✓ Functions loaded: $func_count"
     echo ""
     echo "Run: dotfiles-doctor if anything fails"
-    echo "Run: macos-defaults to apply system preferences"
-    echo "Run: macos-debloat to remove bloatware (destructive)"
-    echo "Run: macos-system-analysis to review services"
-    echo ""
-    echo "📌 TG Pro: install manually → https://www.tunabellysoftware.com/tgpro/"
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        echo "Run: macos-defaults to apply system preferences"
+        echo "Run: macos-debloat to remove bloatware (destructive)"
+        echo "Run: macos-system-analysis to review services"
+        echo ""
+        echo "📌 TG Pro: install manually → https://www.tunabellysoftware.com/tgpro/"
+    elif [[ "$DOTFILES_OS" == linux ]]; then
+        echo "Run: pacup to update all packages"
+        echo "Run: kde-defaults to apply KDE Plasma preferences"
+    fi
 fi
 echo ""

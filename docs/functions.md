@@ -458,9 +458,33 @@ See [dev.md](dev.md) for full documentation.
 | Dev | `40-dev.zsh` | Development utilities |
 | Media | `50-media.zsh` | Image/video processing |
 | Download | `51-download.zsh` | yt-dlp video downloading |
-| macOS | `60-macos.zsh` | System functions |
+| macOS | `60-macos.zsh` | System functions (macOS only) |
 | Discord | `61-discord.zsh` | OpenAsar setup/status helpers |
+| KDE | `62-kde.zsh` | KDE Plasma defaults (Linux only) |
 | OpenCode | `70-opencode.zsh` | OpenCode helpers |
+
+### Pacman/Yay Helpers (21-pacman.zsh, Linux only)
+
+| Command | Description |
+|---------|-------------|
+| `pacup` | Update all packages (pacman -Syu + yay -Sua) |
+| `pacclean` | Clean package cache (keep 2 versions) |
+| `pacorphans` | List orphaned packages (dependencies no longer needed) |
+
+**Examples:**
+```bash
+pacup                # Full system update
+pacclean             # Free up cache space
+pacorphans           # Find packages to remove
+```
+
+### KDE Plasma Defaults (62-kde.zsh, Linux only)
+
+| Command | Description |
+|---------|-------------|
+| `kde-defaults` | Apply KDE Plasma system preferences |
+
+Applies performance-focused defaults: disables animations, enables fast key repeat, configures Dolphin with full paths and hidden files, sets tap-to-click, and disables launch feedback. Run once after installing dotfiles on a fresh Linux machine.
 
 ## Adding Custom Functions
 

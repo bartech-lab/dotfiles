@@ -1,0 +1,8 @@
+[Unit]
+Description=Hourly git auto-pull
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash %h/.config/git-auto-pull/pull.sh
+StandardOutput=null
+StandardError=file:%h/.config/git-auto-pull/error.log

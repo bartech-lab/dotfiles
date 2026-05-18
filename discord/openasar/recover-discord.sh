@@ -1,13 +1,35 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-DISCORD_APP="${DISCORD_APP_PATH:-/Applications/Discord.app}"
-DISCORD_ASAR="$DISCORD_APP/Contents/Resources/app.asar"
-BUILD_INFO="$DISCORD_APP/Contents/Resources/build_info.json"
-SETTINGS_JSON="$HOME/Library/Application Support/discord/settings.json"
+# Platform detection
+case "$(uname -s)" in
+  Darwin) OS=macos ;;
+  Linux)  OS=linux ;;
+  *)      echo "Unsupported OS"; exit 1 ;;
+esac
 
-PERSIST_DIR="$HOME/Library/OpenAsarPersist"
-BACKUP_DIR="$PERSIST_DIR/backups"
+# Platform-specific paths
+if [[ "$OS" == macos ]]; then
+  DISCORD_APP="${DISCORD_APP_PATH:-/Applications/Discord.app}"
+  DISCORD_ASAR="$DISCORD_APP/Contents/Resources/app.asar"
+  BUILD_INFO="$DISCORD_APP/Contents/Resources/build_info.json"
+  SETTINGS_JSON="$HOME/Library/Application Support/discord/settings.json"
+  PERSIST_DIR="$HOME/Library/OpenAsarPersist"
+  BACKUP_DIR="$PERSIST_DIR/backups"
+  DISCORD_BIN="$DISCORD_APP/Contents/MacOS/Discord"
+  PGREP_PATTERN="Discord.app/Contents/MacOS/Discord"
+else
+  for d in "/opt/discord" "/usr/lib/discord" "$HOME/.local/share/discord"; do
+    [[ -d "$d" ]] && { DISCORD_APP="$d"; break; }
+  done
+  DISCORD_ASAR="$DISCORD_APP/resources/app.asar"
+  BUILD_INFO="$DISCORD_APP/resources/build_info.json"
+  SETTINGS_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/discord/settings.json"
+  PERSIST_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/OpenAsarPersist"
+  BACKUP_DIR="$PERSIST_DIR/backups"
+  DISCORD_BIN="$(command -v discord 2>/dev/null || echo "/usr/bin/discord")"
+  PGREP_PATTERN="discord"
+fi
 
 LAUNCH=false
 RESTORE_FILE=""
@@ -49,9 +71,9 @@ if [ ! -d "$DISCORD_APP" ]; then
   fatal "Discord not found at $DISCORD_APP"
 fi
 
-if pgrep -f "Discord.app/Contents/MacOS/Discord" &>/dev/null; then
+if pgrep -f "$PGREP_PATTERN" &>/dev/null; then
   echo "Discord is running. Quitting..."
-  pkill -f "Discord.app/Contents/MacOS/Discord" 2>/dev/null || true
+  pkill -f "$PGREP_PATTERN" 2>/dev/null || true
   sleep 2
 fi
 
@@ -132,7 +154,7 @@ echo ""
 
 if [ "$LAUNCH" = true ]; then
   log "Launching Discord to re-download modules..."
-  "$DISCORD_APP/Contents/MacOS/Discord" 2>/dev/null &
+  "$DISCORD_BIN" 2>/dev/null &
   disown
   echo "  Discord started. The splash screen will show module download progress."
 else
