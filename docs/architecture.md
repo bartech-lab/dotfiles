@@ -149,18 +149,65 @@ Example: `archive()` has `--dry-run` and `-gzip` flags.
 
 3. Reload or restart shell
 
+## Platform Detection
+
+The variable `$DOTFILES_OS` is set at shell startup in `zsh/zshrc.zsh`:
+
+```zsh
+case "$(uname -s)" in
+  Darwin) export DOTFILES_OS=macos ;;
+  Linux)  export DOTFILES_OS=linux ;;
+esac
+```
+
+This is used throughout the codebase to:
+- Skip macOS-only function files on Linux (`zsh/functions.zsh` loader)
+- Branch PATH configuration for Homebrew vs native paths
+- Select platform-appropriate CLI tools (pbcopy vs xclip/wl-copy)
+- Choose GPU encoders (videotoolbox vs vaapi)
+- Prevent macOS-specific script execution on Linux (migration, calfix)
+
+### Loading Order (Post-Linux Support)
+
+```
+~/.zshrc
+  └─ source ~/.config/zsh-dotfiles-loader.zsh
+       └─ source zsh/functions.zsh
+            ├─ source zsh/zshrc.zsh              ← SETS DOTFILES_OS
+            ├─ source 00-core.zsh                ← zinit (cross-platform)
+            ├─ source 10-shell.zsh               ← aliases + cpwd()
+            ├─ source 20-brew.zsh                ← SKIPS on Linux
+            ├─ source 21-pacman.zsh              ← SKIPS on macOS
+            ├─ source 30-git.zsh                 ← cross-platform
+            ├─ source 40-dev.zsh                 ← cross-platform (guarded checks)
+            ├─ source 50-media.zsh               ← platform encoder
+            ├─ source 51-download.zsh            ← cross-platform
+            ├─ SKIP 60-macos.zsh on Linux
+            ├─ source 61-discord.zsh             ← platform paths
+            ├─ source 62-kde.zsh                 ← SKIPS on macOS
+            └─ source 70-opencode.zsh            ← cross-platform
+```
+
 ### Adding New Dependencies
 
-Edit `Brewfile`:
+**macOS**: Edit `Brewfile`
 ```ruby
 # Add new tool
 brew "new-tool"
 ```
 
-Then run:
-```bash
-brew bundle --file=~/dotfiles/Brewfile
-```
+**Linux**: Edit `pkglist/pacman.txt` (official repos) or `pkglist/aur.txt` (AUR).
+
+### Linux Package Management
+
+Instead of Homebrew, Linux uses pacman/yay natively:
+
+- `pkglist/pacman.txt` — official repository packages (one per line)
+- `pkglist/aur.txt` — AUR packages installed via yay
+
+Background services use systemd user timers instead of LaunchAgents:
+- `git-auto-pull/systemd/` — `.service` + `.timer` for hourly git sync
+- `launchd-heartbeat/systemd/` — `.service` + `.timer` for service heartbeat
 
 ### Customizing Shell Theme
 

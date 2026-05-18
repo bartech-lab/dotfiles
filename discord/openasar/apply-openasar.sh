@@ -1,18 +1,53 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-DISCORD_APP="${DISCORD_APP_PATH:-/Applications/Discord.app}"
-DISCORD_ASAR="$DISCORD_APP/Contents/Resources/app.asar"
-BUILD_INFO="$DISCORD_APP/Contents/Resources/build_info.json"
-SETTINGS_JSON="$HOME/Library/Application Support/discord/settings.json"
+# Platform detection
+case "$(uname -s)" in
+  Darwin) OS=macos ;;
+  Linux)  OS=linux ;;
+  *)      echo "Unsupported OS"; exit 1 ;;
+esac
+
+# Platform-specific paths
+if [[ "$OS" == macos ]]; then
+  DISCORD_APP="${DISCORD_APP_PATH:-/Applications/Discord.app}"
+  DISCORD_ASAR="$DISCORD_APP/Contents/Resources/app.asar"
+  BUILD_INFO="$DISCORD_APP/Contents/Resources/build_info.json"
+  SETTINGS_JSON="$HOME/Library/Application Support/discord/settings.json"
+  PERSIST_DIR="$HOME/Library/OpenAsarPersist"
+  BACKUP_DIR="$PERSIST_DIR/backups"
+  LOG_DIR="$HOME/Library/Logs/OpenAsarPersist"
+  DISCORD_BIN="$DISCORD_APP/Contents/MacOS/Discord"
+  STAT_SIZE="stat -f%z"
+  STAT_MTIME="stat -f %m"
+  DATE_PARSE="date -jf %Y-%m-%dT%H:%M:%SZ"
+  DATE_READABLE="date -r"
+  PGREP_PATTERN="Discord.app/Contents/MacOS/Discord"
+  SETTINGS_JSON_DIR="$(dirname "$SETTINGS_JSON")"
+  MODULES_DIR="$SETTINGS_JSON_DIR/${DISCORD_VERSION}/modules"
+else
+  for d in "/opt/discord" "/usr/lib/discord" "$HOME/.local/share/discord"; do
+    [[ -d "$d" ]] && { DISCORD_APP="$d"; break; }
+  done
+  DISCORD_ASAR="$DISCORD_APP/resources/app.asar"
+  BUILD_INFO="$DISCORD_APP/resources/build_info.json"
+  SETTINGS_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/discord/settings.json"
+  PERSIST_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/OpenAsarPersist"
+  BACKUP_DIR="$PERSIST_DIR/backups"
+  LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/OpenAsarPersist"
+  DISCORD_BIN="$(command -v discord 2>/dev/null || echo "/usr/bin/discord")"
+  STAT_SIZE="stat -c%s"
+  STAT_MTIME="stat -c %Y"
+  DATE_PARSE="date -d"
+  DATE_READABLE="date -d @"
+  PGREP_PATTERN="discord"
+fi
+
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 OPENASAR_URL="https://github.com/GooseMod/OpenAsar/releases/download/nightly/app.asar"
 GITHUB_API="https://api.github.com/repos/GooseMod/OpenAsar/releases/tags/nightly"
 
-PERSIST_DIR="$HOME/Library/OpenAsarPersist"
-BACKUP_DIR="$PERSIST_DIR/backups"
-LOG_DIR="$HOME/Library/Logs/OpenAsarPersist"
 OPENASAR_FILE="$PERSIST_DIR/openasar.app.asar"
 THEME_CSS="$DOTFILES_DIR/discord/openasar/aggressive-minimal.css"
 EXTERNAL_THEME_URL="https://d3sox.me/complementary-discord-theme/complementary.theme.css"
@@ -53,7 +88,7 @@ err()  { echo "  ERROR: $*" >&2; }
 fatal(){ echo "FATAL: $*" >&2; exit 1; }
 
 if ! command -v jq &>/dev/null; then
-  fatal "jq is required. Install it with: brew install jq"
+  fatal "jq is required. Install it with your package manager."
 fi
 
 if [ ! -d "$DISCORD_APP" ]; then
@@ -64,8 +99,8 @@ if [ ! -f "$THEME_CSS" ]; then
   fatal "Theme CSS not found at $THEME_CSS"
 fi
 
-if pgrep -f "Discord.app/Contents/MacOS/Discord" &>/dev/null; then
-  fatal "Discord is running. Quit Discord first (Cmd+Q) and try again."
+if pgrep -f "$PGREP_PATTERN" &>/dev/null; then
+  fatal "Discord is running. Quit Discord first and try again."
 fi
 
 DISCORD_VERSION="$(jq -r '.version // "unknown"' "$BUILD_INFO" 2>/dev/null)" || true
@@ -82,14 +117,14 @@ echo "Checking OpenAsar nightly release date..."
 NIGHTLY_DATE="$(curl -sf "$GITHUB_API" | jq -r '.assets[0].updated_at // .published_at // empty' 2>/dev/null)" || true
 
 if [ -n "$NIGHTLY_DATE" ]; then
-  NIGHTLY_EPOCH="$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$NIGHTLY_DATE" "+%s" 2>/dev/null)" || true
-  DISCORD_MTIME="$(stat -f %m "$DISCORD_APP" 2>/dev/null)" || true
+  NIGHTLY_EPOCH="$($DATE_PARSE "$NIGHTLY_DATE" "+%s" 2>/dev/null)" || true
+  DISCORD_MTIME="$($STAT_MTIME "$DISCORD_APP" 2>/dev/null)" || true
 
   if [ -n "$NIGHTLY_EPOCH" ] && [ -n "$DISCORD_MTIME" ] && [ "$DISCORD_MTIME" -gt "$NIGHTLY_EPOCH" ]; then
     echo ""
     echo "  WARNING: Discord appears newer than the OpenAsar nightly build."
-    echo "  Discord bundle modified: $(date -r "$DISCORD_MTIME" '+%Y-%m-%d %H:%M:%S')"
-    echo "  OpenAsar nightly:       $(date -r "$NIGHTLY_EPOCH" '+%Y-%m-%d %H:%M:%S')"
+    echo "  Discord bundle modified: $($DATE_READABLE "$DISCORD_MTIME" '+%Y-%m-%d %H:%M:%S')"
+    echo "  OpenAsar nightly:       $($DATE_READABLE "$NIGHTLY_EPOCH" '+%Y-%m-%d %H:%M:%S')"
     echo ""
     if [ "$FORCE" = false ]; then
       if [ "$YES" = false ]; then
@@ -101,7 +136,7 @@ if [ -n "$NIGHTLY_DATE" ]; then
       echo "  --force: applying despite version mismatch."
     fi
   else
-    echo "  OpenAsar nightly: $(date -r "$NIGHTLY_EPOCH" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$NIGHTLY_DATE")"
+    echo "  OpenAsar nightly: $($DATE_READABLE "$NIGHTLY_EPOCH" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$NIGHTLY_DATE")"
   fi
 else
   echo "  Could not determine nightly release date (GitHub API issue?)."
@@ -118,7 +153,7 @@ echo ""
 echo "Downloading OpenAsar nightly..."
 curl -fL "$OPENASAR_URL" -o "$OPENASAR_FILE" || fatal "Failed to download OpenAsar nightly."
 
-DOWNLOADSIZE=$(stat -f%z "$OPENASAR_FILE" 2>/dev/null || echo 0)
+DOWNLOADSIZE=$($STAT_SIZE "$OPENASAR_FILE" 2>/dev/null || echo 0)
 if [ "$DOWNLOADSIZE" -lt 10000 ]; then
   fatal "Downloaded file is too small ($DOWNLOADSIZE bytes). Corrupt download?"
 fi
@@ -180,7 +215,7 @@ fi
 echo ""
 echo "Smoke test: launching Discord for ${SMOKE_TIMEOUT} seconds..."
 STDERR_LOG="$LOG_DIR/smoke-test-${TIMESTAMP}.log"
-"$DISCORD_APP/Contents/MacOS/Discord" 2>"$STDERR_LOG" &
+"$DISCORD_BIN" 2>"$STDERR_LOG" &
 SMOKE_PID=$!
 sleep "$SMOKE_TIMEOUT"
 
@@ -219,7 +254,7 @@ PY
 
   echo ""
   echo "  Launching stock Discord to re-download modules..."
-  "$DISCORD_APP/Contents/MacOS/Discord" 2>/dev/null &
+  "$DISCORD_BIN" 2>/dev/null &
   disown
 
   echo ""

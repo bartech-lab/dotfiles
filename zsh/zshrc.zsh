@@ -1,10 +1,17 @@
+# --- Platform Detection (must be first) ---
+case "$(uname -s)" in
+  Darwin) export DOTFILES_OS=macos ;;
+  Linux)  export DOTFILES_OS=linux ;;
+  *)      export DOTFILES_OS=unknown ;;
+esac
+
 # --- Powerlevel10k Instant Prompt (must stay first) ---
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-# --- Homebrew (Apple Silicon) ---
-if [[ -x /opt/homebrew/bin/brew ]]; then
+# --- Homebrew (macOS only) ---
+if [[ "$DOTFILES_OS" == macos && -x /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
@@ -19,17 +26,24 @@ fi
   typeset -U PATH path  # Prevent duplicate entries
   path=(
     "$HOME/.cargo/bin"
-    "/opt/homebrew/opt/mozjpeg/bin"
-    "/opt/homebrew/bin"
-    "/opt/homebrew/sbin"
     "$HOME/.local/bin"
-    "/opt/homebrew/opt/openssl@3/bin"
     "$HOME/.opencode/bin"
     "$BUN_INSTALL/bin"
   )
 
-  # ====== Java Configuration (before system paths) ======
-  if java_home=$(/usr/libexec/java_home 2>/dev/null); then
+  # macOS-specific paths (Homebrew)
+  if [[ "$DOTFILES_OS" == macos ]]; then
+    path=(
+      "/opt/homebrew/opt/mozjpeg/bin"
+      "/opt/homebrew/bin"
+      "/opt/homebrew/sbin"
+      "/opt/homebrew/opt/openssl@3/bin"
+      $path
+    )
+  fi
+
+  # ====== Java Configuration (macOS only) ======
+  if [[ "$DOTFILES_OS" == macos ]] && java_home=$(/usr/libexec/java_home 2>/dev/null); then
     export JAVA_HOME=$java_home
     path=("$JAVA_HOME/bin" $path)
   fi
@@ -51,14 +65,13 @@ fi
   export HISTFILE=~/.zsh_history
   export HISTSIZE=100000
   export SAVEHIST=100000
-  export PKG_CONFIG_PATH="/opt/homebrew/opt/blaze/share/pkgconfig:$PKG_CONFIG_PATH"
-  # Use system clang from Xcode Command Line Tools
-  # Uncomment and install llvm via brew if Homebrew clang is needed:
-  # brew install llvm
-  # export CC="/opt/homebrew/opt/llvm/bin/clang"
-  # export CXX="/opt/homebrew/opt/llvm/bin/clang++"
-  export HOMEBREW_CASK_OPTS="--no-quarantine"
-  export HOMEBREW_NO_ENV_HINTS=1
+
+  # macOS-specific environment
+  if [[ "$DOTFILES_OS" == macos ]]; then
+    export PKG_CONFIG_PATH="/opt/homebrew/opt/blaze/share/pkgconfig:$PKG_CONFIG_PATH"
+    export HOMEBREW_CASK_OPTS="--no-quarantine"
+    export HOMEBREW_NO_ENV_HINTS=1
+  fi
 }
 
 # ====== Zinit Plugin Manager ======

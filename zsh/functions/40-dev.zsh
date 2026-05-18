@@ -1,6 +1,15 @@
 # Dev Functions
 # Development helpers and utilities
 
+# Platform-aware file size (BSD stat on macOS, GNU stat on Linux)
+_stat_size() {
+    if [[ "$(uname -s)" == Darwin ]]; then
+        stat -f%z "$1" 2>/dev/null
+    else
+        stat -c%s "$1" 2>/dev/null
+    fi
+}
+
 # Universal archive extractor
 extract() {
     if [[ -z "$1" ]]; then
@@ -92,6 +101,8 @@ archive() {
     local use_gnu_tar=false
     if command -v gtar &>/dev/null; then
         tar_cmd="gtar"
+        use_gnu_tar=true
+    elif tar --version 2>/dev/null | grep -q "GNU tar"; then
         use_gnu_tar=true
     fi
 
@@ -228,7 +239,7 @@ archive() {
     fi
 
     if [[ -f "$outfile" ]]; then
-        local size=$(stat -f%z "$outfile" | awk '{split("B KB MB GB TB PB", unit); u=1; while($1>=1024 && u<6) {$1/=1024; u++} printf "%.1f %s", $1, unit[u]}')
+        local size=$(_stat_size "$outfile" | awk '{split("B KB MB GB TB PB", unit); u=1; while($1>=1024 && u<6) {$1/=1024; u++} printf "%.1f %s", $1, unit[u]}')
         echo "✅ Created: $outfile ($size)"
         if [[ "$use_gnu_tar" == false ]]; then
             echo "💡 For reproducible archives, install: brew install gnu-tar"
@@ -369,7 +380,7 @@ repo-check() {
             [[ -n "$line" ]] && large_files+=("$line")
         done < <(git ls-files 2>/dev/null | while read -r f; do
             if [[ -f "$f" ]]; then
-                local size=$(stat -f%z "$f" 2>/dev/null)
+                local size=$(_stat_size "$f" 2>/dev/null)
                 if [[ "$size" -gt 104857600 ]]; then
                     local mb=$((size / 1048576))
                     echo "$f (${mb}MB)"
@@ -551,38 +562,62 @@ dotfiles-doctor() {
     # System Checks
     echo "System:"
 
-    # macOS version
-    local macos_version=$(sw_vers -productVersion 2>/dev/null)
-    if [[ -n "$macos_version" ]]; then
-        local major_version=$(echo "$macos_version" | cut -d. -f1)
-        if [[ "$major_version" -ge 14 ]]; then
-            echo "  ✅ macOS $macos_version"
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        # macOS version
+        local macos_version=$(sw_vers -productVersion 2>/dev/null)
+        if [[ -n "$macos_version" ]]; then
+            local major_version=$(echo "$macos_version" | cut -d. -f1)
+            if [[ "$major_version" -ge 14 ]]; then
+                echo "  ✅ macOS $macos_version"
+            else
+                echo "  ⚠️  macOS $macos_version (tested on 14+)"
+                ((has_warnings++))
+            fi
         else
-            echo "  ⚠️  macOS $macos_version (tested on 14+)"
+            echo "  ❌ Cannot detect macOS version"
+            ((has_errors++))
+        fi
+
+        # Command Line Tools
+        if xcode-select -p &>/dev/null; then
+            echo "  ✅ Command Line Tools"
+        else
+            echo "  ❌ Command Line Tools not installed"
+            echo "     Run: xcode-select --install"
+            ((has_errors++))
+        fi
+
+        # Homebrew
+        if command -v brew &>/dev/null; then
+            local brew_version=$(brew --version | head -1 | awk '{print $2}')
+            echo "  ✅ Homebrew $brew_version"
+        else
+            echo "  ❌ Homebrew not installed"
+            echo "     Run: ./install.sh"
+            ((has_errors++))
+        fi
+    elif [[ "$DOTFILES_OS" == linux ]]; then
+        # Linux distro detection
+        if [[ -f /etc/os-release ]]; then
+            source /etc/os-release 2>/dev/null
+            echo "  ✅ $NAME"
+        fi
+
+        # Pacman
+        if command -v pacman &>/dev/null; then
+            echo "  ✅ Pacman (Arch Linux)"
+        else
+            echo "  ❌ Pacman not found"
+            ((has_errors++))
+        fi
+
+        # Systemd user timers
+        if systemctl --user is-active git-auto-pull.timer &>/dev/null; then
+            echo "  ✅ git-auto-pull timer active"
+        else
+            echo "  ⚠️  git-auto-pull timer not active"
             ((has_warnings++))
         fi
-    else
-        echo "  ❌ Cannot detect macOS version"
-        ((has_errors++))
-    fi
-
-    # Command Line Tools
-    if xcode-select -p &>/dev/null; then
-        echo "  ✅ Command Line Tools"
-    else
-        echo "  ❌ Command Line Tools not installed"
-        echo "     Run: xcode-select --install"
-        ((has_errors++))
-    fi
-
-    # Homebrew
-    if command -v brew &>/dev/null; then
-        local brew_version=$(brew --version | head -1 | awk '{print $2}')
-        echo "  ✅ Homebrew $brew_version"
-    else
-        echo "  ❌ Homebrew not installed"
-        echo "     Run: ./install.sh"
-        ((has_errors++))
     fi
 
     echo ""
@@ -620,20 +655,32 @@ dotfiles-doctor() {
             esac
             [[ -n "$version" ]] && echo "  ✅ $tool $version" || echo "  ✅ $tool"
         else
-            echo "  ❌ $tool (install: brew install ${tool_packages[$tool]})"
+            local install_hint
+            if [[ "$DOTFILES_OS" == macos ]]; then
+                install_hint="brew install ${tool_packages[$tool]}"
+            else
+                install_hint="sudo pacman -S ${tool_packages[$tool]}"
+            fi
+            echo "  ❌ $tool (install: $install_hint)"
             missing_tools+=("$tool")
             ((has_errors++))
         fi
     done
 
     # Auto-fix missing tools
-    if [[ "$auto_fix" == true && ${#missing_tools[@]} -gt 0 && -x "$(command -v brew)" ]]; then
+    if [[ "$auto_fix" == true && ${#missing_tools[@]} -gt 0 ]]; then
         echo ""
         echo "🔧 Auto-fixing missing tools..."
         for tool in "${missing_tools[@]}"; do
             local package="${tool_packages[$tool]}"
             echo "  → Installing $package..."
-            brew install "$package" 2>/dev/null || echo "  ⚠️ Failed to install $package"
+            if [[ "$DOTFILES_OS" == macos ]] && command -v brew &>/dev/null; then
+                brew install "$package" 2>/dev/null || echo "  ⚠️ Failed to install $package"
+            elif [[ "$DOTFILES_OS" == linux ]] && command -v pacman &>/dev/null; then
+                sudo pacman -S --needed --noconfirm "$package" 2>/dev/null || echo "  ⚠️ Failed to install $package"
+            else
+                echo "  ⚠️ No package manager available"
+            fi
         done
     fi
 
@@ -705,20 +752,22 @@ dotfiles-doctor() {
     echo ""
     echo "PATH Configuration:"
 
-    # Check mozjpeg priority
-    if which -a cjpeg 2>/dev/null | head -1 | grep -q "mozjpeg"; then
-        echo "  ✅ mozjpeg priority correct"
-    else
-        local cjpeg_path=$(which cjpeg 2>/dev/null)
-        if [[ -n "$cjpeg_path" ]]; then
-            echo "  ⚠️  mozjpeg not first in PATH"
-            echo "     Current: $cjpeg_path"
-            echo "     Add to ~/.zshrc (before /opt/homebrew/bin):"
-            echo '       path=("/opt/homebrew/opt/mozjpeg/bin" $path)'
-            ((has_warnings++))
+    # Check mozjpeg priority (macOS only — on Linux cjpeg from mozjpeg is in system PATH)
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        if which -a cjpeg 2>/dev/null | head -1 | grep -q "mozjpeg"; then
+            echo "  ✅ mozjpeg priority correct"
         else
-            echo "  ❌ cjpeg not found (install mozjpeg)"
-            ((has_errors++))
+            local cjpeg_path=$(which cjpeg 2>/dev/null)
+            if [[ -n "$cjpeg_path" ]]; then
+                echo "  ⚠️  mozjpeg not first in PATH"
+                echo "     Current: $cjpeg_path"
+                echo "     Add to ~/.zshrc (before /opt/homebrew/bin):"
+                echo '       path=("/opt/homebrew/opt/mozjpeg/bin" $path)'
+                ((has_warnings++))
+            else
+                echo "  ❌ cjpeg not found (install mozjpeg)"
+                ((has_errors++))
+            fi
         fi
     fi
 
@@ -784,7 +833,11 @@ dotfiles-doctor() {
         echo "  ✅ Nerd Fonts installed"
     else
         echo "  ⚠️  Nerd Fonts not detected"
-        echo "     Install: brew tap homebrew/cask-fonts && brew install --cask font-meslo-lg-nerd-font"
+        if [[ "$DOTFILES_OS" == macos ]]; then
+            echo "     Install: brew tap homebrew/cask-fonts && brew install --cask font-meslo-lg-nerd-font"
+        else
+            echo "     Install: yay -S ttf-meslo-nerd-font-powerlevel10k"
+        fi
         ((has_warnings++))
     fi
 
@@ -844,5 +897,9 @@ dotfiles-doctor() {
 
 # Manually repair macOS Calendar ghost invite state
 calfix() {
+    if [[ "$DOTFILES_OS" != macos ]]; then
+        echo "❌ calfix is macOS-only (repairs Calendar.sqlitedb)"
+        return 1
+    fi
     "$HOME/dotfiles/calendar-ghost-fix/run-now.sh" "$@"
 }

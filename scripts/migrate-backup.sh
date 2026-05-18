@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+[[ "$(uname -s)" != Darwin ]] && { echo "macOS only"; exit 1; }
+
 BACKUP_DIR="$HOME/migration-backup"
 ARCHIVE="$HOME/migration-backup.tar.gz"
 

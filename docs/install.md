@@ -2,9 +2,16 @@
 
 ## Prerequisites
 
+### macOS
 - **macOS** - Tested on macOS Sonoma and later
 - **zsh** - Default shell on macOS (pre-installed)
 - **Homebrew** - Will be auto-installed by `./install.sh` if not present
+
+### Linux (EndeavourOS / Arch)
+- **EndeavourOS** with KDE Plasma (or Arch Linux)
+- **systemd** user session (default on EndeavourOS)
+- Run `sudo pacman -Syu` to update the system
+- Install git: `sudo pacman -S git`
 
 ## Quick Start
 
@@ -21,13 +28,45 @@ source ~/.zshrc
 ```
 
 The installer will:
-- Install Homebrew (if not present)
-- Install all dependencies via `brew bundle`
-- Enable daily Homebrew autoupdate with upgrade + cleanup
+- On macOS: Install Homebrew, install all dependencies via `brew bundle`
+- On Linux: Install yay AUR helper, install packages via `pacman` and `yay`
+- Enable daily Homebrew autoupdate (macOS) or systemd timers (Linux)
 - Link dotfiles functions loader
 - Link `~/.gitignore_global` to the tracked file in `~/dotfiles/git/gitignore_global`
 - Auto-install any missing critical dependencies
 - Check and report status
+
+### Linux Installation
+
+```bash
+# 1. Clone repository
+git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+
+# 2. Run installer (handles everything)
+./install.sh
+
+# 3. Log out and back in (to start zsh as default shell)
+# Or manually: source ~/.zshrc
+```
+
+The Linux installer will:
+- Install `yay` (AUR helper)
+- Install all packages from `pkglist/pacman.txt` via `pacman`
+- Install AUR packages from `pkglist/aur.txt` via `yay`
+- Install fnm (Node.js version manager)
+- Set zsh as your default shell
+- Set up systemd user timers for git auto-pull and heartbeat
+
+After install, apply KDE preferences:
+```bash
+kde-defaults
+```
+
+Update all packages:
+```bash
+pacup
+```
 
 ## Global Git Ignore
 
