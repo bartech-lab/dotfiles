@@ -1,5 +1,6 @@
 # macOS System Functions
 # macOS defaults and system helpers
+[[ "$DOTFILES_OS" != macos ]] && return 0
 
 # Apply macOS system defaults
 # This function configures various macOS system preferences for a better
@@ -818,8 +819,3 @@ macos-disable-notification-sounds() {
     "$script_path" "$@"
 }
 
-# Copy current directory to clipboard
-cpwd() {
-    pwd | tr -d '\n' | pbcopy
-    echo "📋 Path copied: $(pwd)"
-}

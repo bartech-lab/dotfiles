@@ -1,9 +1,12 @@
 #!/bin/bash
 
 # LaunchAgent Heartbeat Setup Script
-# Run this on new machines to monitor LaunchAgent health
+# Run this on macOS to monitor LaunchAgent health.
+# On Linux, systemd timers are set up by install.sh.
 
 set -e
+
+[[ "$(uname -s)" != Darwin ]] && { echo "Use install.sh for Linux setup (systemd timer)"; exit 0; }
 
 echo "Setting up LaunchAgent heartbeat..."
 

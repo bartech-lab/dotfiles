@@ -34,8 +34,15 @@ warn() {
 
 echo "System Requirements:"
 
-# macOS version
-if [[ "$(uname)" == "Darwin" ]]; then
+# Platform detection
+case "$(uname -s)" in
+    Darwin) DOTFILES_OS=macos ;;
+    Linux)  DOTFILES_OS=linux ;;
+    *)      DOTFILES_OS=unknown ;;
+esac
+
+if [[ "$DOTFILES_OS" == macos ]]; then
+    # macOS version
     macos_version=$(sw_vers -productVersion 2>/dev/null)
     major=$(echo "$macos_version" | cut -d. -f1)
     if [[ "$major" -ge 14 ]]; then
@@ -43,55 +50,96 @@ if [[ "$(uname)" == "Darwin" ]]; then
     else
         warn "macOS $macos_version (tested on 14+)"
     fi
-else
-    fail "Not macOS"
-fi
 
-# Command Line Tools
-if xcode-select -p &>/dev/null; then
-    pass "Command Line Tools installed"
+    # Command Line Tools
+    if xcode-select -p &>/dev/null; then
+        pass "Command Line Tools installed"
+    else
+        fail "Command Line Tools not installed - run: xcode-select --install"
+    fi
+elif [[ "$DOTFILES_OS" == linux ]]; then
+    if [[ -f /etc/os-release ]]; then
+        source /etc/os-release 2>/dev/null
+        pass "$NAME"
+    fi
+
+    if command -v gcc &>/dev/null; then
+        pass "build tools (gcc)"
+    else
+        warn "base-devel not installed - run: sudo pacman -S base-devel"
+    fi
 else
-    fail "Command Line Tools not installed - run: xcode-select --install"
+    fail "Not macOS or Linux"
 fi
 
 # Architecture
 ARCH=$(uname -m)
 if [[ "$ARCH" == "arm64" ]]; then
     pass "Apple Silicon (arm64)"
+elif [[ "$ARCH" == "aarch64" ]]; then
+    pass "ARM64 (aarch64)"
 else
-    pass "Intel ($ARCH)"
+    pass "Intel/AMD ($ARCH)"
 fi
 
 echo ""
 
 # ============================================================================
-# Homebrew
+# Package Manager
 # ============================================================================
 
-echo "Homebrew:"
+echo "Package Manager:"
 
-if command -v brew &>/dev/null; then
-    brew_version=$(brew --version 2>/dev/null | head -1 | awk '{print $2}')
-    pass "Homebrew $brew_version"
-    
-    # Check critical brew packages
-    critical_packages=("git" "zinit")
-    for pkg in "${critical_packages[@]}"; do
-        if brew list "$pkg" &>/dev/null; then
-            pass "Brew package: $pkg"
+if [[ "$DOTFILES_OS" == macos ]]; then
+    if command -v brew &>/dev/null; then
+        brew_version=$(brew --version 2>/dev/null | head -1 | awk '{print $2}')
+        pass "Homebrew $brew_version"
+        
+        critical_packages=("git" "zinit")
+        for pkg in "${critical_packages[@]}"; do
+            if brew list "$pkg" &>/dev/null; then
+                pass "Brew package: $pkg"
+            else
+                fail "Brew package missing: $pkg"
+            fi
+        done
+
+        autoupdate_status=$(brew autoupdate status 2>&1 || true)
+        if [[ "$autoupdate_status" == *"installed and running"* ]]; then
+            pass "Homebrew autoupdate running"
         else
-            fail "Brew package missing: $pkg"
+            warn "Homebrew autoupdate not running - run: brew autoupdate start 86400 --upgrade --cleanup"
         fi
-    done
-
-    autoupdate_status=$(brew autoupdate status 2>&1 || true)
-    if [[ "$autoupdate_status" == *"installed and running"* ]]; then
-        pass "Homebrew autoupdate running"
     else
-        warn "Homebrew autoupdate not running - run: brew autoupdate start 86400 --upgrade --cleanup"
+        fail "Homebrew not installed"
     fi
-else
-    fail "Homebrew not installed"
+elif [[ "$DOTFILES_OS" == linux ]]; then
+    if command -v pacman &>/dev/null; then
+        pass "Pacman"
+        
+        critical_packages=("git" "zsh" "zstd" "eza")
+        for pkg in "${critical_packages[@]}"; do
+            if pacman -Qi "$pkg" &>/dev/null; then
+                pass "Package: $pkg"
+            else
+                fail "Package missing: $pkg"
+            fi
+        done
+
+        if command -v yay &>/dev/null; then
+            pass "yay (AUR helper)"
+        else
+            warn "yay not found"
+        fi
+
+        if systemctl --user is-active git-auto-pull.timer &>/dev/null; then
+            pass "systemd timers running"
+        else
+            warn "systemd timers not active"
+        fi
+    else
+        fail "Pacman not found"
+    fi
 fi
 
 echo ""
@@ -127,7 +175,11 @@ if [[ -d "$DOTFILES_DIR" ]]; then
     
     # Check key files
     [[ -f "$DOTFILES_DIR/install.sh" ]] && pass "install.sh present" || fail "install.sh missing"
-    [[ -f "$DOTFILES_DIR/Brewfile" ]] && pass "Brewfile present" || fail "Brewfile missing"
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        [[ -f "$DOTFILES_DIR/Brewfile" ]] && pass "Brewfile present" || fail "Brewfile missing"
+    elif [[ "$DOTFILES_OS" == linux ]]; then
+        [[ -f "$DOTFILES_DIR/pkglist/pacman.txt" ]] && pass "pkglist/pacman.txt present" || fail "pkglist/pacman.txt missing"
+    fi
     [[ -d "$DOTFILES_DIR/zsh/functions" ]] && pass "Functions directory present" || fail "Functions directory missing"
 else
     fail "Dotfiles directory missing at $DOTFILES_DIR"
@@ -178,6 +230,7 @@ p10k_found=false
 p10k_paths=(
     "$HOME/.zinit/plugins/romkatv---powerlevel10k"
     "/opt/homebrew/opt/powerlevel10k"
+    "/usr/share/zsh/plugins/powerlevel10k"
 )
 
 for p10k_path in "${p10k_paths[@]}"; do
@@ -194,8 +247,16 @@ fi
 
 # Check gitstatus binary
 GITSTATUS_CACHE="$HOME/.cache/gitstatus"
-if [[ -f "$GITSTATUS_CACHE/gitstatusd-darwin-$ARCH" ]]; then
-    size=$(stat -f%z "$GITSTATUS_CACHE/gitstatusd-darwin-$ARCH" 2>/dev/null || echo "unknown")
+case "$DOTFILES_OS" in
+    macos) local gs_suffix="darwin" ;;
+    linux) local gs_suffix="linux" ;;
+esac
+if [[ -f "$GITSTATUS_CACHE/gitstatusd-${gs_suffix}-$ARCH" ]]; then
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        size=$(stat -f%z "$GITSTATUS_CACHE/gitstatusd-${gs_suffix}-$ARCH" 2>/dev/null || echo "unknown")
+    else
+        size=$(stat -c%s "$GITSTATUS_CACHE/gitstatusd-${gs_suffix}-$ARCH" 2>/dev/null || echo "unknown")
+    fi
     pass "Gitstatus binary cached ($size bytes)"
 else
     warn "Gitstatus binary not cached (will download on first run)"
@@ -270,16 +331,28 @@ if [[ $FAIL -eq 0 ]]; then
     echo "✅ All validations passed!"
     echo ""
     echo "Next steps:"
-    echo "  • Run: dotfiles-doctor (comprehensive health check)"
-    echo "  • Run: macos-defaults (apply system preferences)"
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        echo "  • Run: dotfiles-doctor (comprehensive health check)"
+        echo "  • Run: macos-defaults (apply system preferences)"
+    elif [[ "$DOTFILES_OS" == linux ]]; then
+        echo "  • Run: dotfiles-doctor (comprehensive health check)"
+        echo "  • Run: pacup (update all packages)"
+        echo "  • Run: kde-defaults (apply KDE Plasma preferences)"
+    fi
     echo "  • Restart terminal to ensure clean startup"
     exit 0
 else
     echo "❌ Some validations failed"
     echo ""
     echo "Troubleshooting:"
-    echo "  • Re-run: ~/dotfiles/install.sh"
-    echo "  • Check: ~/dotfiles/docs/install.md"
-    echo "  • Diagnose: dotfiles-doctor"
+    if [[ "$DOTFILES_OS" == linux ]]; then
+        echo "  • Run: ~/dotfiles/install.sh"
+        echo "  • Check: ~/dotfiles/docs/install.md"
+        echo "  • Diagnose: dotfiles-doctor"
+    else
+        echo "  • Re-run: ~/dotfiles/install.sh"
+        echo "  • Check: ~/dotfiles/docs/install.md"
+        echo "  • Diagnose: dotfiles-doctor"
+    fi
     exit 1
 fi

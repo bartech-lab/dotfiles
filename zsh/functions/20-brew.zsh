@@ -1,5 +1,6 @@
 # Brew Functions
 # Homebrew helper functions
+[[ "$DOTFILES_OS" == linux ]] && return 0
 
 brewup() {
   echo "→ brew update";         brew update
