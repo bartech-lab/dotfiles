@@ -71,6 +71,7 @@ brew "pngquant"         # PNG quantizer (lossy, smaller files)
 # Development Tools
 # ============================================================================
 
+brew "spicetify-cli"    # Spotify client customizer (themes, extensions)
 brew "fnm"              # Fast Node Manager (faster nvm alternative)
 brew "pipx"             # Python app installer (isolated packages)
 
