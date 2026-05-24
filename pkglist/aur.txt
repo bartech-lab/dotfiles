@@ -1,3 +1,5 @@
 ttf-meslo-nerd-font-powerlevel10k
 mozjpeg
 brave-bin
+protonup-qt
+goverlay

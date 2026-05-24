@@ -26,8 +26,13 @@ git-open() {
   if [[ "$url" == git@ssh.dev.azure.com:* ]]; then
     # git@ssh.dev.azure.com:v3/org/project/repo
     path=${url#git@ssh.dev.azure.com:v3/}
+    local azure_url="https://dev.azure.com/${path//\//\/_git\/}"
     echo "Opening Azure DevOps repo…"
-    open "https://dev.azure.com/${path//\//\/_git\/}"
+    if [[ "$DOTFILES_OS" == macos ]]; then
+      open "$azure_url"
+    else
+      xdg-open "$azure_url" &>/dev/null & disown
+    fi
     return
   fi
 
@@ -43,5 +48,9 @@ git-open() {
   url=${url%.git}
 
   echo "Opening $url"
-  open "$url"
+  if [[ "$DOTFILES_OS" == macos ]]; then
+    open "$url"
+  else
+    xdg-open "$url" &>/dev/null & disown
+  fi
 }

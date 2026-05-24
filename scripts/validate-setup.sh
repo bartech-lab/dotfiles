@@ -117,7 +117,7 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
     if command -v pacman &>/dev/null; then
         pass "Pacman"
         
-        critical_packages=("git" "zsh" "zstd" "eza")
+        critical_packages=("git" "zsh" "zstd" "eza" "wl-clipboard" "gamemode")
         for pkg in "${critical_packages[@]}"; do
             if pacman -Qi "$pkg" &>/dev/null; then
                 pass "Package: $pkg"
@@ -133,12 +133,55 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
         fi
 
         if systemctl --user is-active git-auto-pull.timer &>/dev/null; then
-            pass "systemd timers running"
+            pass "systemd user timers running"
         else
-            warn "systemd timers not active"
+            warn "systemd user timers not active"
+        fi
+
+        if systemctl is-active fstrim.timer &>/dev/null; then
+            pass "fstrim.timer active"
+        else
+            warn "fstrim.timer not active"
+        fi
+
+        if systemctl is-active reflector.timer &>/dev/null; then
+            pass "reflector.timer active"
+        else
+            warn "reflector.timer not active"
         fi
     else
         fail "Pacman not found"
+    fi
+
+    # NVIDIA checks
+    if lsmod 2>/dev/null | grep -q '^nvidia '; then
+        pass "NVIDIA driver loaded"
+    else
+        warn "NVIDIA driver not loaded"
+    fi
+
+    if lsmod 2>/dev/null | grep -q '^nova_core'; then
+        fail "nova_core module loaded (conflicts with nvidia)"
+    else
+        pass "nova_core not loaded"
+    fi
+
+    if [[ -f /etc/sysctl.d/99-performance.conf ]]; then
+        pass "sysctl performance config deployed"
+    else
+        fail "sysctl performance config missing"
+    fi
+
+    if [[ -f /etc/modprobe.d/nvidia.conf ]]; then
+        pass "NVIDIA modprobe config deployed"
+    else
+        fail "NVIDIA modprobe config missing"
+    fi
+
+    if [[ -f ~/.config/gamemode.ini ]]; then
+        pass "GameMode config present"
+    else
+        warn "GameMode config missing"
     fi
 fi
 

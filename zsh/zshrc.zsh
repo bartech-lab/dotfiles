@@ -72,6 +72,14 @@ fi
     export HOMEBREW_CASK_OPTS="--no-quarantine"
     export HOMEBREW_NO_ENV_HINTS=1
   fi
+
+  # Linux-specific environment (NVIDIA Wayland)
+  if [[ "$DOTFILES_OS" == linux ]]; then
+    export LIBVA_DRIVER_NAME=nvidia
+    export __GL_GSYNC_ALLOWED=1
+    export __GL_VRR_ALLOWED=1
+    export MOZ_ENABLE_WAYLAND=1
+  fi
 }
 
 # ====== Zinit Plugin Manager ======

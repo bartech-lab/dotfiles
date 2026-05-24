@@ -37,3 +37,31 @@ pacorphans() {
         echo "Remove with: sudo pacman -Rns \$(pacman -Qdtq)"
     fi
 }
+
+pacman-optimize() {
+    echo "Optimizing pacman.conf..."
+
+    # Enable color output
+    sudo sed -i 's/^#Color$/Color/' /etc/pacman.conf
+
+    # Enable verbose package lists
+    sudo sed -i 's/^#VerbosePkgLists$/VerbosePkgLists/' /etc/pacman.conf
+
+    # Set parallel downloads to 10 (2 Gbps connection)
+    if grep -q '^#ParallelDownloads' /etc/pacman.conf; then
+        sudo sed -i 's/^#ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
+    elif grep -q '^ParallelDownloads' /etc/pacman.conf; then
+        sudo sed -i 's/^ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
+    fi
+
+    # Add ILoveCandy if not present
+    if ! grep -q '^ILoveCandy' /etc/pacman.conf; then
+        sudo sed -i '/^ParallelDownloads/a ILoveCandy' /etc/pacman.conf
+    fi
+
+    echo "✓ Pacman config optimized:"
+    echo "  • Color output enabled"
+    echo "  • Verbose package lists enabled"
+    echo "  • Parallel downloads: 10"
+    echo "  • ILoveCandy enabled"
+}
