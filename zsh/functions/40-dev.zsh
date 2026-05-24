@@ -611,11 +611,81 @@ dotfiles-doctor() {
             ((has_errors++))
         fi
 
+        # NVIDIA driver
+        if lsmod 2>/dev/null | grep -q '^nvidia '; then
+            echo "  ✅ NVIDIA driver loaded"
+        else
+            echo "  ⚠️  NVIDIA driver not loaded"
+            ((has_warnings++))
+        fi
+
+        # nova_core should NOT be loaded
+        if lsmod 2>/dev/null | grep -q '^nova_core'; then
+            echo "  ❌ nova_core module loaded (conflicts with nvidia)"
+            echo "     Blacklist it: /etc/modprobe.d/nvidia.conf"
+            ((has_errors++))
+        fi
+
+        # DRM KMS
+        if [[ -f /sys/module/nvidia_drm/parameters/modeset ]]; then
+            local kms_val=$(cat /sys/module/nvidia_drm/parameters/modeset 2>/dev/null)
+            if [[ "$kms_val" == "Y" || "$kms_val" == "1" ]]; then
+                echo "  ✅ NVIDIA DRM KMS enabled"
+            else
+                echo "  ⚠️  NVIDIA DRM KMS not enabled (Wayland requires it)"
+                ((has_warnings++))
+            fi
+        fi
+
+        # Wayland session
+        if [[ "$XDG_SESSION_TYPE" == "wayland" ]]; then
+            echo "  ✅ Wayland session active"
+        elif [[ -n "$XDG_SESSION_TYPE" ]]; then
+            echo "  ⚠️  Session type: $XDG_SESSION_TYPE (expected wayland)"
+            ((has_warnings++))
+        fi
+
+        # Baloo
+        if command -v balooctl6 &>/dev/null; then
+            local baloo_status=$(balooctl6 status 2>/dev/null | head -3)
+            if echo "$baloo_status" | grep -qi "disabled\|not running"; then
+                echo "  ✅ Baloo file indexer disabled"
+            else
+                echo "  ⚠️  Baloo file indexer may be running"
+                echo "     Run: kde-defaults to disable it"
+                ((has_warnings++))
+            fi
+        fi
+
         # Systemd user timers
         if systemctl --user is-active git-auto-pull.timer &>/dev/null; then
             echo "  ✅ git-auto-pull timer active"
         else
             echo "  ⚠️  git-auto-pull timer not active"
+            ((has_warnings++))
+        fi
+
+        # fstrim timer
+        if systemctl is-active fstrim.timer &>/dev/null; then
+            echo "  ✅ fstrim.timer active"
+        else
+            echo "  ⚠️  fstrim.timer not active (SSD TRIM)"
+            ((has_warnings++))
+        fi
+
+        # GameMode
+        if command -v gamemoded &>/dev/null; then
+            echo "  ✅ GameMode installed"
+        else
+            echo "  ⚠️  GameMode not found"
+            ((has_warnings++))
+        fi
+
+        # PipeWire
+        if systemctl --user is-active pipewire &>/dev/null; then
+            echo "  ✅ PipeWire running"
+        else
+            echo "  ⚠️  PipeWire not running"
             ((has_warnings++))
         fi
     fi

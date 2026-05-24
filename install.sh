@@ -346,6 +346,50 @@ HEARTBEATCONF
         echo "✓ systemd user timers enabled"
     fi
 
+    # --- System performance configs (sysctl, modprobe) ---
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "System configs to deploy (requires sudo):"
+        echo "  → /etc/sysctl.d/99-performance.conf (vm.swappiness=10, vm.max_map_count)"
+        echo "  → /etc/modprobe.d/nvidia.conf (blacklist nouveau/nova_core, DRM modeset)"
+    else
+        echo ""
+        echo "⚙️  Deploying system performance configs..."
+        sudo cp "$DOTFILES_DIR/linux/etc/sysctl.d/99-performance.conf" /etc/sysctl.d/
+        sudo cp "$DOTFILES_DIR/linux/etc/modprobe.d/nvidia.conf" /etc/modprobe.d/
+        sudo sysctl --system >/dev/null 2>&1
+        echo "✓ System configs deployed (sysctl, modprobe)"
+    fi
+
+    # --- GameMode config ---
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "User configs to deploy:"
+        echo "  → ~/.config/gamemode.ini"
+    else
+        mkdir -p ~/.config
+        cp "$DOTFILES_DIR/linux/gamemode.ini" ~/.config/gamemode.ini
+        echo "✓ GameMode config deployed"
+    fi
+
+    # --- Enable system timers (fstrim, reflector) ---
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "System timers to enable:"
+        echo "  → fstrim.timer (weekly SSD TRIM)"
+        echo "  → reflector.timer (mirror optimization)"
+    else
+        sudo systemctl enable --now fstrim.timer 2>/dev/null || true
+        sudo systemctl enable --now reflector.timer 2>/dev/null || true
+        echo "✓ fstrim.timer and reflector.timer enabled"
+    fi
+
+    # --- mkinitcpio instructions (never auto-modify) ---
+    echo ""
+    echo "📌 MANUAL STEP: Add NVIDIA modules to /etc/mkinitcpio.conf:"
+    echo "   MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)"
+    echo "   Then run: sudo mkinitcpio -P"
+
 fi  # End Linux package install
 
 # Create ~/.config if needed
@@ -541,7 +585,9 @@ else
         echo "📌 TG Pro: install manually → https://www.tunabellysoftware.com/tgpro/"
     elif [[ "$DOTFILES_OS" == linux ]]; then
         echo "Run: pacup to update all packages"
-        echo "Run: kde-defaults to apply KDE Plasma preferences"
+        echo "Run: pacman-optimize to optimize pacman.conf"
+        echo "Run: kde-defaults to apply KDE Plasma 6 preferences"
+        echo "Run: kde-audit-effects to verify disabled effects"
     fi
 fi
 echo ""

@@ -1,5 +1,14 @@
 # Media Functions
-# optimize-images, video-remux, video-encode-cpu, video-encode-gpu
+# optimize-images, video-remux, video-encode-cpu, video-encode-gpu, video-encode-av1
+
+_notify() {
+    local title="$1" msg="$2"
+    if [[ "$DOTFILES_OS" == macos ]]; then
+        osascript -e "display notification \"$msg\" with title \"$title\"" 2>/dev/null
+    elif command -v notify-send &>/dev/null; then
+        notify-send "$title" "$msg" 2>/dev/null
+    fi
+}
 
 optimize-images() {
   local SOURCE_PATH="."
@@ -374,9 +383,7 @@ video-remux() {
     echo "✅ Done! Remuxed files in current directory"
   fi
   
-  if [[ "$DOTFILES_OS" == macos ]] && command -v osascript &>/dev/null; then
-    osascript -e 'display notification "Video remux complete!" with title "video-remux"'
-  fi
+  _notify "video-remux" "Video remux complete!"
 }
 
 video-encode-cpu() {
@@ -472,9 +479,7 @@ video-encode-cpu() {
     echo "✅ Done! Encoded files in current directory"
   fi
   
-  if [[ "$DOTFILES_OS" == macos ]] && command -v osascript &>/dev/null; then
-    osascript -e 'display notification "CPU encoding complete!" with title "video-encode-cpu"'
-  fi
+  _notify "video-encode-cpu" "CPU encoding complete!"
 }
 
 video-encode-gpu() {
@@ -535,6 +540,8 @@ video-encode-gpu() {
   local encoder
   if [[ "$DOTFILES_OS" == macos ]]; then
     encoder="hevc_videotoolbox"
+  elif command -v nvidia-smi &>/dev/null; then
+    encoder="hevc_nvenc"
   else
     encoder="hevc_vaapi"
   fi
@@ -590,9 +597,106 @@ video-encode-gpu() {
     echo "✅ Done! Encoded files in current directory"
   fi
   
-  if [[ "$DOTFILES_OS" == macos ]] && command -v osascript &>/dev/null; then
-    osascript -e 'display notification "GPU encoding complete!" with title "video-encode-gpu"'
+  _notify "video-encode-gpu" "GPU encoding complete!"
+}
+
+video-encode-av1() {
+  local SOURCE_DIR="${1:-.}"
+  local USE_SUBDIR=0
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --subdir)
+        USE_SUBDIR=1
+        shift
+        ;;
+      *)
+        SOURCE_DIR="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [[ ! -d "$SOURCE_DIR" ]]; then
+    echo "❌ Error: Directory '$SOURCE_DIR' not found"
+    return 1
   fi
+
+  # AV1 NVENC requires RTX 40xx/50xx
+  if ! command -v nvidia-smi &>/dev/null; then
+    echo "❌ NVIDIA GPU not detected (av1_nvenc requires RTX 40xx/50xx)"
+    return 1
+  fi
+
+  cd "$SOURCE_DIR" || return 1
+
+  local OUTDIR="."
+  local ERROR_LOG="./encode_errors.log"
+
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    mkdir -p av1
+    OUTDIR="av1"
+    ERROR_LOG="$OUTDIR/encode_errors.log"
+  fi
+
+  rm -f "$ERROR_LOG"
+
+  local files=()
+  while IFS= read -r -d '' file; do
+    files+=("$file")
+  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" -o -iname "*.mkv" \) -print0)
+
+  local total_files=${#files[@]}
+
+  if (( total_files == 0 )); then
+    echo "No video files found to encode"
+    return 0
+  fi
+
+  echo "Found $total_files files to encode"
+  echo "Mode: GPU AV1 (NVENC, 10-bit)"
+  echo ""
+
+  printf '%s\0' "${files[@]}" | xargs -0 -P 2 -I{} sh -c '
+    file="$1"
+    base=$(basename "$file")
+    name="${base%.*}"
+    ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
+
+    if [[ "'"$USE_SUBDIR"'" == "1" ]]; then
+      out="'"$OUTDIR"'/${name}.mp4"
+    elif [[ "$ext" == "mp4" ]]; then
+      out="${name}-av1.mp4"
+    else
+      out="${name}.mp4"
+    fi
+
+    if [[ ! -f "$out" ]]; then
+      if ffmpeg -hide_banner -loglevel error -i "$file" \
+          -c:v av1_nvenc -crf 25 -preset p5 -pix_fmt p010le \
+          -c:a libopus -b:a 128k -ac 2 -ar 48000 \
+          -movflags +faststart "$out" 2>/dev/null; then
+        touch -r "$file" "$out"
+      else
+        echo "FAILED: $base" >> "'"$ERROR_LOG"'"
+      fi
+    fi
+  ' _ {}
+
+  if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
+    local error_count=$(wc -l < "$ERROR_LOG")
+    echo ""
+    echo "⚠️  $error_count file(s) had issues:"
+    cat "$ERROR_LOG"
+  fi
+
+  if [[ $USE_SUBDIR -eq 1 ]]; then
+    echo "✅ Done! AV1-encoded files in: $(pwd)/$OUTDIR/"
+  else
+    echo "✅ Done! AV1-encoded files in current directory"
+  fi
+
+  _notify "video-encode-av1" "AV1 encoding complete!"
 }
 
 # Convert video to GIF (useful for documentation/issues)
@@ -629,6 +733,8 @@ video-to-gif() {
     local hwaccel_args=()
     if [[ "$DOTFILES_OS" == macos ]]; then
         hwaccel_args=(-hwaccel videotoolbox)
+    elif command -v nvidia-smi &>/dev/null; then
+        hwaccel_args=(-hwaccel cuda)
     fi
 
     ffmpeg \
