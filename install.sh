@@ -372,6 +372,26 @@ HEARTBEATCONF
         echo "✓ GameMode config deployed"
     fi
 
+    # --- Plasma 6 Panel Config (centered icons, auto-hide, thickness=60) ---
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "Plasma 6 panel configs to deploy:"
+        echo "  → ~/.config/plasmashellrc"
+        echo "  → ~/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    else
+        # Backup existing plasma configs if not symlinks
+        for cfg in plasmashellrc plasma-org.kde.plasma.desktop-appletsrc; do
+            if [[ -f "$HOME/.config/$cfg" && ! -L "$HOME/.config/$cfg" ]]; then
+                ensure_backup_dir
+                cp "$HOME/.config/$cfg" "$BACKUP_DIR/$cfg"
+                echo "✓ Backed up $cfg"
+            fi
+        done
+        cp "$DOTFILES_DIR/linux/plasma/plasmashellrc" "$HOME/.config/plasmashellrc"
+        cp "$DOTFILES_DIR/linux/plasma/plasma-org.kde.plasma.desktop-appletsrc" "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+        echo "✓ Plasma 6 panel configs deployed (centered icons, auto-hide, 60px)"
+    fi
+
     # --- Enable system timers (fstrim, reflector) ---
     if [[ "$DRY_RUN" == true ]]; then
         echo ""
@@ -564,6 +584,32 @@ if [[ "$DRY_RUN" == false ]]; then
     fi
 fi
 
+# --- OpenCode ---
+if ! command -v opencode >/dev/null; then
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "OpenCode:"
+        echo "  → Would install: curl -fsSL https://opencode.ai/install | bash"
+    else
+        echo ""
+        echo "📦 Installing OpenCode..."
+        curl -fsSL https://opencode.ai/install | bash
+        echo "✓ OpenCode installed"
+    fi
+fi
+
+# --- p10k config (suppresses configuration wizard, ships preferred style) ---
+if [[ ! -f ~/.p10k.zsh ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "p10k config:"
+        echo "  → Would create: ~/.p10k.zsh"
+    else
+        cp "$DOTFILES_DIR/zsh/p10k.zsh" ~/.p10k.zsh
+        echo "✓ p10k config deployed (run p10k configure to customize)"
+    fi
+fi
+
 # Count available functions
 func_count=$(find "$DOTFILES_DIR/zsh/functions" -name "*.zsh" -type f 2>/dev/null | wc -l | tr -d ' ')
 
@@ -588,6 +634,7 @@ else
         echo "Run: pacman-optimize to optimize pacman.conf"
         echo "Run: kde-defaults to apply KDE Plasma 6 preferences"
         echo "Run: kde-audit-effects to verify disabled effects"
+        echo "Run: p10k configure to customize your prompt (optional)"
     fi
 fi
 echo ""
