@@ -49,14 +49,14 @@ make
 # GUI apps
 ghostty
 handbrake
-
-code
 android-tools
 
 # System utilities
 pacman-contrib
 reflector
 libnotify
+mission-center
+psensor
 
 # NVIDIA extras (base nvidia-open/nvidia-utils installed by EndeavourOS)
 lib32-nvidia-utils
