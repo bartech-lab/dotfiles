@@ -1,6 +1,6 @@
 # Core CLI
 git
-gh
+github-cli
 curl
 wget
 openssh
@@ -29,7 +29,7 @@ zsh-completions
 ffmpeg
 parallel
 zstd
-unar
+unarchiver
 yt-dlp
 aria2
 
@@ -38,7 +38,7 @@ oxipng
 pngquant
 
 # Dev tools
-pipx
+python-pipx
 python-pip
 python
 nodejs
@@ -49,7 +49,7 @@ make
 # GUI apps
 ghostty
 handbrake
-localsend
+
 code
 android-tools
 
@@ -97,8 +97,7 @@ gst-plugins-good
 gst-plugins-bad
 gst-plugins-ugly
 gst-libav
-lib32-gst-plugins-base
-lib32-gst-plugins-good
+
 
 # Gaming libs
 lib32-libva
