@@ -372,24 +372,19 @@ HEARTBEATCONF
         echo "✓ GameMode config deployed"
     fi
 
-    # --- Plasma 6 Panel Config (centered icons, auto-hide, thickness=60) ---
+    # --- Plasma 6 Panel Config (auto-hide, floating, thickness=60) ---
     if [[ "$DRY_RUN" == true ]]; then
         echo ""
-        echo "Plasma 6 panel configs to deploy:"
+        echo "Plasma 6 panel config to deploy:"
         echo "  → ~/.config/plasmashellrc"
-        echo "  → ~/.config/plasma-org.kde.plasma.desktop-appletsrc"
     else
-        # Backup existing plasma configs if not symlinks
-        for cfg in plasmashellrc plasma-org.kde.plasma.desktop-appletsrc; do
-            if [[ -f "$HOME/.config/$cfg" && ! -L "$HOME/.config/$cfg" ]]; then
-                ensure_backup_dir
-                cp "$HOME/.config/$cfg" "$BACKUP_DIR/$cfg"
-                echo "✓ Backed up $cfg"
-            fi
-        done
+        if [[ -f "$HOME/.config/plasmashellrc" && ! -L "$HOME/.config/plasmashellrc" ]]; then
+            ensure_backup_dir
+            cp "$HOME/.config/plasmashellrc" "$BACKUP_DIR/plasmashellrc"
+            echo "✓ Backed up plasmashellrc"
+        fi
         cp "$DOTFILES_DIR/linux/plasma/plasmashellrc" "$HOME/.config/plasmashellrc"
-        cp "$DOTFILES_DIR/linux/plasma/plasma-org.kde.plasma.desktop-appletsrc" "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
-        echo "✓ Plasma 6 panel configs deployed (centered icons, auto-hide, 60px)"
+        echo "✓ Plasma 6 panel config deployed (auto-hide, floating, 60px)"
     fi
 
     # --- Enable system timers (fstrim, reflector) ---
