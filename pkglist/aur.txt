@@ -1,10 +1,9 @@
 ttf-meslo-nerd-font-powerlevel10k
-mozjpeg
 brave-bin
 protonup-qt
 goverlay
 localsend-bin
-visual-studio-code-bin
 spotify
 spicetify-cli
 filen-desktop-bin
+standardnotes-desktop

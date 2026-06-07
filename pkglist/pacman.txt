@@ -49,6 +49,8 @@ make
 # GUI apps
 ghostty
 handbrake
+
+code
 android-tools
 
 # System utilities

@@ -148,11 +148,8 @@ kde-defaults() {
     echo "  ✓ KDE globals: menu icons off, recent documents off"
 
     # ============================================
-    # PANEL (Taskbar) — Centered icons, auto-hide, 60px
+    # PANEL (Taskbar) — Centered icons, 60px, floating
     # ============================================
-
-    # Auto-hide
-    kwriteconfig6 --file plasmashellrc --group PlasmaViews --group "Panel 2" --key panelVisibility 1
 
     # Thickness (height)
     kwriteconfig6 --file plasmashellrc --group PlasmaViews --group "Panel 2" --group Defaults --key thickness 60
@@ -160,7 +157,7 @@ kde-defaults() {
     # Floating panel
     kwriteconfig6 --file plasmashellrc --group PlasmaViews --group "Panel 2" --key floating 1
 
-    echo "  ✓ Panel: auto-hide enabled, 60px thickness, floating"
+    echo "  ✓ Panel: 60px thickness, floating"
 
     # ============================================
     # PANEL LAYOUT — Spacers to center Icons-Only Task Manager
