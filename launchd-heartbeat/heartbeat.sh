@@ -41,12 +41,29 @@ if [[ "$(uname -s)" == Darwin ]]; then
     }
 else
     check_service() {
-        systemctl --user is-active "$1" 2>/dev/null || echo "missing"
+        local timer_name="${1%.service}.timer"
+        local status
+        if status=$(systemctl --user is-active "$timer_name" 2>/dev/null); then
+            echo "$status"
+            return
+        fi
+        if status=$(systemctl --user is-active "$1" 2>/dev/null); then
+            echo "$status"
+            return
+        fi
+        echo "missing"
     }
     get_service_details() {
         local state runs
-        state=$(systemctl --user is-active "$1" 2>/dev/null || echo "unknown")
-        runs="N/A"
+        local timer_name="${1%.service}.timer"
+        if state=$(systemctl --user is-active "$timer_name" 2>/dev/null); then
+            runs="N/A"
+        elif state=$(systemctl --user is-active "$1" 2>/dev/null); then
+            runs="N/A"
+        else
+            state="unknown"
+            runs="N/A"
+        fi
         echo "state=$state runs=$runs"
     }
 fi
