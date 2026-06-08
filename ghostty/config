@@ -69,6 +69,9 @@ window-decoration = auto
 maximize = true
 background-opacity = 0.97
 
+unfocused-split-opacity = 1
+quick-terminal-animation-duration = 0
+
 # ---------- Cursor ----------
 cursor-style = bar
 cursor-color = #00e5ff
