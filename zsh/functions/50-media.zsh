@@ -107,7 +107,7 @@ optimize-images() {
 
       tmp=".optimize_tmp_${$}_${RANDOM}_${name}.jpg"
 
-      if cjpeg -quality 92 -optimize -progressive "$file" > "$tmp" 2>/dev/null; then
+      if cjpeg -quality 85 -optimize -progressive "$file" > "$tmp" 2>/dev/null; then
         mv "$tmp" "$out"
         touch -r "$file" "$out"
       else
@@ -135,7 +135,7 @@ optimize-images() {
 
         tmp=".optimize_tmp_${$}_${RANDOM}_${name}.png"
 
-        if oxipng -q -o 4 --strip safe -i 0 --out "$tmp" "$file" 2>/dev/null; then
+        if oxipng -q -o 4 --strip safe -a -i 0 --out "$tmp" "$file" 2>/dev/null; then
           mv "$tmp" "$out"
           touch -r "$file" "$out"
         else
@@ -183,7 +183,7 @@ optimize-images() {
             pngquant --quality=80-90 --speed 1 --output "$tmp_quant" -- "$file" 2>/dev/null
 
             if [[ -f "$tmp_quant" ]]; then
-              if oxipng -q -o 4 --strip safe -i 0 --out "$tmp_png" "$tmp_quant" 2>/dev/null; then
+              if oxipng -q -o 4 --strip safe -a -i 0 --out "$tmp_png" "$tmp_quant" 2>/dev/null; then
                 mv "$tmp_png" "$out"
                 touch -r "$file" "$out"
               else
@@ -191,7 +191,7 @@ optimize-images() {
               fi
               rm -f "$tmp_quant" "$tmp_png" 2>/dev/null
             else
-              if oxipng -q -o 4 --strip safe -i 0 --out "$tmp_png" "$file" 2>/dev/null; then
+              if oxipng -q -o 4 --strip safe -a -i 0 --out "$tmp_png" "$file" 2>/dev/null; then
                 mv "$tmp_png" "$out"
                 touch -r "$file" "$out"
               else
@@ -439,9 +439,18 @@ video-encode-cpu() {
   echo "Found $total_files files to encode"
   echo "Mode: CPU H.265 (high quality, slow)"
   echo ""
-  
-  # Process files in parallel using xargs (2 jobs for CPU)
-  printf '%s\0' "${files[@]}" | xargs -0 -P 2 -I{} sh -c '
+
+  # Platform-aware parallel: M4 Pro handles 4 concurrent x265 encodes;
+  # 9800X3D (8c/16t) caps at 3 to avoid thread contention
+  local enc_parallel=2
+  if [[ "$DOTFILES_OS" == macos ]]; then
+    enc_parallel=4
+  elif [[ "$DOTFILES_OS" == linux ]]; then
+    enc_parallel=3
+  fi
+
+  # Process files in parallel using xargs
+  printf '%s\0' "${files[@]}" | xargs -0 -P "$enc_parallel" -I{} sh -c '
     file="$1"
     base=$(basename "$file")
     name="${base%.*}"
@@ -536,16 +545,21 @@ video-encode-gpu() {
   echo "Mode: GPU H.265 (fast encoding)"
   echo ""
 
-  # Platform-aware encoder
+  # Platform-aware encoder with optimized flags
   local encoder
+  local enc_flags
   if [[ "$DOTFILES_OS" == macos ]]; then
     encoder="hevc_videotoolbox"
+    enc_flags="-q:v 40 -pix_fmt p010le -allow_sw 0"
   elif command -v nvidia-smi &>/dev/null; then
     encoder="hevc_nvenc"
+    enc_flags="-preset p7 -tune hq -cq 26 -pix_fmt p010le -multipass qres -bf 5 -b_ref_mode each -spatial-aq 1 -temporal-aq 1"
   else
     encoder="hevc_vaapi"
+    enc_flags="-qp 26"
   fi
   export DOTFILES_ENCODER="$encoder"
+  export DOTFILES_ENCODER_FLAGS="$enc_flags"
   
   # Process files in parallel using xargs (4 jobs for GPU)
   printf '%s\0' "${files[@]}" | xargs -0 -P 4 -I{} sh -c '
@@ -564,17 +578,16 @@ video-encode-gpu() {
     fi
     
     if [[ ! -f "$out" ]]; then
-      q=52
       crop=$(ffmpeg -hide_banner -i "$file" -vf cropdetect=limit=0.1:round=2 -t 8 -f null - 2>&1 | awk -F'"'"'crop='"'"' '"'"'/crop=/{print $2}'"'"' | awk '"'"'{print $1}'"'"' | tail -1)
       
       if [[ -n "$crop" ]]; then
-        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v "$DOTFILES_ENCODER" -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v "$DOTFILES_ENCODER" $DOTFILES_ENCODER_FLAGS -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
           : # success
         else
           echo "FAILED: $base" >> "'"$ERROR_LOG"'"
         fi
       else
-        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v "$DOTFILES_ENCODER" -q:v $q -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v "$DOTFILES_ENCODER" $DOTFILES_ENCODER_FLAGS -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
           : # success
         else
           echo "FAILED: $base" >> "'"$ERROR_LOG"'"
@@ -673,8 +686,9 @@ video-encode-av1() {
 
     if [[ ! -f "$out" ]]; then
       if ffmpeg -hide_banner -loglevel error -i "$file" \
-          -c:v av1_nvenc -crf 25 -preset p5 -pix_fmt p010le \
-          -c:a libopus -b:a 128k -ac 2 -ar 48000 \
+          -c:v av1_nvenc -preset p7 -tune hq -cq 28 -pix_fmt p010le \
+          -multipass qres -b_ref_mode each -spatial-aq 1 -temporal-aq 1 \
+          -c:a aac -b:a 192k -ac 2 -ar 48000 \
           -movflags +faststart "$out" 2>/dev/null; then
         touch -r "$file" "$out"
       else

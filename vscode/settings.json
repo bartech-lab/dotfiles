@@ -1,0 +1,6 @@
+{
+  "editor.smoothScrolling": false,
+  "workbench.list.smoothScrolling": false,
+  "editor.minimap.renderCharacters": false,
+  "terminal.integrated.smoothScrolling": false
+}

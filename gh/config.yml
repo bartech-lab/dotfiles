@@ -1,0 +1,4 @@
+editor: nvim
+prompt: enabled
+prefer_editor_prompt: true
+version: 1

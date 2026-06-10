@@ -1,0 +1,5 @@
+--format bv*+ba/b
+--output ~/Downloads/%(title)s.%(ext)s
+--concurrent-fragments 16
+--embed-metadata
+--no-mtime

@@ -83,6 +83,32 @@ archive() {
     emulate -L zsh
     setopt LOCAL_OPTIONS NO_NOMATCH
 
+    local dry_run=false
+    local use_gzip=false
+    local name=""
+
+    # Parse arguments (must happen before compressor check)
+    for arg in "$@"; do
+        case "$arg" in
+            --dry-run|-n)
+                dry_run=true
+                ;;
+            -gzip)
+                use_gzip=true
+                ;;
+            -*)
+                echo "❌ Unknown option: $arg"
+                echo "Usage: archive [name] [--dry-run] [-gzip]"
+                return 1
+                ;;
+            *)
+                if [[ -z "$name" ]]; then
+                    name="$arg"
+                fi
+                ;;
+        esac
+    done
+
     # Check for compressor
     if [[ "$use_gzip" == true ]]; then
         if ! command -v gzip &>/dev/null; then
@@ -105,32 +131,6 @@ archive() {
     elif tar --version 2>/dev/null | grep -q "GNU tar"; then
         use_gnu_tar=true
     fi
-
-    local dry_run=false
-    local use_gzip=false
-    local name=""
-
-    # Parse arguments
-    for arg in "$@"; do
-        case "$arg" in
-            --dry-run|-n)
-                dry_run=true
-                ;;
-            -gzip)
-                use_gzip=true
-                ;;
-            -*)
-                echo "❌ Unknown option: $arg"
-                echo "Usage: archive [name] [--dry-run] [-gzip]"
-                return 1
-                ;;
-            *)
-                if [[ -z "$name" ]]; then
-                    name="$arg"
-                fi
-                ;;
-        esac
-    done
 
     # Default name from current directory
     name="${name:-$(basename "$PWD")}"
@@ -235,7 +235,7 @@ archive() {
             "${tar_opts[@]}" \
             "${exclude_args[@]}" \
             -cf - . 2>/dev/null | \
-            zstd -19 -T0 -q -o "$outfile"
+            zstd -12 -T0 -q -o "$outfile"
     fi
 
     if [[ -f "$outfile" ]]; then

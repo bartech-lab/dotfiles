@@ -247,6 +247,10 @@ macos-defaults() {
     # Chrome: disable backswipe on trackpad (prevents accidental navigation)
     defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool false
     defaults write com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls -bool false
+
+    # Brave: disable backswipe on trackpad
+    defaults write com.brave.Browser AppleEnableSwipeNavigateWithScrolls -bool false
+    defaults write com.brave.Browser AppleEnableMouseSwipeNavigateWithScrolls -bool false
     
     # Chrome: use system-native print preview dialog
     defaults write com.google.Chrome DisablePrintPreview -bool true

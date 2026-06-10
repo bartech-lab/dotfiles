@@ -78,6 +78,7 @@ fi
     export LIBVA_DRIVER_NAME=nvidia
     export __GL_GSYNC_ALLOWED=1
     export __GL_VRR_ALLOWED=1
+    export __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1
     export MOZ_ENABLE_WAYLAND=1
   fi
 }
