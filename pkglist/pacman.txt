@@ -99,8 +99,6 @@ gst-plugins-good
 gst-plugins-bad
 gst-plugins-ugly
 gst-libav
-lib32-gst-plugins-base
-lib32-gst-plugins-good
 
 # Gaming libs
 lib32-libva
