@@ -1,0 +1,22 @@
+[init]
+  defaultBranch = main
+[pull]
+  rebase = true
+[push]
+  autoSetupRemote = true
+[fetch]
+  prune = true
+[merge]
+  conflictstyle = zdiff3
+[rebase]
+  autoSquash = true
+  autoStash = true
+[rerere]
+  enabled = true
+[diff]
+  algorithm = histogram
+  colorMoved = zebra
+[help]
+  autocorrect = 1
+[column]
+  ui = auto

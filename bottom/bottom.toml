@@ -1,0 +1,5 @@
+[flags]
+rate = 1000
+default_time_value = 60000
+default_widget_type = "proc"
+color = "gruvbox"

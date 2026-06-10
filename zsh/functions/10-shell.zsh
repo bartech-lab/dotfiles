@@ -18,6 +18,10 @@ alias df='duf'
 # Note: coreutils are available but not aliased to avoid conflicts
 # Use g-prefix for GNU versions: gls, gcat, etc.
 
+# fzf defaults (fuzzy finder)
+export FZF_DEFAULT_OPTS='--height=40% --layout=reverse --border --info=inline'
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --exclude .git'
+
 # Copy current directory to clipboard (platform-aware)
 cpwd() {
     local clip

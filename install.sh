@@ -506,6 +506,78 @@ else
     echo "✓ Linked XDG Ghostty config"
 fi
 
+# ============================================================================
+# Cross-Platform Config Symlinks
+# ============================================================================
+
+config_symlinks() {
+    local src="$1" dest="$2" label="$3"
+    local dest_dir
+    dest_dir="$(dirname "$dest")"
+    if [[ "$DRY_RUN" == true ]]; then
+        if [[ -L "$dest" ]]; then
+            echo "  → Would update: $dest → $src"
+        else
+            echo "  → Would create: $dest → $src"
+        fi
+    else
+        mkdir -p "$dest_dir"
+        ln -sf "$src" "$dest"
+        echo "✓ Linked $label"
+    fi
+}
+
+# git global config
+config_symlinks "$DOTFILES_DIR/git/gitconfig" "$HOME/.gitconfig" "git global config"
+
+# curl
+config_symlinks "$DOTFILES_DIR/curl/curlrc" "$HOME/.curlrc" "curl config"
+
+# ripgrep
+config_symlinks "$DOTFILES_DIR/ripgrep/ripgreprc" "$HOME/.ripgreprc" "ripgrep config"
+
+# yt-dlp
+config_symlinks "$DOTFILES_DIR/yt-dlp/config" "$HOME/.config/yt-dlp/config" "yt-dlp config"
+
+# aria2
+config_symlinks "$DOTFILES_DIR/aria2/aria2.conf" "$HOME/.aria2/aria2.conf" "aria2 config"
+
+# bottom
+config_symlinks "$DOTFILES_DIR/bottom/bottom.toml" "$HOME/.config/bottom/bottom.toml" "bottom config"
+
+# GitHub CLI
+config_symlinks "$DOTFILES_DIR/gh/config.yml" "$HOME/.config/gh/config.yml" "gh config"
+
+# VS Code (shared settings.json, different target per platform)
+if [[ "$DOTFILES_OS" == macos ]]; then
+    config_symlinks "$DOTFILES_DIR/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json" "VS Code settings"
+else
+    config_symlinks "$DOTFILES_DIR/vscode/settings.json" "$HOME/.config/Code/User/settings.json" "VS Code settings"
+fi
+
+# ============================================================================
+# macOS-Specific Symlinks
+# ============================================================================
+
+if [[ "$DOTFILES_OS" == macos ]]; then
+    # IINA mpv config
+    config_symlinks "$DOTFILES_DIR/iina/mpv.conf" "$HOME/Library/Application Support/iina/mpv.conf" "IINA mpv config"
+fi
+
+# ============================================================================
+# Linux-Specific Config Symlinks
+# ============================================================================
+
+if [[ "$DOTFILES_OS" == linux ]]; then
+    # Brave GPU flags
+    config_symlinks "$DOTFILES_DIR/linux/brave-flags.conf" "$HOME/.config/brave-flags.conf" "Brave flags"
+
+    # Desktop overrides (Wayland for Electron apps)
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code.desktop" "$HOME/.local/share/applications/code.desktop" "VS Code desktop"
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standardnotes-desktop.desktop" "$HOME/.local/share/applications/standardnotes-desktop.desktop" "Standard Notes desktop"
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/filen-desktop.desktop" "$HOME/.local/share/applications/filen-desktop.desktop" "Filen Desktop desktop"
+fi
+
 # Add to .zshrc if not present
 if ! grep -q "zsh-dotfiles-loader.zsh" ~/.zshrc 2>/dev/null; then
     if [[ "$DRY_RUN" == true ]]; then
