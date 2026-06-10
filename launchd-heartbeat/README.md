@@ -1,17 +1,23 @@
-# LaunchAgent Heartbeat
+# Service Heartbeat Monitor
 
-Lightweight heartbeat monitor for user LaunchAgents on macOS.
+Lightweight heartbeat monitor for background services.
 
-It writes small status snapshots every hour so you can quickly confirm launchd jobs are actually loading and running.
+Supports **macOS** (LaunchAgents) and **Linux** (systemd user units). Detects platform automatically and uses the appropriate service manager.
 
 ## What it does
 
-- Runs every hour via LaunchAgent (`StartInterval=3600`)
-- Checks a configurable list of LaunchAgent labels
-- Logs `loaded`/`missing` status plus `state` and `runs`
+- Runs every hour
+- Checks a configurable list of service labels/units
+- Logs active/missing status
 - Writes errors to a separate log file
 
 ## Setup
+
+```bash
+bash ~/dotfiles/install.sh
+```
+
+For macOS-only legacy setup:
 
 ```bash
 cd ~/dotfiles/launchd-heartbeat
@@ -20,18 +26,25 @@ bash setup.sh
 
 ## Configuration
 
-Edit monitored labels:
+Edit monitored services:
 
 ```bash
 nano ~/.config/launchd-heartbeat/monitored-labels.conf
 ```
 
-Format: one LaunchAgent label per line.
+Format — one service per line.
 
-Example:
+**macOS** (LaunchAgent labels):
 ```
 com.user.gitautopull
 com.github.domt4.homebrew-autoupdate
+```
+
+**Linux** (systemd unit names):
+```
+git-auto-pull.service
+launchd-heartbeat.service
+system-update.service
 ```
 
 ## Logs
@@ -41,6 +54,8 @@ com.github.domt4.homebrew-autoupdate
 
 ## Management
 
+### macOS
+
 ```bash
 # Check service
 launchctl print gui/$(id -u)/com.user.launchdheartbeat
@@ -48,17 +63,44 @@ launchctl print gui/$(id -u)/com.user.launchdheartbeat
 # Trigger immediate run
 launchctl kickstart -k gui/$(id -u)/com.user.launchdheartbeat
 
-# Stop service
+# Stop
 launchctl bootout gui/$(id -u)/com.user.launchdheartbeat
 
-# Start service
+# Start
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.launchdheartbeat.plist
+```
+
+### Linux
+
+```bash
+# Check status
+systemctl --user status launchd-heartbeat.timer
+
+# Trigger immediate run
+systemctl --user start launchd-heartbeat.service
+
+# View recent logs
+journalctl --user -u launchd-heartbeat.service -n 20
+
+# Stop timer
+systemctl --user stop launchd-heartbeat.timer
+
+# Start timer
+systemctl --user start launchd-heartbeat.timer
 ```
 
 ## Uninstall
 
+### macOS
 ```bash
 launchctl bootout gui/$(id -u)/com.user.launchdheartbeat
 rm ~/Library/LaunchAgents/com.user.launchdheartbeat.plist
+rm -rf ~/.config/launchd-heartbeat
+```
+
+### Linux
+```bash
+systemctl --user disable --now launchd-heartbeat.timer
+rm ~/.config/systemd/user/launchd-heartbeat.{service,timer}
 rm -rf ~/.config/launchd-heartbeat
 ```

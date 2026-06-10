@@ -3,3 +3,8 @@ mozjpeg
 brave-bin
 protonup-qt
 goverlay
+localsend-bin
+spotify
+spicetify-cli
+filen-desktop-bin
+standardnotes-desktop

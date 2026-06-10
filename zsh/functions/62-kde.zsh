@@ -148,12 +148,41 @@ kde-defaults() {
     echo "  ✓ KDE globals: menu icons off, recent documents off"
 
     # ============================================
-    # PANEL (Taskbar) — Auto-hide
+    # PANEL (Taskbar) — Centered icons, 60px, floating
     # ============================================
 
-    kwriteconfig6 --file plasmashellrc --group PlasmaViews --group "Panel 1" --key panelVisibility 1
+    # Thickness (height)
+    kwriteconfig6 --file plasmashellrc --group PlasmaViews --group "Panel 2" --group Defaults --key thickness 60
 
-    echo "  ✓ Panel: auto-hide enabled"
+    # Floating panel
+    kwriteconfig6 --file plasmashellrc --group PlasmaViews --group "Panel 2" --key floating 1
+
+    echo "  ✓ Panel: 60px thickness, floating"
+
+    # ============================================
+    # PANEL LAYOUT — Spacers to center Icons-Only Task Manager
+    # ============================================
+
+    # Add flexible spacers around icontasks widget for centered app icons
+    # Note: Full layout is deployed via install.sh from linux/plasma/ configs
+    # This sets the key properties programmatically
+
+    local appletsrc="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+
+    # Left spacer (applet 25)
+    kwriteconfig6 --file "$appletsrc" --group Containments --group 2 --group Applets --group 25 --key immutability 1
+    kwriteconfig6 --file "$appletsrc" --group Containments --group 2 --group Applets --group 25 --key plugin org.kde.plasma.panelspacer
+    kwriteconfig6 --file "$appletsrc" --group Containments --group 2 --group Applets --group 25 --group Configuration --group General --key expanding true
+
+    # Right spacer (applet 26)
+    kwriteconfig6 --file "$appletsrc" --group Containments --group 2 --group Applets --group 26 --key immutability 1
+    kwriteconfig6 --file "$appletsrc" --group Containments --group 2 --group Applets --group 26 --key plugin org.kde.plasma.panelspacer
+    kwriteconfig6 --file "$appletsrc" --group Containments --group 2 --group Applets --group 26 --group Configuration --group General --key expanding true
+
+    # Applet order: kickoff(3) pager(4) spacer(25) icontasks(5) marg(6) spacer(26) systray(7) clock(21) showdesktop(22)
+    kwriteconfig6 --file "$appletsrc" --group Containments --group 2 --group General --key AppletOrder "3;4;25;5;6;26;7;21;22"
+
+    echo "  ✓ Panel layout: centered app icons (flexible spacers)"
 
     # ============================================
     # APPLY CHANGES (Wayland-safe)

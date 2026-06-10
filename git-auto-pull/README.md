@@ -1,23 +1,32 @@
 # Git Auto-Pull
 
-Automatically pull updates from git repositories every hour on macOS.
+Automatically pull updates from git repositories every hour.
+
+Supports **macOS** (LaunchAgents) and **Linux** (systemd user timers).
 
 ## Overview
 
-This setup creates a LaunchAgent that runs a shell script periodically to fetch and fast-forward configured branches in git repositories. It runs silently in the background with minimal resource usage.
+Runs a shell script periodically to fetch and fast-forward configured branches in git repositories. Silent background operation with minimal resource usage.
 
 ## Components
 
 - **pull.sh** - The main script that checks and pulls updates
-- **setup.sh** - One-time setup script for new machines
+- **install.sh** (`~/dotfiles/install.sh`) — Unified installer for all services on both macOS and Linux
+- **setup.sh** - macOS-only setup (legacy; prefer `install.sh`)
 - **repos.conf** - Configuration file listing repositories and their main branches (machine-specific, not in dotfiles)
+- **systemd/** - systemd user unit files for Linux
 
 ## Installation
 
 ### First Time Setup
 
-1. Make sure this directory is part of your dotfiles repository
-2. Run the setup script:
+Run the unified installer from dotfiles root:
+
+```bash
+bash ~/dotfiles/install.sh
+```
+
+Or for macOS-only legacy setup:
 
 ```bash
 cd ~/dotfiles/git-auto-pull
@@ -68,25 +77,43 @@ cat ~/.config/git-auto-pull/pull.log
 
 ## Management
 
-### Check if running:
+### macOS
+
 ```bash
+# Check if running
 launchctl list | grep gitautopull
-```
 
-### Stop the service:
-```bash
+# Stop
 launchctl unload ~/Library/LaunchAgents/com.user.gitautopull.plist
-```
 
-### Start the service:
-```bash
+# Start
 launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
-```
 
-### Restart after config changes:
-```bash
+# Restart after config changes
 launchctl unload ~/Library/LaunchAgents/com.user.gitautopull.plist
 launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
+```
+
+### Linux
+
+```bash
+# Check status
+systemctl --user status git-auto-pull.timer
+
+# Trigger immediate run
+systemctl --user start git-auto-pull.service
+
+# View recent logs
+journalctl --user -u git-auto-pull.service -n 20
+
+# Stop
+systemctl --user stop git-auto-pull.timer
+
+# Start
+systemctl --user start git-auto-pull.timer
+
+# Disable
+systemctl --user disable git-auto-pull.timer
 ```
 
 ## How It Works
@@ -112,8 +139,16 @@ launchctl load ~/Library/LaunchAgents/com.user.gitautopull.plist
 
 ## Uninstallation
 
+### macOS
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.user.gitautopull.plist
 rm ~/Library/LaunchAgents/com.user.gitautopull.plist
+rm -rf ~/.config/git-auto-pull
+```
+
+### Linux
+```bash
+systemctl --user disable --now git-auto-pull.timer
+rm ~/.config/systemd/user/git-auto-pull.{service,timer}
 rm -rf ~/.config/git-auto-pull
 ```

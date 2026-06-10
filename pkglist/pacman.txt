@@ -1,6 +1,6 @@
 # Core CLI
 git
-gh
+github-cli
 curl
 wget
 openssh
@@ -29,7 +29,7 @@ zsh-completions
 ffmpeg
 parallel
 zstd
-unar
+unarchiver
 yt-dlp
 aria2
 
@@ -38,7 +38,7 @@ oxipng
 pngquant
 
 # Dev tools
-pipx
+python-pipx
 python-pip
 python
 nodejs
@@ -49,7 +49,7 @@ make
 # GUI apps
 ghostty
 handbrake
-localsend
+
 code
 android-tools
 
@@ -57,6 +57,8 @@ android-tools
 pacman-contrib
 reflector
 libnotify
+mission-center
+psensor
 
 # NVIDIA extras (base nvidia-open/nvidia-utils installed by EndeavourOS)
 lib32-nvidia-utils
