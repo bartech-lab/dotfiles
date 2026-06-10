@@ -1,7 +1,11 @@
 # OpenCode Functions
 
 oco() {
-  opencode
+  if ! command -v opencode >/dev/null; then
+    echo "OpenCode not installed. Run: curl -fsSL https://opencode.ai/install | bash" >&2
+    return 1
+  fi
+  opencode "$@"
 }
 
 # Cleanup orphaned opencode processes (safe with multiple terminals)

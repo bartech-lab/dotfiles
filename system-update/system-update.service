@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily system update via yay
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/yay -Syu --noconfirm
+StandardOutput=journal
+StandardError=journal

@@ -4,6 +4,8 @@ Personal shell functions, aliases, and scripts for macOS 14+ and Linux (Endeavou
 
 ## Quick Start
 
+### macOS
+
 ```bash
 # Prerequisite (fresh Mac only)
 xcode-select --install
@@ -14,9 +16,26 @@ cd ~/dotfiles
 source ~/.zshrc
 ```
 
+### Linux (EndeavourOS / Arch)
+
+```bash
+# Prerequisites (fresh system only)
+sudo pacman -S git zsh
+chsh -s /usr/bin/zsh
+# Log out and back in for the shell change, then:
+
+git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./install.sh
+source ~/.zshrc
+
+# Optional: customize your prompt
+p10k configure
+```
+
 The installer is idempotent and safe to re-run.
 
-It also enables daily Homebrew autoupdate with `brew autoupdate start 86400 --upgrade --cleanup` when autoupdate is not already running.
+On macOS it also enables daily Homebrew autoupdate. On Linux it enables systemd timers for automatic git syncing, heartbeat monitoring, SSD TRIM, and mirror list refresh.
 
 ## Global Git Ignore
 
@@ -86,6 +105,8 @@ dotfiles-doctor
 - `video-encode-cpu/gpu [path] [--subdir]` - H.265 encoding
 
 ### OpenCode
+
+> OpenCode is auto-installed by `./install.sh` on both macOS and Linux.
 
 - `oco` - Launch OpenCode
 - `ocfix` - Clean orphaned opencode processes
@@ -171,9 +192,10 @@ See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
 
 ## Requirements
 
-- **macOS** 14+ (Sonoma and later)
-- **zsh** (pre-installed)
-- **Homebrew** (auto-installed by `./install.sh`)
+- **macOS** 14+ (Sonoma and later) or **Linux** (EndeavourOS/Arch)
+- **zsh** (auto-installed by `./install.sh` on Linux, pre-installed on macOS)
+- **Homebrew** (auto-installed by `./install.sh` on macOS)
+- **OpenCode** (auto-installed by `./install.sh` on both platforms)
 
 ## License
 

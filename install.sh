@@ -1,24 +1,13 @@
-#!/usr/bin/env zsh
+#!/bin/bash
 
-DOTFILES_DIR="$HOME/dotfiles"
-BACKUP_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/backups"
-BACKUP_DIR="$BACKUP_ROOT/$(date +%Y-%m-%d_%H-%M-%S)"
-BACKUP_CREATED=false
-DRY_RUN=false
+# Unified Automation Installer
+# Sets up all background services: git-auto-pull, launchd-heartbeat, system-update
+# Works on both macOS (LaunchAgents) and Linux (systemd user timers)
 
-# Runtime-critical dependencies (not install-time)
-# These prevent installer from running in broken environments
-CRITICAL_DEPS=("git" "zsh")
+set -e
 
-# Enforce ~/dotfiles location
-if [[ "$PWD" != "$HOME/dotfiles" ]]; then
-  print -u2 "❌ Please clone dotfiles into ~/dotfiles"
-  print -u2 "   Current location: $PWD"
-  print -u2 ""
-  print -u2 "Example:"
-  print -u2 "  git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles"
-  exit 1
-fi
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OS="$(uname -s)"
 
 # Parse arguments
 for arg in "$@"; do
@@ -54,6 +43,10 @@ case "$(uname -s)" in
   Linux)  DOTFILES_OS=linux ;;
   *)      print -u2 "❌ Unsupported OS: $(uname -s)"; exit 1 ;;
 esac
+
+echo "==> OS detected: $DOTFILES_OS"
+echo "==> Dotfiles root: $DOTFILES_DIR"
+echo ""
 
 # Check runtime-critical dependencies
 for dep in "${CRITICAL_DEPS[@]}"; do
@@ -590,4 +583,3 @@ else
         echo "Run: kde-audit-effects to verify disabled effects"
     fi
 fi
-echo ""
