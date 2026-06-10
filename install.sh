@@ -28,6 +28,11 @@ for arg in "$@"; do
     esac
 done
 
+# Backup variables — used by ensure_backup_dir()
+BACKUP_ROOT="$HOME/.dotfiles-backups"
+BACKUP_DIR="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
+BACKUP_CREATED=false
+
 if [[ "$DRY_RUN" == true ]]; then
     echo "🚀 Dotfiles Installer (DRY RUN)"
     echo "================================"
