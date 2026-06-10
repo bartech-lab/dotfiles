@@ -2,5 +2,7 @@
   "editor.smoothScrolling": false,
   "workbench.list.smoothScrolling": false,
   "editor.minimap.renderCharacters": false,
-  "terminal.integrated.smoothScrolling": false
+  "terminal.integrated.smoothScrolling": false,
+  "workbench.startupEditor": "none",
+  "explorer.confirmDelete": false
 }
