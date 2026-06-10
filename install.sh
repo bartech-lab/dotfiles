@@ -216,7 +216,7 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
     if ! command -v yay &>/dev/null; then
         if [[ "$DRY_RUN" == false ]]; then
             echo "📦 Installing yay AUR helper..."
-            local yay_tmp=$(mktemp -d)
+            yay_tmp=$(mktemp -d)
             git clone https://aur.archlinux.org/yay.git "$yay_tmp"
             (cd "$yay_tmp" && makepkg -si --noconfirm)
             rm -rf "$yay_tmp"
@@ -234,7 +234,7 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
         done < "$DOTFILES_DIR/pkglist/pacman.txt"
     else
         echo "📦 Installing pacman packages..."
-        local pkgs=()
+        pkgs=()
         while IFS= read -r pkg; do
             [[ -z "$pkg" || "$pkg" == \#* ]] && continue
             pkgs+=("$pkg")
@@ -253,7 +253,7 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
         done < "$DOTFILES_DIR/pkglist/aur.txt"
     else
         echo "📦 Installing AUR packages..."
-        local aur_pkgs=()
+        aur_pkgs=()
         while IFS= read -r pkg; do
             [[ -z "$pkg" || "$pkg" == \#* ]] && continue
             aur_pkgs+=("$pkg")
