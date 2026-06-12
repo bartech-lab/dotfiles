@@ -4,5 +4,6 @@
   "editor.minimap.renderCharacters": false,
   "terminal.integrated.smoothScrolling": false,
   "workbench.startupEditor": "none",
-  "explorer.confirmDelete": false
+  "explorer.confirmDelete": false,
+  "chat.agent.enabled": false
 }
