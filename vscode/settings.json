@@ -5,5 +5,9 @@
   "terminal.integrated.smoothScrolling": false,
   "workbench.startupEditor": "none",
   "explorer.confirmDelete": false,
-  "chat.agent.enabled": false
+  "chat.agent.enabled": false,
+  "files.autoSave": "afterDelay",
+  "github.copilot.chat.organizationInstructions.enabled": false,
+  "github.copilot.chat.organizationCustomAgents.enabled": false,
+  "chat.titleBar.signIn.enabled": false
 }
