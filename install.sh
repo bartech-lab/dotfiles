@@ -499,6 +499,9 @@ if [[ "$DRY_RUN" == true ]]; then
     else
         echo "  → Would create: ~/.gitignore_global → $DOTFILES_DIR/git/gitignore_global"
     fi
+    if ! git config --global core.excludesfile | grep -q "gitignore_global"; then
+        echo "  → Would set: git config --global core.excludesfile ~/.gitignore_global"
+    fi
     if [[ -L ~/.config/zsh-dotfiles-loader.zsh ]]; then
         echo "  → Would update: ~/.config/zsh-dotfiles-loader.zsh → $DOTFILES_DIR/zsh/functions.zsh"
     else
@@ -511,6 +514,11 @@ else
     else
         ln -sf "$DOTFILES_DIR/git/gitignore_global" ~/.gitignore_global
         echo "✓ Linked global gitignore"
+    fi
+
+    if ! git config --global core.excludesfile | grep -q "gitignore_global"; then
+        git config --global core.excludesfile ~/.gitignore_global
+        echo "✓ Set git core.excludesfile → ~/.gitignore_global"
     fi
 
     if [[ -L ~/.config/zsh-dotfiles-loader.zsh ]]; then
