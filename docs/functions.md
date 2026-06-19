@@ -462,6 +462,8 @@ See [dev.md](dev.md) for full documentation.
 | Discord | `61-discord.zsh` | OpenAsar setup/status helpers |
 | KDE | `62-kde.zsh` | KDE Plasma defaults (Linux only) |
 | OpenCode | `70-opencode.zsh` | OpenCode helpers |
+| **Scripts** | | |
+| Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 
 ### Pacman/Yay Helpers (21-pacman.zsh, Linux only)
 
@@ -485,6 +487,63 @@ pacorphans           # Find packages to remove
 | `kde-defaults` | Apply KDE Plasma system preferences |
 
 Applies performance-focused defaults: disables animations, enables fast key repeat, configures Dolphin with full paths and hidden files, sets tap-to-click, and disables launch feedback. Run once after installing dotfiles on a fresh Linux machine.
+
+## Browser Utilities
+
+### cookies
+
+Extract cookies from Chromium-based browser cookie stores (Chrome, Brave).
+
+**Location:** `scripts/bin/cookies` (Node.js, zero npm dependencies)
+
+```bash
+cookies [options]
+
+Options:
+  -b, --browser BROWSER   chrome (default), brave
+  -d, --domain DOMAIN     Filter by host_key (e.g., .example.com)
+  -f, --format FORMAT     json (default), header, plain
+  -l, --list              List supported browsers with detected DB paths
+  -v, --verbose           Show per-cookie decryption errors on stderr
+  -h, --help              Show this help message
+```
+
+If cookie names are given as positional args, only those cookies are returned.
+
+**Output formats:**
+- `json` (default) — structured JSON with all fields (host, path, secure, httponly, expires, etc.)
+- `header` — semicolon-delimited `name=value` pairs (for HTTP `Cookie:` header)
+- `plain` — one `name=value` per line
+
+**Platform support:**
+
+| | macOS | Linux |
+|---|---|---|
+| Key source | Keychain (`security` CLI) | KWallet (`kwallet-query`) or GNOME Keyring (`secret-tool`) or peanuts fallback |
+| Key derivation | PBKDF2(password, saltysalt, **1003**, 16) | PBKDF2(password, saltysalt, **1**, 16) |
+| Cookie cipher | AES-128-CBC, IV=16 spaces, PKCS#7 | same |
+| Hash prefix stripped | when meta ≥ 24 | same |
+
+**Examples:**
+```bash
+cookies                              # All cookies as JSON
+cookies -d .example.com              # Filter by domain
+cookies sessionid                    # Filter by cookie name
+cookies -b brave -d .example.com     # Brave, domain filter
+cookies -f header > cookie.txt       # Cookie header to file
+cookies -f plain | rg session        # Plain format, grep
+
+# Pipe to jq for custom filtering:
+cookies | jq '.[] | select(.name == "sessionid")'
+```
+
+**How it works:**
+1. Finds the browser's SQLite cookie database
+2. Queries the `cookies` table with an optional WHERE clause
+3. Reads the encryption key from the system keychain/keyring (or uses peanuts fallback)
+4. Derives an AES-128 key via PBKDF2-SHA1
+5. Decrypts each cookie's `encrypted_value` using AES-128-CBC
+6. Strips PKCS#7 padding and SHA-256 hash prefix (when present)
 
 ## Adding Custom Functions
 
