@@ -1,0 +1,321 @@
+#!/usr/bin/env node
+'use strict';
+
+const { execFileSync } = require('child_process');
+const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const PLATFORM = os.platform();
+const HOME = os.homedir();
+
+const BROWSERS = {
+  chrome: {
+    name: 'Chrome',
+    dbPath: {
+      darwin: path.join(HOME, 'Library/Application Support/Google/Chrome/Default/Cookies'),
+      linux: path.join(HOME, '.config/google-chrome/Default/Cookies'),
+    },
+    keychain: { darwin: { account: 'Chrome', service: 'Chrome Safe Storage' } },
+    linuxKeyring: 'Chrome',
+  },
+  brave: {
+    name: 'Brave',
+    dbPath: {
+      darwin: path.join(HOME, 'Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies'),
+      linux: path.join(HOME, '.config/BraveSoftware/Brave-Browser/Default/Cookies'),
+    },
+    keychain: { darwin: { account: 'Brave', service: 'Brave Safe Storage' } },
+    linuxKeyring: 'Brave',
+  },
+};
+
+const IV16 = Buffer.alloc(16, 0x20);
+
+function sqlEscape(v) {
+  return v.replace(/'/g, "''");
+}
+
+function unpadPKCS7(buf) {
+  if (!buf || buf.length === 0) return buf;
+  const pad = buf[buf.length - 1];
+  if (pad < 1 || pad > 16) return buf;
+  for (let i = buf.length - pad; i < buf.length; i++) {
+    if (buf[i] !== pad) return buf;
+  }
+  return buf.subarray(0, buf.length - pad);
+}
+
+function deriveAesKey(password, iterations) {
+  return crypto.pbkdf2Sync(password, 'saltysalt', iterations, 16, 'sha1');
+}
+
+function decryptCookieValueCbc(key, encryptedValue, hashPrefix) {
+  if (!encryptedValue || encryptedValue.length < 4) return null;
+  const ver = encryptedValue.slice(0, 3).toString();
+  if (ver !== 'v10' && ver !== 'v11') return null;
+  const ct = encryptedValue.slice(3);
+  try {
+    const d = crypto.createDecipheriv('aes-128-cbc', key, IV16);
+    d.setAutoPadding(false);
+    const pt = Buffer.concat([d.update(ct), d.final()]);
+    const unpadded = unpadPKCS7(pt);
+    // Strip 32-byte SHA-256 hash prefix if present
+    if (hashPrefix && unpadded.length > 32) return unpadded.subarray(32).toString('utf-8');
+    return unpadded.toString('utf-8');
+  } catch {
+    return null;
+  }
+}
+
+function getKey(browser) {
+  if (PLATFORM === 'darwin') return getKeyMacOS(browser);
+  if (PLATFORM === 'linux') return getKeyLinux(browser);
+  throw new Error(`Platform ${PLATFORM} not supported`);
+}
+
+function getKeyMacOS(browser) {
+  const { account, service } = browser.keychain.darwin;
+  let password;
+  try {
+    password = execFileSync('security',
+      ['find-generic-password', '-a', account, '-s', service, '-w'],
+      { encoding: 'utf-8' }).trim();
+  } catch (err) {
+    if (err.code === 'ENOENT') throw new Error('security command not found');
+    if (err.status === 44)
+      throw new Error(`Keychain entry not found for ${browser.name}. Is ${browser.name} installed?`);
+    throw new Error(`Failed to get keychain password for ${browser.name}`);
+  }
+  // macOS: PBKDF2(keychain_password, 'saltysalt', 1003, 16)
+  return deriveAesKey(Buffer.from(password, 'utf-8'), 1003);
+}
+
+function getKeyLinux(browser) {
+  const keyringName = browser.linuxKeyring;
+
+  // Try KDE Wallet
+  try {
+    const out = execFileSync('kwallet-query',
+      ['--read-password', `${keyringName} Safe Storage`,
+       '--folder', `${keyringName} Keys`, 'kdewallet'],
+      { encoding: 'utf-8', timeout: 5000 });
+    const pw = out.trim();
+    if (pw && !pw.toLowerCase().startsWith('failed')) {
+      // Linux keyring: PBKDF2(password, 'saltysalt', 1, 16)
+      return deriveAesKey(Buffer.from(pw, 'utf-8'), 1);
+    }
+  } catch {}
+
+  // Try GNOME Keyring
+  try {
+    const out = execFileSync('secret-tool',
+      ['lookup', 'application', keyringName],
+      { encoding: 'utf-8', timeout: 5000 });
+    const pw = out.trim();
+    if (pw) return deriveAesKey(Buffer.from(pw, 'utf-8'), 1);
+  } catch {}
+
+  // Fall back to peanuts (BASICTEXT)
+  // Linux peanuts: PBKDF2('peanuts', 'saltysalt', 1, 16)
+  return deriveAesKey(Buffer.from('peanuts', 'utf-8'), 1);
+}
+
+function getMetaVersion(dbPath) {
+  try {
+    const out = execFileSync('sqlite3', ['-json', dbPath,
+      "SELECT value FROM meta WHERE key = 'version'"],
+      { encoding: 'utf-8' });
+    if (!out.trim()) return 0;
+    return JSON.parse(out)[0]?.value ? parseInt(JSON.parse(out)[0].value, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function queryCookies(browser, domain, names) {
+  const dbPath = browser.dbPath[PLATFORM];
+  if (!fs.existsSync(dbPath))
+    throw new Error(`Cookie DB not found at ${dbPath} — ${browser.name} may not be installed.`);
+
+  const metaVersion = getMetaVersion(dbPath);
+  const hashPrefix = metaVersion >= 24;
+
+  const clauses = [];
+  if (domain) {
+    const dotDomain = domain.startsWith('.') ? domain : '.' + domain;
+    const conds = [`host_key LIKE '${sqlEscape(dotDomain)}'`];
+    if (!domain.startsWith('.'))
+      conds.push(`host_key = '${sqlEscape(domain)}'`);
+    clauses.push(`(${conds.join(' OR ')})`);
+  }
+  if (names && names.length > 0) {
+    clauses.push(`name IN (${names.map(n => `'${sqlEscape(n)}'`).join(',')})`);
+  }
+  const where = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
+
+  const sql = `SELECT host_key, name, HEX(encrypted_value) AS ev_hex, ` +
+    `path, is_secure, is_httponly, has_expires, expires_utc, ` +
+    `samesite, source_scheme, source_port, creation_utc, last_access_utc ` +
+    `FROM cookies ${where} ORDER BY host_key, name`;
+
+  try {
+    const out = execFileSync('sqlite3', ['-json', dbPath, sql],
+      { encoding: 'utf-8', maxBuffer: 100 * 1024 * 1024 });
+    if (!out.trim()) return [];
+    const rows = JSON.parse(out);
+    return rows.map(r => ({
+      host_key: r.host_key,
+      name: r.name,
+      encrypted_value: Buffer.from(r.ev_hex, 'hex'),
+      path: r.path,
+      is_secure: r.is_secure,
+      is_httponly: r.is_httponly,
+      has_expires: r.has_expires,
+      expires_utc: r.expires_utc,
+      samesite: r.samesite,
+      source_scheme: r.source_scheme,
+      source_port: r.source_port,
+      creation_utc: r.creation_utc,
+      last_access_utc: r.last_access_utc,
+      hashPrefix,
+    }));
+  } catch (err) {
+    if (err.code === 'ENOENT')
+      throw new Error('sqlite3 not found. Install: brew install sqlite3 or pacman -S sqlite3');
+    throw new Error(`Failed to query ${browser.name} DB: ${err.stderr ? err.stderr.trim() : err.message}`);
+  }
+}
+
+function formatOutput(cookies, format, key, verbose) {
+  const decrypted = [];
+  for (const c of cookies) {
+    const value = decryptCookieValueCbc(key, c.encrypted_value, c.hashPrefix);
+    if (value === null && !verbose) continue;
+    decrypted.push({ ...c, value });
+  }
+
+  if (format === 'json') {
+    return JSON.stringify(decrypted.map(c => ({
+      host_key: c.host_key,
+      name: c.name,
+      value: c.value,
+      path: c.path,
+      is_secure: !!c.is_secure,
+      is_httponly: !!c.is_httponly,
+      has_expires: !!c.has_expires,
+      expires_utc: c.expires_utc,
+      samesite: c.samesite,
+      source_scheme: c.source_scheme,
+      source_port: c.source_port,
+      creation_utc: c.creation_utc,
+      last_access_utc: c.last_access_utc,
+    })), null, 2);
+  }
+
+  if (format === 'header')
+    return decrypted.map(c => `${c.name}=${c.value}`).join('; ');
+
+  return decrypted.map(c => `${c.name}=${c.value}`).join('\n') + '\n';
+}
+
+function printHelp() {
+  console.log(`Usage: cookies [options]
+
+Extract cookies from browser cookie stores. Outputs to stdout.
+
+Options:
+  -b, --browser BROWSER   Browser to use (chrome, brave) [default: chrome]
+  -d, --domain DOMAIN     Filter by host_key (e.g., .example.com)
+  -f, --format FORMAT     Output format (json, header, plain) [default: json]
+  -l, --list              List supported browsers with detected DB paths
+  -v, --verbose           Show per-cookie decryption errors on stderr
+  -h, --help              Show this help message
+
+If cookie names are given as positional args, only those cookies are shown.
+
+Examples:
+  cookies                          All Chrome cookies as JSON
+  cookies -b brave                 All Brave cookies
+  cookies -d .example.com          Cookies for example.com domain
+  cookies sessionid                Filter by cookie name
+  cookies -f header > cookie.txt   Cookie header string (for HTTP headers)
+  cookies -f plain | rg session    Plain format piped into rg
+
+  # Pipe into jq for advanced filtering:
+  cookies | jq '.[] | select(.name == "sessionid")'
+
+  # Combine domain + name, output as Cookie header:
+  cookies -d .example.com -f header > ~/cookie.txt`);
+}
+
+function listBrowsers() {
+  for (const [key, b] of Object.entries(BROWSERS)) {
+    const p = b.dbPath[PLATFORM];
+    console.log(`${key}: ${fs.existsSync(p) ? '\u2713' : '\u2717'} ${p}`);
+  }
+}
+
+function parseArgs() {
+  const a = process.argv.slice(2);
+  const opts = { browser: 'chrome', domain: '', format: 'json', list: false, verbose: false, positional: [] };
+
+  for (let i = 0; i < a.length; i++) {
+    const arg = a[i];
+    if (arg === '-h' || arg === '--help') { printHelp(); process.exit(0); }
+    if (arg === '-l' || arg === '--list') { opts.list = true; continue; }
+    if (arg === '-v' || arg === '--verbose') { opts.verbose = true; continue; }
+    if ((arg === '-b' || arg === '--browser') && i + 1 < a.length)
+      { opts.browser = a[++i].toLowerCase(); continue; }
+    if ((arg === '-d' || arg === '--domain') && i + 1 < a.length)
+      { opts.domain = a[++i]; continue; }
+    if ((arg === '-f' || arg === '--format') && i + 1 < a.length)
+      { opts.format = a[++i].toLowerCase(); continue; }
+    if (arg.startsWith('-')) {
+      console.error(`Unknown option: ${arg}\nUse --help for usage.`);
+      process.exit(1);
+    }
+    opts.positional.push(arg);
+  }
+  return opts;
+}
+
+function main() {
+  const opts = parseArgs();
+
+  if (opts.list) { listBrowsers(); return; }
+
+  if (!['darwin', 'linux'].includes(PLATFORM)) {
+    console.error(`Platform ${PLATFORM} not supported (only macOS and Linux)`);
+    process.exit(1);
+  }
+
+  const browser = BROWSERS[opts.browser];
+  if (!browser) {
+    console.error(`Unsupported browser: ${opts.browser}\nSupported: ${Object.keys(BROWSERS).join(', ')}`);
+    process.exit(1);
+  }
+
+  if (!['json', 'header', 'plain'].includes(opts.format)) {
+    console.error(`Unsupported format: ${opts.format}\nSupported: json, header, plain`);
+    process.exit(1);
+  }
+
+  try {
+    const key = getKey(browser);
+    const rows = queryCookies(browser, opts.domain, opts.positional);
+    if (rows.length === 0) {
+      process.stdout.write(opts.format === 'json' ? '[]\n' : '\n');
+      return;
+    }
+    const out = formatOutput(rows, opts.format, key, opts.verbose);
+    process.stdout.write(out);
+    if (!out.endsWith('\n')) process.stdout.write('\n');
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
+main();
