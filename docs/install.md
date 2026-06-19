@@ -75,6 +75,7 @@ The repo tracks a global Git ignore file at `git/gitignore_global`.
 During install, `./install.sh`:
 - Backs up an existing non-symlink `~/.gitignore_global`
 - Symlinks `~/.gitignore_global` to `~/dotfiles/git/gitignore_global`
+- Runs `git config --global core.excludesfile ~/.gitignore_global` if not already set
 
 This keeps your personal global ignore rules versioned in dotfiles while preserving the standard Git location.
 
@@ -85,7 +86,7 @@ Current defaults include:
 - Local AI/tool directories: `.sisyphus`, `.opencode`, `.agents/`, `.agent-browser/`, `.skill-lock.json`, `.llm/`
 - Agent instruction files: `agents.md`, `AGENTS.md`
 
-If Git is not already using `~/.gitignore_global`, set it once with:
+This is handled automatically by `./install.sh`. To set it manually:
 
 ```bash
 git config --global core.excludesfile ~/.gitignore_global
