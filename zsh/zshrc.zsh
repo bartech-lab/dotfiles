@@ -25,10 +25,9 @@ fi
   # ====== Path Configuration ======
   typeset -U PATH path  # Prevent duplicate entries
   path=(
-    "$HOME/.cargo/bin"
+    "$HOME/dotfiles/scripts/bin"
     "$HOME/.local/bin"
     "$HOME/.opencode/bin"
-    "$BUN_INSTALL/bin"
   )
 
   # macOS-specific paths (Homebrew)

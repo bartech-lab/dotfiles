@@ -6,7 +6,7 @@
 
 # Taps - Additional package repositories
 # autoupdate: Keeps Homebrew updated automatically
-tap "homebrew/autoupdate"
+tap "domt4/autoupdate"
 
 # ============================================================================
 # Core System Tools
@@ -26,7 +26,7 @@ brew "coreutils"        # GNU core utilities (gcp, gmv, gdate, etc.)
 
 brew "eza"              # Modern ls replacement (icons, git status, tree)
 brew "ripgrep"          # Modern grep replacement (rg command, fast search)
-brew "jq"               # JSON parser/transformer for machine-readable workflows
+# brew "jq"              # JSON parser — macOS ships /usr/bin/jq. Installed via pacman on Linux.
 brew "yq"               # YAML parser/transformer with jq-like syntax
 brew "sd"               # Intuitive sed replacement for simple substitutions
 brew "dust"             # Modern du replacement (visual disk usage)
@@ -60,7 +60,7 @@ brew "gnu-tar"          # Reproducible archives (--sort=name, --mtime)
 brew "unar"             # Universal archive extractor (zip, rar, 7z)
 brew "mozjpeg"          # Provides cjpeg binary for image optimization
 brew "yt-dlp"           # YouTube video downloader (ffmpeg companion)
-brew "aria2"           # Multi-connection download accelerator (yt-dlp companion)
+# brew "aria2"          # Multi-connection download accelerator (yt-dlp companion) — optional, install manually if needed
 
 # Image optimization tools (used by optimize-images)
 brew "oxipng"           # PNG optimizer (lossless)
@@ -98,6 +98,5 @@ cask "localsend"                # Cross-platform file sharing
 # Installed automatically with VS Code
 
 vscode "davidanson.vscode-markdownlint"   # Markdown linting
-vscode "mikestead.dotenv"                 # .env file support
 vscode "tamasfe.even-better-toml"         # TOML file support
 vscode "ms-playwright.playwright"         # Playwright test support

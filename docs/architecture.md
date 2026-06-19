@@ -16,8 +16,8 @@ dotfiles/
 ├── discord/
 │   └── openasar/
 │       ├── aggressive-minimal.css          # Optional OpenAsar custom CSS
-│       ├── dev.openasar.reapply.plist.template  # LaunchAgent template
-│       └── reapply-openasar.sh             # Reapply script for updates
+│       ├── apply-openasar.sh              # Apply script for updates
+│       └── recover-discord.sh             # Recovery script
 ├── git/
 │   └── gitignore_global      # Global Git ignore rules
 ├── git-auto-pull/            # Automatic git repo syncing
@@ -28,17 +28,29 @@ dotfiles/
 │   ├── heartbeat.sh          # Main heartbeat script
 │   ├── setup.sh              # One-time setup for new machines
 │   └── README.md             # Component documentation
+├── system-update/            # Linux systemd timer for daily yay -Syu
+│   ├── system-update.service # systemd oneshot service
+│   └── system-update.timer   # Daily timer at 10:00
+├── calendar-ghost-fix/       # macOS Calendar ghost invite remover
+│   ├── run-now.sh            # Main fix script
+│   └── README.md             # Usage documentation
+├── scripts/
+│   └── bin/                  # Executable scripts (in PATH)
+│       └── cookies           # Browser cookie extraction
 ├── zsh/
 │   ├── functions.zsh         # Main loader (sources all files)
 │   └── functions/            # Individual function files
 │       ├── 00-core.zsh       # Zsh plugins and theme
 │       ├── 10-shell.zsh      # Modern CLI aliases
 │       ├── 20-brew.zsh       # Homebrew functions
+│       ├── 21-pacman.zsh     # Pacman/yay helpers (Linux)
 │       ├── 30-git.zsh        # Git helpers
 │       ├── 40-dev.zsh        # Development utilities
 │       ├── 50-media.zsh      # Media processing
+│       ├── 51-download.zsh   # yt-dlp download helpers
 │       ├── 60-macos.zsh      # macOS system functions
 │       ├── 61-discord.zsh    # Discord OpenAsar helpers
+│       ├── 62-kde.zsh        # KDE Plasma defaults (Linux)
 │       └── 70-opencode.zsh   # OpenCode helpers (launch + cleanup)
 ├── install.sh                # One-command installer
 ├── Brewfile                  # Homebrew dependencies
@@ -52,14 +64,15 @@ Functions load in a specific sequence controlled by filenames:
 ```
 00-core.zsh      → First (zinit, powerlevel10k)
 10-*.zsh         → Second (shell)
-20-*.zsh         → Third (brew)
+20-*.zsh         → Third (homebrew/pacman helpers)
 30-*.zsh         → Fourth (git)
 40-*.zsh         → Fifth (dev)
-50-*.zsh         → Sixth (media)
-60-*.zsh         → Seventh (macos)
-61-*.zsh         → Eighth (discord)
+50-*.zsh         → Sixth (media/download)
+60-*.zsh         → Seventh (macos/system + discord/kde)
 70-*.zsh         → Ninth (opencode)
 ```
+
+Linux-only files (`21-pacman.zsh`, `51-download.zsh`, `62-kde.zsh`) are interspersed by their number slot and guarded by platform checks in the loader.
 
 The numbered prefix ensures consistent loading regardless of filesystem order.
 

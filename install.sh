@@ -54,6 +54,7 @@ echo "==> Dotfiles root: $DOTFILES_DIR"
 echo ""
 
 # Check runtime-critical dependencies
+CRITICAL_DEPS=(git curl)
 for dep in "${CRITICAL_DEPS[@]}"; do
     if ! command -v "$dep" &> /dev/null; then
         echo "❌ Critical dependency missing: $dep"
@@ -84,6 +85,39 @@ ensure_backup_dir() {
 }
 
 # Install Homebrew if missing (macOS only)
+# macOS LaunchAgent plists for background services
+ensure_launchagent_plist() {
+    local label="$1" script="$2" interval="$3"
+    local plist="$HOME/Library/LaunchAgents/${label}.plist"
+    if [[ ! -f "$plist" ]]; then
+        if [[ "$DRY_RUN" == true ]]; then
+            echo "  → Would create: $plist"
+        else
+            mkdir -p "$HOME/Library/LaunchAgents"
+            cat > "$plist" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${label}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${script}</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>${interval}</integer>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+            launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null || true
+            echo "✓ Created and loaded $label"
+        fi
+    fi
+}
+
 if [[ "$DOTFILES_OS" == macos ]]; then
 if [[ ! -x /opt/homebrew/bin/brew ]]; then
     echo "📦 Installing Homebrew..."
@@ -208,6 +242,36 @@ else
         fi
     fi
 fi
+
+# macOS background services (git-auto-pull + heartbeat)
+# Copy scripts to ~/.config (same as Linux, but use LaunchAgents)
+if [[ "$DRY_RUN" == false ]]; then
+    mkdir -p ~/.config/git-auto-pull
+    cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/pull.sh
+    chmod +x ~/.config/git-auto-pull/pull.sh
+
+    mkdir -p ~/.config/launchd-heartbeat
+    cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/heartbeat.sh
+    chmod +x ~/.config/launchd-heartbeat/heartbeat.sh
+
+    if [[ ! -f ~/.config/git-auto-pull/repos.conf ]]; then
+        cat > ~/.config/git-auto-pull/repos.conf << 'GITCONF'
+# Git Auto-Pull Configuration
+# Format: /path/to/repo:branch-name
+# Lines starting with # are ignored
+GITCONF
+    fi
+    if [[ ! -f ~/.config/launchd-heartbeat/monitored-labels.conf ]]; then
+        cat > ~/.config/launchd-heartbeat/monitored-labels.conf << 'HEARTBEATCONF'
+# Monitored services
+git-auto-pull.service
+launchd-heartbeat.service
+HEARTBEATCONF
+    fi
+fi
+
+ensure_launchagent_plist "com.user.gitautopull" "$HOME/.config/git-auto-pull/pull.sh" 3600
+ensure_launchagent_plist "com.user.launchdheartbeat" "$HOME/.config/launchd-heartbeat/heartbeat.sh" 300
 
 # Linux package installation (pacman/yay)
 elif [[ "$DOTFILES_OS" == linux ]]; then
@@ -339,8 +403,10 @@ HEARTBEATCONF
         cp "$DOTFILES_DIR/git-auto-pull/systemd/git-auto-pull.timer" ~/.config/systemd/user/
         cp "$DOTFILES_DIR/launchd-heartbeat/systemd/launchd-heartbeat.service" ~/.config/systemd/user/
         cp "$DOTFILES_DIR/launchd-heartbeat/systemd/launchd-heartbeat.timer" ~/.config/systemd/user/
+        cp "$DOTFILES_DIR/system-update/system-update.service" ~/.config/systemd/user/
+        cp "$DOTFILES_DIR/system-update/system-update.timer" ~/.config/systemd/user/
         systemctl --user daemon-reload
-        systemctl --user enable --now git-auto-pull.timer launchd-heartbeat.timer
+        systemctl --user enable --now git-auto-pull.timer launchd-heartbeat.timer system-update.timer
         echo "✓ systemd user timers enabled"
     fi
 
@@ -581,7 +647,22 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code.desktop" "$HOME/.local/share/applications/code.desktop" "VS Code desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standardnotes-desktop.desktop" "$HOME/.local/share/applications/standardnotes-desktop.desktop" "Standard Notes desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/filen-desktop.desktop" "$HOME/.local/share/applications/filen-desktop.desktop" "Filen Desktop desktop"
+
+    # Plasma desktop session config
+    config_symlinks "$DOTFILES_DIR/linux/plasma/plasmashellrc" "$HOME/.config/plasmashellrc" "Plasma shell config"
 fi
+
+# p10k prompt theme
+if [[ -f "$HOME/.p10k.zsh" && ! -L "$HOME/.p10k.zsh" ]]; then
+    ensure_backup_dir
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  → Would backup: ~/.p10k.zsh"
+    else
+        cp "$HOME/.p10k.zsh" "$BACKUP_DIR/p10k.zsh"
+        echo "✓ Backed up existing .p10k.zsh"
+    fi
+fi
+config_symlinks "$DOTFILES_DIR/zsh/p10k.zsh" "$HOME/.p10k.zsh" "p10k theme"
 
 # Add to .zshrc if not present
 if ! grep -q "zsh-dotfiles-loader.zsh" ~/.zshrc 2>/dev/null; then
