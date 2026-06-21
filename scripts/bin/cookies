@@ -69,6 +69,10 @@ function decryptCookieValueCbc(key, encryptedValue, hashPrefix) {
   }
 }
 
+function webkitToUnix(micros) {
+  return Math.floor(micros / 1000000) - 11644473600;
+}
+
 function getKey(browser) {
   if (PLATFORM === 'darwin') return getKeyMacOS(browser);
   if (PLATFORM === 'linux') return getKeyLinux(browser);
@@ -134,6 +138,24 @@ function getMetaVersion(dbPath) {
   }
 }
 
+function listDomains(browser) {
+  const dbPath = browser.dbPath[PLATFORM];
+  if (!fs.existsSync(dbPath))
+    throw new Error(`Cookie DB not found at ${dbPath} — ${browser.name} may not be installed.`);
+
+  try {
+    const out = execFileSync('sqlite3', ['-json', dbPath,
+      'SELECT DISTINCT host_key FROM cookies ORDER BY host_key'],
+      { encoding: 'utf-8' });
+    if (!out.trim()) return [];
+    return JSON.parse(out).map(r => r.host_key);
+  } catch (err) {
+    if (err.code === 'ENOENT')
+      throw new Error('sqlite3 not found. Install: brew install sqlite3 or pacman -S sqlite3');
+    throw new Error(`Failed to query ${browser.name} DB: ${err.stderr ? err.stderr.trim() : err.message}`);
+  }
+}
+
 function queryCookies(browser, domain, names) {
   const dbPath = browser.dbPath[PLATFORM];
   if (!fs.existsSync(dbPath))
@@ -188,16 +210,26 @@ function queryCookies(browser, domain, names) {
   }
 }
 
-function formatOutput(cookies, format, key, verbose) {
+function formatOutput(cookies, format, key, verbose, includeExpired) {
+  const now = Math.floor(Date.now() / 1000);
   const decrypted = [];
+
   for (const c of cookies) {
     const value = decryptCookieValueCbc(key, c.encrypted_value, c.hashPrefix);
-    if (value === null && !verbose) continue;
+    if (value === null) {
+      if (verbose) process.stderr.write(`Failed to decrypt ${c.host_key} : ${c.name}\n`);
+      continue;
+    }
     decrypted.push({ ...c, value });
   }
 
+  const filtered = includeExpired ? decrypted : decrypted.filter(c => {
+    if (!c.has_expires) return true;
+    return webkitToUnix(c.expires_utc) >= now;
+  });
+
   if (format === 'json') {
-    return JSON.stringify(decrypted.map(c => ({
+    return JSON.stringify(filtered.map(c => ({
       host_key: c.host_key,
       name: c.name,
       value: c.value,
@@ -215,39 +247,50 @@ function formatOutput(cookies, format, key, verbose) {
   }
 
   if (format === 'header')
-    return decrypted.map(c => `${c.name}=${c.value}`).join('; ');
+    return filtered.map(c => `${c.name}=${c.value}`).join('; ');
 
-  return decrypted.map(c => `${c.name}=${c.value}`).join('\n') + '\n';
+  if (format === 'netscape') {
+    const lines = ['# Netscape HTTP Cookie File'];
+    for (const c of filtered) {
+      const expiry = c.has_expires ? webkitToUnix(c.expires_utc) : 0;
+      const secure = c.is_secure ? 'TRUE' : 'FALSE';
+      lines.push(`${c.host_key}\tTRUE\t${c.path}\t${secure}\t${expiry}\t${c.name}\t${c.value}`);
+    }
+    return lines.join('\n') + '\n';
+  }
+
+  return filtered.map(c => `${c.name}=${c.value}`).join('\n') + '\n';
 }
 
 function printHelp() {
   console.log(`Usage: cookies [options]
 
-Extract cookies from browser cookie stores. Outputs to stdout.
+Extract cookies from Chromium-based browser cookie stores (Chrome, Brave).
+Outputs Netscape format (curl -b compatible) by default.
 
 Options:
-  -b, --browser BROWSER   Browser to use (chrome, brave) [default: chrome]
+  -b, --browser BROWSER   chrome (default), brave
   -d, --domain DOMAIN     Filter by host_key (e.g., .example.com)
-  -f, --format FORMAT     Output format (json, header, plain) [default: json]
+  -f, --format FORMAT     netscape (default), json, header
+  -o, --output PATH       Output file (- for stdout)
+  -e, --expired           Include expired cookies (excluded by default)
+  -L, --list-domains      List unique host_keys (one per line, to stdout)
   -l, --list              List supported browsers with detected DB paths
   -v, --verbose           Show per-cookie decryption errors on stderr
   -h, --help              Show this help message
 
-If cookie names are given as positional args, only those cookies are shown.
+Cookie name filters can be given as positional args.
 
 Examples:
-  cookies                          All Chrome cookies as JSON
-  cookies -b brave                 All Brave cookies
-  cookies -d .example.com          Cookies for example.com domain
+  cookies                          All non-expired cookies as Netscape format
+  cookies -b brave                 Brave browser
+  cookies -d .airbnb.com           Filter by domain
   cookies sessionid                Filter by cookie name
-  cookies -f header > cookie.txt   Cookie header string (for HTTP headers)
-  cookies -f plain | rg session    Plain format piped into rg
-
-  # Pipe into jq for advanced filtering:
-  cookies | jq '.[] | select(.name == "sessionid")'
-
-  # Combine domain + name, output as Cookie header:
-  cookies -d .example.com -f header > ~/cookie.txt`);
+  cookies -o ~/cookies.txt         Write to file (Netscape)
+  cookies -f json -o -             JSON to stdout
+  cookies -f header -o -           Cookie: header to stdout
+  cookies -b brave -e              Brave, include expired
+  cookies -L                       List all domains found`);
 }
 
 function listBrowsers() {
@@ -259,19 +302,27 @@ function listBrowsers() {
 
 function parseArgs() {
   const a = process.argv.slice(2);
-  const opts = { browser: 'chrome', domain: '', format: 'json', list: false, verbose: false, positional: [] };
+  const opts = {
+    browser: 'chrome', domain: '', format: 'netscape',
+    list: false, verbose: false, expired: false,
+    output: '', listDomains: false, positional: []
+  };
 
   for (let i = 0; i < a.length; i++) {
     const arg = a[i];
     if (arg === '-h' || arg === '--help') { printHelp(); process.exit(0); }
     if (arg === '-l' || arg === '--list') { opts.list = true; continue; }
     if (arg === '-v' || arg === '--verbose') { opts.verbose = true; continue; }
+    if (arg === '-e' || arg === '--expired') { opts.expired = true; continue; }
+    if (arg === '-L' || arg === '--list-domains') { opts.listDomains = true; continue; }
     if ((arg === '-b' || arg === '--browser') && i + 1 < a.length)
       { opts.browser = a[++i].toLowerCase(); continue; }
     if ((arg === '-d' || arg === '--domain') && i + 1 < a.length)
       { opts.domain = a[++i]; continue; }
     if ((arg === '-f' || arg === '--format') && i + 1 < a.length)
       { opts.format = a[++i].toLowerCase(); continue; }
+    if ((arg === '-o' || arg === '--output') && i + 1 < a.length)
+      { opts.output = a[++i]; continue; }
     if (arg.startsWith('-')) {
       console.error(`Unknown option: ${arg}\nUse --help for usage.`);
       process.exit(1);
@@ -279,6 +330,17 @@ function parseArgs() {
     opts.positional.push(arg);
   }
   return opts;
+}
+
+function writeOutput(outputArg, content) {
+  if (outputArg && outputArg !== '-') {
+    const dir = path.dirname(outputArg);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(outputArg, content, 'utf-8');
+  } else {
+    process.stdout.write(content);
+    if (!content.endsWith('\n')) process.stdout.write('\n');
+  }
 }
 
 function main() {
@@ -297,21 +359,30 @@ function main() {
     process.exit(1);
   }
 
-  if (!['json', 'header', 'plain'].includes(opts.format)) {
-    console.error(`Unsupported format: ${opts.format}\nSupported: json, header, plain`);
+  if (!['netscape', 'json', 'header', 'plain'].includes(opts.format)) {
+    console.error(`Unsupported format: ${opts.format}\nSupported: netscape, json, header`);
     process.exit(1);
   }
 
   try {
-    const key = getKey(browser);
-    const rows = queryCookies(browser, opts.domain, opts.positional);
-    if (rows.length === 0) {
-      process.stdout.write(opts.format === 'json' ? '[]\n' : '\n');
+    if (opts.listDomains) {
+      const domains = listDomains(browser);
+      process.stdout.write(domains.join('\n') + (domains.length ? '\n' : ''));
       return;
     }
-    const out = formatOutput(rows, opts.format, key, opts.verbose);
-    process.stdout.write(out);
-    if (!out.endsWith('\n')) process.stdout.write('\n');
+
+    const key = getKey(browser);
+    const rows = queryCookies(browser, opts.domain, opts.positional);
+
+    if (rows.length === 0) {
+      const empty = opts.format === 'json' ? '[]\n' :
+                    opts.format === 'netscape' ? '# Netscape HTTP Cookie File\n' : '\n';
+      writeOutput(opts.output, empty);
+      return;
+    }
+
+    const out = formatOutput(rows, opts.format, key, opts.verbose, opts.expired);
+    writeOutput(opts.output, out);
   } catch (err) {
     console.error(err.message);
     process.exit(1);
