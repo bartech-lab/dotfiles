@@ -493,6 +493,7 @@ Applies performance-focused defaults: disables animations, enables fast key repe
 ### cookies
 
 Extract cookies from Chromium-based browser cookie stores (Chrome, Brave).
+Outputs Netscape format (curl -b compatible) by default.
 
 **Location:** `scripts/bin/cookies` (Node.js, zero npm dependencies)
 
@@ -502,18 +503,21 @@ cookies [options]
 Options:
   -b, --browser BROWSER   chrome (default), brave
   -d, --domain DOMAIN     Filter by host_key (e.g., .example.com)
-  -f, --format FORMAT     json (default), header, plain
+  -f, --format FORMAT     netscape (default), json, header
+  -o, --output PATH       Output file (- for stdout)
+  -e, --expired           Include expired cookies (excluded by default)
+  -L, --list-domains      List unique host_keys (one per line, to stdout)
   -l, --list              List supported browsers with detected DB paths
   -v, --verbose           Show per-cookie decryption errors on stderr
   -h, --help              Show this help message
 ```
 
-If cookie names are given as positional args, only those cookies are returned.
+Cookie name filters can be given as positional args.
 
 **Output formats:**
-- `json` (default) — structured JSON with all fields (host, path, secure, httponly, expires, etc.)
+- `netscape` (default) — tab-separated, compatible with `curl -b`, `wget --load-cookies`
+- `json` — structured JSON with all fields (host, path, secure, httponly, expires, etc.)
 - `header` — semicolon-delimited `name=value` pairs (for HTTP `Cookie:` header)
-- `plain` — one `name=value` per line
 
 **Platform support:**
 
@@ -526,15 +530,15 @@ If cookie names are given as positional args, only those cookies are returned.
 
 **Examples:**
 ```bash
-cookies                              # All cookies as JSON
-cookies -d .example.com              # Filter by domain
+cookies                              # All non-expired cookies as Netscape format
+cookies -b brave                     # Brave browser
+cookies -d .airbnb.com               # Filter by domain
 cookies sessionid                    # Filter by cookie name
-cookies -b brave -d .example.com     # Brave, domain filter
-cookies -f header > cookie.txt       # Cookie header to file
-cookies -f plain | rg session        # Plain format, grep
-
-# Pipe to jq for custom filtering:
-cookies | jq '.[] | select(.name == "sessionid")'
+cookies -o ~/cookies.txt             # Write to file (Netscape)
+cookies -f json -o -                 # JSON to stdout
+cookies -f header -o -               # Cookie: header to stdout
+cookies -b brave -e                  # Brave, include expired
+cookies -L                           # List all domains found
 ```
 
 **How it works:**
@@ -544,6 +548,8 @@ cookies | jq '.[] | select(.name == "sessionid")'
 4. Derives an AES-128 key via PBKDF2-SHA1
 5. Decrypts each cookie's `encrypted_value` using AES-128-CBC
 6. Strips PKCS#7 padding and SHA-256 hash prefix (when present)
+7. Filters expired cookies (unless `--expired`)
+8. Outputs in requested format (Netscape by default)
 
 ## Adding Custom Functions
 
