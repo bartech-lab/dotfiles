@@ -21,6 +21,7 @@ __pycache__/
 .llm/
 .commandcode/
 .playwright-mcp
+.mcp.json
 
 # Agent instruction files
 agents.md
