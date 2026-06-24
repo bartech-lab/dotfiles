@@ -20,6 +20,7 @@ __pycache__/
 .skill-lock.json
 .llm/
 .commandcode/
+.playwright-mcp
 
 # Agent instruction files
 agents.md
