@@ -24,6 +24,11 @@ __pycache__/
 # Agent instruction files
 agents.md
 AGENTS.md
+claude.md
+CLAUDE.md
+
+# AI tool directories
+.claude/
 
 # Local git config (machine-specific identities)
 .gitconfig.local
