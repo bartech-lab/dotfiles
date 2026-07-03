@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Defaults
+SINCE=""
+UNTIL=""
+TARGET_BRANCH="develop"
+PROJECT=""
+STATS="merged-by"
+FORMAT="table"
+TOP_N=10
+EXCLUDE_BOTS=true
+NO_CACHE=false
+BUCKETS="0,50,200,500,999999"
+BY_AUTHOR=true
+
+show_help() {
+  cat <<HELP
+Usage: gitlab-stats [options]
+
+Stats about merged merge requests on GitLab.
+
+Options:
+  --since DATE        Start date (YYYY-MM-DD, default: 30 days ago)
+  --until DATE        End date (YYYY-MM-DD, default: today)
+  --target-branch BR  Target branch (default: develop)
+  --project PROJECT   GitLab project path (default: auto-detect)
+  --stats LIST        Comma-separated stats or "all"
+                      merged-by, mr-authors, approvals, comments,
+                      size-distribution, throughput
+  --format FORMAT     Output format: table, json, csv (default: table)
+  --top N             Show top N entries (0 = all, default: 10)
+  --exclude-bots BOOL  Filter out bot users (default: true)
+  --no-cache          Skip cache, fetch fresh data
+  --buckets LIST      Size thresholds (default: 0,50,200,500,999999)
+  --by-author BOOL    Throughput breakdown by author (default: true)
+  --help, -h          Show this help
+HELP
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --since) SINCE="$2"; shift 2 ;;
+    --until) UNTIL="$2"; shift 2 ;;
+    --target-branch) TARGET_BRANCH="$2"; shift 2 ;;
+    --project) PROJECT="$2"; shift 2 ;;
+    --stats) STATS="$2"; shift 2 ;;
+    --format) FORMAT="$2"; shift 2 ;;
+    --top) TOP_N="$2"; shift 2 ;;
+    --exclude-bots) EXCLUDE_BOTS="$2"; shift 2 ;;
+    --no-cache) NO_CACHE=true; shift ;;
+    --buckets) BUCKETS="$2"; shift 2 ;;
+    --by-author) BY_AUTHOR="$2"; shift 2 ;;
+    --help|-h) show_help; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; show_help >&2; exit 1 ;;
+  esac
+done
+
+# Source libraries
+source "$SCRIPT_DIR/lib/utils.sh"
+source "$SCRIPT_DIR/lib/format.sh"
+source "$SCRIPT_DIR/lib/cache.sh"
+source "$SCRIPT_DIR/lib/api.sh"
+
+# Source stat functions
+for f in "$SCRIPT_DIR"/stats/*.sh; do
+  source "$f"
+done
+
+# Compute defaults
+SINCE="${SINCE:-$(get_date_n_days_ago 30)}"
+UNTIL="${UNTIL:-$(get_today)}"
+
+# Validate date format (YYYY-MM-DD)
+validate_date() {
+  local label="$1" val="$2"
+  if ! echo "$val" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+    echo "Error: $label must be YYYY-MM-DD format, got '$val'" >&2
+    exit 1
+  fi
+}
+validate_date "since" "$SINCE"
+validate_date "until" "$UNTIL"
+CACHE_DIR="$(get_cache_dir)"
+
+# Auto-detect project
+if [[ -z "$PROJECT" ]]; then
+  PROJECT=$(detect_project) || exit 1
+fi
+
+# Compute cache key
+CACHE_KEY="$(make_cache_key "$PROJECT" "$TARGET_BRANCH" "$SINCE" "$UNTIL")"
+CACHE_FILE="${CACHE_DIR}/gitlab-stats-${CACHE_KEY}.json"
+
+# Expand "all"
+if [[ "$STATS" == "all" ]]; then
+  STATS="merged-by,mr-authors,approvals,comments,size-distribution,throughput"
+fi
+
+# Validate format
+case "$FORMAT" in
+  table|json|csv) ;;
+  *) echo "Error: Invalid format '$FORMAT'. Use table, json, or csv." >&2; exit 1 ;;
+esac
+
+# Validate buckets (numeric comma-separated)
+if ! echo "$BUCKETS" | grep -qE '^[0-9]+(,[0-9]+)+$'; then
+  echo "Error: --buckets must be comma-separated numbers, e.g. 0,50,200,500,999999" >&2
+  exit 1
+fi
+
+# Fetch data
+if [[ "$NO_CACHE" == "true" ]] || ! cache_valid "$CACHE_FILE"; then
+  >&2 echo "Fetching MR data from GitLab API..."
+  MR_DATA=$(fetch_all_mrs "$PROJECT" "$SINCE" "$UNTIL" "$TARGET_BRANCH") || exit 1
+  cache_write "$CACHE_FILE" "$MR_DATA"
+else
+  >&2 echo "Using cached data..."
+  MR_DATA=$(cache_read "$CACHE_FILE")
+fi
+
+# Export small config vars for stat functions
+export FORMAT TOP_N EXCLUDE_BOTS BUCKETS BY_AUTHOR SINCE UNTIL
+
+# Run stats
+IFS=',' read -ra STAT_ARRAY <<< "$STATS"
+for raw_stat in "${STAT_ARRAY[@]}"; do
+  stat="${raw_stat//[[:space:]]/}"  # trim whitespace
+  case "$stat" in
+    merged-by)          stat_merged_by ;;
+    mr-authors)         stat_mr_authors ;;
+    approvals)          stat_approvals ;;
+    comments)           stat_comments ;;
+    size-distribution)  stat_size_distribution ;;
+    throughput)         stat_throughput ;;
+    "") ;;  # skip empty
+    *) echo "Unknown stat: $stat" >&2; exit 1 ;;
+  esac
+done
