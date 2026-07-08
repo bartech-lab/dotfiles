@@ -20,6 +20,7 @@ __pycache__/
 .skill-lock.json
 .llm/
 .commandcode/
+.codex
 .playwright-mcp
 .mcp.json
 
