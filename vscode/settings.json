@@ -10,5 +10,6 @@
   "github.copilot.chat.organizationInstructions.enabled": false,
   "github.copilot.chat.organizationCustomAgents.enabled": false,
   "chat.titleBar.signIn.enabled": false,
-  "git.confirmSync": false
+  "git.confirmSync": false,
+  "chat.disableAIFeatures": true
 }
