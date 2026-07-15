@@ -15,7 +15,8 @@ cache_valid() {
   fi
   now_time=$(date +%s)
 
-  [[ $((now_time - file_time)) -lt "$CACHE_TTL" ]]
+  (( now_time >= file_time && now_time - file_time < CACHE_TTL )) || return 1
+  jq -e 'type == "array"' "$cache_file" >/dev/null 2>&1
 }
 
 cache_read() {
@@ -27,8 +28,15 @@ cache_read() {
 
 cache_write() {
   local cache_file="$1" data="$2"
-  mkdir -p "$(dirname "$cache_file")" 2>/dev/null || true
-  printf '%s\n' "$data" > "$cache_file"
+  local cache_dir tmp_file
+  cache_dir="$(dirname "$cache_file")"
+  mkdir -p "$cache_dir" 2>/dev/null || return 1
+  tmp_file="${cache_file}.tmp.$$"
+  if ! printf '%s\n' "$data" > "$tmp_file"; then
+    rm -f "$tmp_file"
+    return 1
+  fi
+  mv -f "$tmp_file" "$cache_file"
 }
 
 cache_clear() {
