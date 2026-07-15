@@ -249,18 +249,27 @@ Handy for:
 
 ### brewup
 
-Complete Homebrew maintenance.
+Update Homebrew packages in one command.
 
 ```bash
-brewup                # Update, upgrade, cleanup
+brewup                          # Update formulae and casks
+brewupgrade node python         # Upgrade named formulae only
+brewcaskupgrade firefox         # Upgrade named casks only
+brew upgrade --dry-run node     # Preview a specific formula upgrade
+brew cleanup --dry-run          # Preview cleanup separately
 ```
 
 **What it does:**
-1. Updates Homebrew itself
-2. Upgrades all formulae and casks
-3. Cleans up old versions
+1. Updates Homebrew metadata
+2. Upgrades all unpinned formulae
+3. Upgrades all unpinned casks
+4. Stops if any step fails
 
-**Note:** Does NOT run `brew bundle`. Run that separately when you want to sync packages with Brewfile.
+Pinned formulae and casks are skipped by Homebrew. Use `brew pin node` (or
+another package that must remain stable) when appropriate, and `brew unpin` to
+allow it to update again. Cleanup remains separate so old versions are not
+removed automatically. It does NOT run `brew bundle`; run that separately when
+you want to sync packages with Brewfile.
 
 ## OpenCode Functions
 
