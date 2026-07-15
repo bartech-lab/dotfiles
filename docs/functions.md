@@ -464,6 +464,7 @@ See [dev.md](dev.md) for full documentation.
 | OpenCode | `70-opencode.zsh` | OpenCode helpers |
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
+| GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
 
 ### Pacman/Yay Helpers (21-pacman.zsh, Linux only)
 

@@ -60,8 +60,8 @@ compute_hash() {
 }
 
 make_cache_key() {
-  local project="$1" branch="$2" since="$3" until="$4"
-  compute_hash "${project}|${branch}|${since}|${until}"
+  local project="$1" branch="$2" since="$3" until="$4" variant="${5:-base-v2}"
+  compute_hash "${project}|${branch}|${since}|${until}|${variant}"
 }
 
 get_cache_dir() {

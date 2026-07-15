@@ -117,6 +117,7 @@ dotfiles-doctor
 - `archive [name] [--dry-run] [-gzip]` - Create reproducible archives
 - `repo-check` - Pre-archive sanity checker
 - `dotfiles-doctor` - Environment health check
+- `gitlab-stats [options]` - GitLab merge request statistics
 - `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
 - `discord-openasar-status` - Check OpenAsar LaunchAgent status
 

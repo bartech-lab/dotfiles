@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ "${1:-}" == "api" ]] || exit 2
+shift
+
+if [[ "${1:-}" == "graphql" ]]; then
+  shift
+  query=""
+  for arg in "$@"; do
+    case "$arg" in
+      query=*) query="${arg#query=}" ;;
+    esac
+  done
+  printf '%s\n' "$query" >> "${GLAB_LOG:?}"
+  jq -n '
+    {data: {project: {mergeRequests: {
+      nodes: [
+        {iid: "101", title: "First", webUrl: "https://gitlab.example/101",
+         mergedAt: "2026-07-10T12:00:00Z", createdAt: "2026-07-01T12:00:00Z",
+         author: {name: "Alice", username: "alice", bot: false},
+         mergeUser: {name: "Alice", username: "alice", bot: false},
+         approvedBy: {nodes: []}, diffStatsSummary: {additions: 5, deletions: 3}},
+        {iid: "102", title: "Second", webUrl: "https://gitlab.example/102",
+         mergedAt: "2026-07-11T12:00:00Z", createdAt: "2026-07-02T12:00:00Z",
+         author: {name: "Alice", username: "alice", bot: false},
+         mergeUser: {name: "Alice", username: "alice", bot: false},
+         approvedBy: {nodes: []}, diffStatsSummary: {additions: 8, deletions: 2}}
+      ],
+      pageInfo: {hasNextPage: false, endCursor: null}
+    }}}}
+  '
+  exit 0
+fi
+
+endpoint="${1:-}"
+shift || true
+page=1
+for arg in "$@"; do
+  case "$arg" in
+    page=*) page="${arg#page=}" ;;
+  esac
+done
+printf '%s page=%s\n' "$endpoint" "$page" >> "${GLAB_LOG:?}"
+
+if [[ "$endpoint" == */merge_requests/102/discussions && "${GLAB_MODE:-}" == retry-discussion ]]; then
+  retry_file="${GLAB_RETRY_FILE:?}"
+  count=0
+  [[ -f "$retry_file" ]] && count=$(<"$retry_file")
+  count=$((count + 1))
+  printf '%s' "$count" > "$retry_file"
+  if (( count < 4 )); then
+    echo "500 transient test failure" >&2
+    exit 1
+  fi
+fi
+
+if [[ "$endpoint" == */merge_requests/101/discussions ]]; then
+  if [[ "$page" == 1 ]]; then
+    jq -cn '
+      [{id: "101-main", individual_note: false, notes: [
+        {id: 1, author: {id: 1, name: "Alice", username: "alice"}, system: false},
+        {id: 2, author: {id: 2, name: "Bot", username: "bot"}, system: false}
+      ]}]
+      + [range(0;99) | {id: ("101-system-" + tostring), individual_note: false,
+          notes: [{id: 100, author: {id: 99, name: "System", username: "system"}, system: true}]}]
+    '
+  else
+    jq -cn '[{id: "101-standalone", individual_note: true, notes: [
+      {id: 3, author: {id: 2, name: "Bot", username: "bot"}, system: false}
+    ]}]'
+  fi
+  exit 0
+fi
+
+if [[ "$endpoint" == */merge_requests/102/discussions ]]; then
+  jq -cn '[
+    {id: "102-system", individual_note: false, notes: [
+      {id: 4, author: {id: 99, name: "System", username: "system"}, system: true}
+    ]},
+    {id: "102-resolved", individual_note: false, notes: [
+      {id: 5, author: {id: 1, name: "Alice", username: "alice"}, system: false, resolved: true},
+      {id: 6, author: {id: 2, name: "Bot", username: "bot"}, system: false}
+    ]},
+    {id: "102-bot", individual_note: true, notes: [
+      {id: 7, author: {id: 2, name: "Bot", username: "bot"}, system: false}
+    ]}
+  ]'
+  exit 0
+fi
+
+if [[ "$endpoint" == /users/1 ]]; then
+  jq -cn '{id: 1, name: "Alice", username: "alice", bot: false}'
+  exit 0
+fi
+
+if [[ "$endpoint" == /users/2 ]]; then
+  if [[ "${GLAB_MODE:-}" == fail-author ]]; then
+    echo "503 author test failure" >&2
+    exit 1
+  fi
+  jq -cn '{id: 2, name: "Bot", username: "bot", bot: true}'
+  exit 0
+fi
+
+echo "unexpected endpoint: $endpoint" >&2
+exit 2

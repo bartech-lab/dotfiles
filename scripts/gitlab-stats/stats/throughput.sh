@@ -62,6 +62,7 @@ stat_throughput() {
     local result
     result=$(echo "$MR_DATA" | jq --argjson months "$months_json" --argjson exclude_bots "$exclude_bots_json" '
       map(select(.mergedAt != null)
+        | select($exclude_bots == false or .author.bot == false)
         | {month: (.mergedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y-%m"))})
       | group_by(.month)
       | map({month: .[0].month, count: length})

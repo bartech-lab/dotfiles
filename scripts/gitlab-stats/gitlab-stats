@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SINCE=""
 UNTIL=""
 TARGET_BRANCH="develop"
-PROJECT=""
+PROJECT="${GITLAB_STATS_PROJECT:-}"
 STATS="merged-by"
 FORMAT="table"
 TOP_N=10
@@ -26,7 +26,7 @@ Options:
   --since DATE        Start date (YYYY-MM-DD, default: 30 days ago)
   --until DATE        End date (YYYY-MM-DD, default: today)
   --target-branch BR  Target branch (default: develop)
-  --project PROJECT   GitLab project path (default: auto-detect)
+  --project PROJECT   GitLab project path (default: GITLAB_STATS_PROJECT or auto-detect)
   --stats LIST        Comma-separated stats or "all"
                       merged-by, mr-authors, approvals, comments,
                       size-distribution, throughput
@@ -40,20 +40,28 @@ Options:
 HELP
 }
 
+require_option_value() {
+  local option="$1" value="${2:-}"
+  if [[ -z "$value" ]]; then
+    echo "Error: $option requires a value." >&2
+    exit 1
+  fi
+}
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --since) SINCE="$2"; shift 2 ;;
-    --until) UNTIL="$2"; shift 2 ;;
-    --target-branch) TARGET_BRANCH="$2"; shift 2 ;;
-    --project) PROJECT="$2"; shift 2 ;;
-    --stats) STATS="$2"; shift 2 ;;
-    --format) FORMAT="$2"; shift 2 ;;
-    --top) TOP_N="$2"; shift 2 ;;
-    --exclude-bots) EXCLUDE_BOTS="$2"; shift 2 ;;
+    --since) require_option_value "$1" "${2:-}"; SINCE="$2"; shift 2 ;;
+    --until) require_option_value "$1" "${2:-}"; UNTIL="$2"; shift 2 ;;
+    --target-branch) require_option_value "$1" "${2:-}"; TARGET_BRANCH="$2"; shift 2 ;;
+    --project) require_option_value "$1" "${2:-}"; PROJECT="$2"; shift 2 ;;
+    --stats) require_option_value "$1" "${2:-}"; STATS="$2"; shift 2 ;;
+    --format) require_option_value "$1" "${2:-}"; FORMAT="$2"; shift 2 ;;
+    --top) require_option_value "$1" "${2:-}"; TOP_N="$2"; shift 2 ;;
+    --exclude-bots) require_option_value "$1" "${2:-}"; EXCLUDE_BOTS="$2"; shift 2 ;;
     --no-cache) NO_CACHE=true; shift ;;
-    --buckets) BUCKETS="$2"; shift 2 ;;
-    --by-author) BY_AUTHOR="$2"; shift 2 ;;
+    --buckets) require_option_value "$1" "${2:-}"; BUCKETS="$2"; shift 2 ;;
+    --by-author) require_option_value "$1" "${2:-}"; BY_AUTHOR="$2"; shift 2 ;;
     --help|-h) show_help; exit 0 ;;
     *) echo "Unknown option: $1" >&2; show_help >&2; exit 1 ;;
   esac
@@ -81,9 +89,25 @@ validate_date() {
     echo "Error: $label must be YYYY-MM-DD format, got '$val'" >&2
     exit 1
   fi
+
+  if is_macos; then
+    date -j -f "%Y-%m-%d" "$val" +%Y-%m-%d >/dev/null 2>&1 || {
+      echo "Error: $label is not a valid calendar date: '$val'" >&2
+      exit 1
+    }
+  else
+    date -d "$val" +%Y-%m-%d >/dev/null 2>&1 || {
+      echo "Error: $label is not a valid calendar date: '$val'" >&2
+      exit 1
+    }
+  fi
 }
 validate_date "since" "$SINCE"
 validate_date "until" "$UNTIL"
+if [[ "$SINCE" > "$UNTIL" ]]; then
+  echo "Error: --since must not be later than --until." >&2
+  exit 1
+fi
 CACHE_DIR="$(get_cache_dir)"
 
 # Auto-detect project
@@ -91,14 +115,46 @@ if [[ -z "$PROJECT" ]]; then
   PROJECT=$(detect_project) || exit 1
 fi
 
-# Compute cache key
-CACHE_KEY="$(make_cache_key "$PROJECT" "$TARGET_BRANCH" "$SINCE" "$UNTIL")"
-CACHE_FILE="${CACHE_DIR}/gitlab-stats-${CACHE_KEY}.json"
-
 # Expand "all"
 if [[ "$STATS" == "all" ]]; then
   STATS="merged-by,mr-authors,approvals,comments,size-distribution,throughput"
 fi
+
+STATS_COMPACT="${STATS//[[:space:]]/}"
+INCLUDE_DISCUSSIONS=false
+if [[ ",$STATS_COMPACT," == *,comments,* ]]; then
+  INCLUDE_DISCUSSIONS=true
+fi
+
+if ! [[ "$TOP_N" =~ ^[0-9]+$ ]]; then
+  echo "Error: --top must be a non-negative integer." >&2
+  exit 1
+fi
+if [[ "$EXCLUDE_BOTS" != true && "$EXCLUDE_BOTS" != false ]]; then
+  echo "Error: --exclude-bots must be true or false." >&2
+  exit 1
+fi
+if [[ "$BY_AUTHOR" != true && "$BY_AUTHOR" != false ]]; then
+  echo "Error: --by-author must be true or false." >&2
+  exit 1
+fi
+
+IFS=',' read -ra STAT_ARRAY <<< "$STATS"
+for raw_stat in "${STAT_ARRAY[@]}"; do
+  stat="${raw_stat//[[:space:]]/}"
+  case "$stat" in
+    merged-by|mr-authors|approvals|comments|size-distribution|throughput) ;;
+    "") ;;
+    *) echo "Error: Unknown stat '$stat'." >&2; exit 1 ;;
+  esac
+done
+
+# Keep base MR data and REST-enriched discussions in separate versioned caches.
+# This prevents old GraphQL discussion payloads from being reused.
+BASE_CACHE_KEY="$(make_cache_key "$PROJECT" "$TARGET_BRANCH" "$SINCE" "$UNTIL" "base-v2")"
+BASE_CACHE_FILE="${CACHE_DIR}/gitlab-stats-base-${BASE_CACHE_KEY}.json"
+DISCUSSION_CACHE_KEY="$(make_cache_key "$PROJECT" "$TARGET_BRANCH" "$SINCE" "$UNTIL" "discussions-rest-v1")"
+DISCUSSION_CACHE_FILE="${CACHE_DIR}/gitlab-stats-discussions-${DISCUSSION_CACHE_KEY}.json"
 
 # Validate format
 case "$FORMAT" in
@@ -106,27 +162,54 @@ case "$FORMAT" in
   *) echo "Error: Invalid format '$FORMAT'. Use table, json, or csv." >&2; exit 1 ;;
 esac
 
-# Validate buckets (numeric comma-separated)
+# Validate buckets (numeric, strictly increasing, comma-separated)
 if ! echo "$BUCKETS" | grep -qE '^[0-9]+(,[0-9]+)+$'; then
   echo "Error: --buckets must be comma-separated numbers, e.g. 0,50,200,500,999999" >&2
   exit 1
 fi
+IFS=',' read -ra BUCKET_ARRAY <<< "$BUCKETS"
+previous_bucket=-1
+for bucket in "${BUCKET_ARRAY[@]}"; do
+  numeric_bucket=$((10#$bucket))
+  if (( numeric_bucket <= previous_bucket )); then
+    echo "Error: --buckets values must be strictly increasing." >&2
+    exit 1
+  fi
+  previous_bucket="$numeric_bucket"
+done
 
 # Fetch data
-if [[ "$NO_CACHE" == "true" ]] || ! cache_valid "$CACHE_FILE"; then
+if [[ "$NO_CACHE" == "true" ]] || ! cache_valid "$BASE_CACHE_FILE"; then
   >&2 echo "Fetching MR data from GitLab API..."
   MR_DATA=$(fetch_all_mrs "$PROJECT" "$SINCE" "$UNTIL" "$TARGET_BRANCH") || exit 1
-  cache_write "$CACHE_FILE" "$MR_DATA"
+  cache_write "$BASE_CACHE_FILE" "$MR_DATA" || {
+    echo "Error: could not write the base MR cache." >&2
+    exit 1
+  }
 else
   >&2 echo "Using cached data..."
-  MR_DATA=$(cache_read "$CACHE_FILE")
+  MR_DATA=$(cache_read "$BASE_CACHE_FILE")
+fi
+
+if [[ "$INCLUDE_DISCUSSIONS" == "true" ]]; then
+  if [[ "$NO_CACHE" == "true" ]] || ! cache_valid "$DISCUSSION_CACHE_FILE"; then
+    >&2 echo "Fetching REST discussion data (this may be slower)..."
+    DISCUSSION_DATA=$(fetch_discussion_data "$PROJECT" "$MR_DATA") || exit 1
+    cache_write "$DISCUSSION_CACHE_FILE" "$DISCUSSION_DATA" || {
+      echo "Error: could not write the REST discussion cache." >&2
+      exit 1
+    }
+  else
+    >&2 echo "Using cached REST discussion data..."
+    DISCUSSION_DATA=$(cache_read "$DISCUSSION_CACHE_FILE")
+  fi
+  MR_DATA=$(merge_discussion_data "$MR_DATA" "$DISCUSSION_DATA") || exit 1
 fi
 
 # Export small config vars for stat functions
 export FORMAT TOP_N EXCLUDE_BOTS BUCKETS BY_AUTHOR SINCE UNTIL
 
 # Run stats
-IFS=',' read -ra STAT_ARRAY <<< "$STATS"
 for raw_stat in "${STAT_ARRAY[@]}"; do
   stat="${raw_stat//[[:space:]]/}"  # trim whitespace
   case "$stat" in
