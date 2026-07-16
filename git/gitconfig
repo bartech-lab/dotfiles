@@ -2,12 +2,15 @@
     path = ~/.gitconfig.local
 [core]
   excludesfile = ~/.gitignore_global
+  fsmonitor = true
+  untrackedCache = true
 [init]
   defaultBranch = main
 [pull]
   rebase = true
 [push]
   autoSetupRemote = true
+  followTags = true
 [fetch]
   prune = true
 [merge]
@@ -15,11 +18,17 @@
 [rebase]
   autoSquash = true
   autoStash = true
+  updateRefs = true
 [rerere]
   enabled = true
+  autoupdate = true
 [diff]
   algorithm = histogram
   colorMoved = zebra
+[branch]
+  sort = -committerdate
+[tag]
+  sort = version:refname
 [help]
   autocorrect = 1
 [column]
