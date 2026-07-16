@@ -75,6 +75,10 @@ brew "pngquant"         # PNG quantizer (lossy, smaller files)
 
 brew "spicetify-cli"    # Spotify client customizer (themes, extensions)
 brew "fnm"              # Fast Node Manager (faster nvm alternative)
+brew "colima"           # Container runtime (replaced Docker Desktop/OrbStack 2026-07: free, no license checks)
+brew "docker"           # Docker CLI (daemon provided by colima)
+brew "docker-compose"   # Compose plugin (wired via ~/.docker/config.json cliPluginsExtraDirs)
+brew "docker-credential-helper"  # docker-credential-osxkeychain (was bundled with Docker Desktop)
 # pipx removed 2026-07 — uv (installed) covers isolated Python CLI tools via `uv tool`/uvx
 
 # ============================================================================
