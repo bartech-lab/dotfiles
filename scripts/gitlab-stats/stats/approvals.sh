@@ -17,6 +17,6 @@ stat_approvals() {
     }) | sort_by(-.count) | if $top > 0 then .[:$top] else . end
   ') || true
 
-  print_heading "Approvals"
-  format_results "$result" "[.name, (.count | tostring)]" "Name|Count"
+  print_heading "Approver | Approvals granted"
+  format_results "$result" "[.name, (.count | tostring)]" "Approver|Approvals granted"
 }

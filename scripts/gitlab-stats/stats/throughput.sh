@@ -72,19 +72,19 @@ stat_throughput() {
       | sort_by(.month)
     ') || true
 
-    local header="Month|Count"
+    local header="Month|MRs merged"
 
     case "${FORMAT:-table}" in
       json)
-        print_heading "Throughput"
+        print_heading "Month | MRs merged"
         echo "$result" | jq '.'
         ;;
       csv)
-        print_heading "Throughput"
+        print_heading "Month | MRs merged"
         echo "$result" | jq -r '["Month", "Count"], (.[] | [.month, (.count | tostring)]) | @csv'
         ;;
       table|*)
-        print_heading "Throughput"
+        print_heading "Month | MRs merged"
         {
           echo "Month"'	'"Count"
           echo "$result" | jq -r '.[] | [.month, (.count | tostring)] | @tsv'
@@ -99,11 +99,11 @@ format_throughput_table() {
 
   case "${FORMAT:-table}" in
     json)
-      print_heading "Throughput"
+      print_heading "Month | MRs merged"
       echo "$result" | jq '.'
       ;;
     csv)
-      print_heading "Throughput"
+      print_heading "Month | MRs merged"
       # Build CSV header from months
       local csv_header
       csv_header=$(echo "$header" | tr '|' ',')
@@ -113,7 +113,7 @@ format_throughput_table() {
       '
       ;;
     table|*)
-      print_heading "Throughput"
+      print_heading "Month | MRs merged"
       {
         echo "$header" | tr '|' '\t'
         echo "$result" | jq -r --argjson m "$months_json" '

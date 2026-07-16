@@ -19,6 +19,6 @@ stat_comments() {
     }) | sort_by(-.count) | if $top > 0 then .[:$top] else . end
   ') || true
 
-  print_heading "Comments (thread starters, includes resolved)"
-  format_results "$result" "[.name, (.count | tostring)]" "Name|Count"
+  print_heading "Reviewer | Review threads started"
+  format_results "$result" "[.name, (.count | tostring)]" "Reviewer|Review threads started"
 }

@@ -16,6 +16,6 @@ stat_mr_authors() {
     }) | sort_by(-.count) | if $top > 0 then .[:$top] else . end
   ') || true
 
-  print_heading "MR Authors"
-  format_results "$result" "[.name, (.count | tostring)]" "Name|Count"
+  print_heading "Author | MRs merged"
+  format_results "$result" "[.name, (.count | tostring)]" "Author|MRs merged"
 }

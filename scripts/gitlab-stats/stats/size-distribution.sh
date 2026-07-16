@@ -51,7 +51,7 @@ stat_size_distribution() {
 
   # Build jq fields and format headers dynamically
   local jq_fields="[.name, (.total | tostring)"
-  local field_labels="Name|Total"
+  local field_labels="Author|MR count"
   for ((i=0; i<${#THRE[@]}-1; i++)); do
     local label="${labels[$i]:-B$i}"
     jq_fields+=", (.${label} | tostring)"
@@ -59,6 +59,6 @@ stat_size_distribution() {
   done
   jq_fields+="]"
 
-  print_heading "MR Size Distribution"
+  print_heading "Size bucket | MR count"
   format_results "$result" "$jq_fields" "$field_labels"
 }
