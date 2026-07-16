@@ -280,11 +280,11 @@ macos-defaults() {
     defaults write com.spotify.client AutoStart -bool false
     
     # ============================================
-    # ORBSTACK SETTINGS (replaced Docker Desktop 2026-07)
+    # CONTAINERS (Colima replaced Docker Desktop 2026-07)
     # ============================================
 
-    # OrbStack: disable auto-start on login (rare container usage)
-    command -v orb >/dev/null 2>&1 && orb config set app.start_at_login false 2>/dev/null
+    # Colima is on-demand by design: `colima start` / `colima stop`.
+    # No login items or defaults to manage.
     
     # ============================================
     # SLACK SETTINGS
@@ -784,9 +784,8 @@ macos-defaults-export() {
     
     echo ""
     
-    # OrbStack (replaced Docker Desktop 2026-07)
-    echo "# OrbStack settings"
-    command -v orb >/dev/null 2>&1 && echo "orb config set app.start_at_login $(orb config get app.start_at_login 2>/dev/null || echo false)"
+    # Containers (Colima, on-demand — no defaults to export)
+    echo "# Containers: colima (no persisted defaults)"
     
     echo ""
     
