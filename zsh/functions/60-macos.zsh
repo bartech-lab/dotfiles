@@ -280,14 +280,11 @@ macos-defaults() {
     defaults write com.spotify.client AutoStart -bool false
     
     # ============================================
-    # DOCKER DESKTOP SETTINGS
+    # ORBSTACK SETTINGS (replaced Docker Desktop 2026-07)
     # ============================================
-    
-    # Docker: disable automatic startup
-    defaults write com.docker.docker AutoStart -bool false
-    
-    # Docker: disable analytics
-    defaults write com.docker.docker analyticsEnabled -bool false
+
+    # OrbStack: disable auto-start on login (rare container usage)
+    command -v orb >/dev/null 2>&1 && orb config set app.start_at_login false 2>/dev/null
     
     # ============================================
     # SLACK SETTINGS
@@ -787,10 +784,9 @@ macos-defaults-export() {
     
     echo ""
     
-    # Docker
-    echo "# Docker settings"
-    defaults read com.docker.docker AutoStart 2>/dev/null && echo "defaults write com.docker.docker AutoStart -bool $(defaults read com.docker.docker AutoStart)"
-    defaults read com.docker.docker analyticsEnabled 2>/dev/null && echo "defaults write com.docker.docker analyticsEnabled -bool $(defaults read com.docker.docker analyticsEnabled)"
+    # OrbStack (replaced Docker Desktop 2026-07)
+    echo "# OrbStack settings"
+    command -v orb >/dev/null 2>&1 && echo "orb config set app.start_at_login $(orb config get app.start_at_login 2>/dev/null || echo false)"
     
     echo ""
     

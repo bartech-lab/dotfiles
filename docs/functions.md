@@ -192,9 +192,8 @@ macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 #### Spotify
 - Disable auto-start on login
 
-#### Docker Desktop
-- Disable automatic startup
-- Disable analytics
+#### OrbStack (replaced Docker Desktop 2026-07)
+- Disable auto-start on login (`orb config set app.start_at_login false`)
 
 #### Slack
 - Disable spell checking
