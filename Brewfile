@@ -59,6 +59,8 @@ brew "zstd"             # Fast compression for archive() function
 brew "gnu-tar"          # Reproducible archives (--sort=name, --mtime)
 brew "unar"             # Universal archive extractor (zip, rar, 7z)
 brew "mozjpeg"          # Provides cjpeg binary for image optimization
+# jpegli (cjpegli, ~30% smaller JPEGs at q85+) is preferred by optimize-images when present,
+# but is NOT yet packaged in Homebrew (jpeg-xl 0.12 ships without the jpegli target). Revisit.
 brew "yt-dlp"           # YouTube video downloader (ffmpeg companion)
 # brew "aria2"          # Multi-connection download accelerator (yt-dlp companion) — optional, install manually if needed
 
@@ -73,7 +75,7 @@ brew "pngquant"         # PNG quantizer (lossy, smaller files)
 
 brew "spicetify-cli"    # Spotify client customizer (themes, extensions)
 brew "fnm"              # Fast Node Manager (faster nvm alternative)
-brew "pipx"             # Python app installer (isolated packages)
+# pipx removed 2026-07 — uv (installed) covers isolated Python CLI tools via `uv tool`/uvx
 
 # ============================================================================
 # GUI Applications (Casks)
@@ -86,7 +88,7 @@ cask "handbrake-app"            # Video transcoder (GUI for ffmpeg tasks)
 cask "iina"                     # Modern macOS video player
 cask "keka"                     # Archive extractor (7z, rar support)
 cask "kekaexternalhelper"       # Keka Finder integration
-cask "paintbrush"               # Simple image editor (MS Paint-like)
+# cask "paintbrush"             # Removed 2026-07: abandoned upstream since 2021 — use Preview markup or Pinta
 cask "stats"                    # System monitor in menu bar
 # cask "tg-pro"                 # Temperature monitoring for Mac -> commenting this one out, causing checksum issue
 cask "visual-studio-code"       # Code editor
@@ -98,5 +100,5 @@ cask "localsend"                # Cross-platform file sharing
 # Installed automatically with VS Code
 
 vscode "davidanson.vscode-markdownlint"   # Markdown linting
-vscode "tamasfe.even-better-toml"         # TOML file support
+vscode "tombi-toml.tombi"                 # TOML support (successor of unmaintained even-better-toml)
 vscode "ms-playwright.playwright"         # Playwright test support
