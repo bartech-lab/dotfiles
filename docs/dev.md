@@ -188,7 +188,7 @@ dotfiles-doctor --fix   # Auto-fix common issues
 - ✅ `zstd` - Archive compression
 - ✅ `gtar` - GNU tar for reproducibility
 - ✅ `ffmpeg` - Media processing
-- ✅ `cjpeg` (mozjpeg) - JPEG optimization
+- ✅ `cjpeg` (mozjpeg) - JPEG optimization (cjpegli preferred automatically if ever installed)
 - ✅ `parallel` - Parallel processing
 
 ### Dotfiles Setup

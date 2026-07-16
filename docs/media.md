@@ -19,12 +19,12 @@ optimize-images [path] [--lossless]
 - Parallel processing for speed
 - Transparent PNGs → JPEG (better compression)
 - Non-transparent PNGs → optimized PNG
-- JPEGs → mozjpeg optimized
+- JPEGs → cjpegli optimized when installed (~30% smaller at q85); mozjpeg cjpeg otherwise
 - Output in same directory with smart `-opt` suffixing (no `optimized/` folder)
 
 **Lossless mode:**
 - PNGs → oxipng optimized (preserves transparency)
-- JPEGs → mozjpeg optimized
+- JPEGs → cjpegli when installed, mozjpeg otherwise
 
 **Examples:**
 ```bash
@@ -36,6 +36,7 @@ optimize-images ./assets --lossless  # Lossless PNG optimization
 
 **Requirements:**
 - `mozjpeg` (provides `cjpeg`) - JPEG optimization
+- optional: `cjpegli` (jpegli) - preferred automatically when present; not yet in Homebrew
 - `oxipng` - PNG optimization
 - `pngquant` - PNG quantization
 - `ffmpeg` - Image conversion
