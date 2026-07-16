@@ -1,0 +1,21 @@
+[Unit]
+Description=omniroute (Next.js)
+After=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=exec
+WorkingDirectory=%h/omniroute
+ExecStart=/bin/sh %h/.config/omniroute/run.sh
+Restart=on-failure
+RestartSec=5
+# next start exits 143 on SIGTERM / 130 on SIGINT (explicit process.exit) —
+# treat as clean so Restart=on-failure doesn't misfire
+SuccessExitStatus=130 143
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=omniroute
+
+[Install]
+WantedBy=default.target
