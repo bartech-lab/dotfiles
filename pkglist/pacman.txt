@@ -24,6 +24,7 @@ fd
 # Shell
 zsh
 zsh-completions
+shellcheck
 
 # Media pipeline
 ffmpeg

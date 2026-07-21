@@ -316,6 +316,43 @@ No changes made (dry run mode)
 
 ## Development Best Practices
 
+### Shell Validation
+
+This repository contains Bash, one POSIX `sh` script, and zsh scripts. Several
+zsh scripts intentionally use a `.sh` suffix, so select files by shebang before
+running a checker:
+
+```bash
+rg -n '^#!' --glob '*.sh' --glob '*.bash' --glob '*.zsh' --glob 'install.sh'
+```
+
+For changed Bash or POSIX `sh` files, run ShellCheck at warning severity and
+keep the existing syntax checks:
+
+```bash
+shellcheck --severity=warning path/to/changed-bash-file.sh
+bash -n path/to/changed-bash-file.sh
+shellcheck --severity=warning path/to/changed-posix-file.sh
+sh -n path/to/changed-posix-file.sh
+```
+
+For changed zsh files, run only the zsh parser:
+
+```bash
+zsh -n path/to/changed-zsh-file.zsh
+```
+
+Do not pass zsh files to ShellCheck, even when their filename ends in `.sh`.
+Keep the relevant integration tests, including:
+
+```bash
+bash ~/dotfiles/git-auto-pull/tests/test.sh
+bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
+```
+
+ShellCheck is a static analyzer, not a formatter; `shfmt` remains optional and
+is not part of the validation gate.
+
 ### Before Archiving
 
 Always check first:

@@ -79,6 +79,7 @@ brew "colima"           # Container runtime (replaced Docker Desktop/OrbStack 20
 brew "docker"           # Docker CLI (daemon provided by colima)
 brew "docker-compose"   # Compose plugin (wired via ~/.docker/config.json cliPluginsExtraDirs)
 brew "docker-credential-helper"  # docker-credential-osxkeychain (was bundled with Docker Desktop)
+brew "shellcheck"       # Static analysis for Bash and POSIX sh scripts
 # pipx removed 2026-07 — uv (installed) covers isolated Python CLI tools via `uv tool`/uvx
 
 # ============================================================================
