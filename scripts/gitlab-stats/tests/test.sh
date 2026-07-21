@@ -66,10 +66,10 @@ assert_contains "$(<"$TMP_DIR/fail.err")" "GET /users/2"
 
 export CACHE_DIR="$TMP_DIR/cache"
 first_output=$(bash "$ROOT_DIR/gitlab-stats" --project tidio/js/frontend/operators-apps --since 2026-07-01 --until 2026-07-15 --stats comments --format json --no-cache 2>"$TMP_DIR/cli-first.err") || fail "CLI comments run failed"
-assert_contains "$first_output" "Comments (thread starters, includes resolved)"
+assert_contains "$first_output" "Reviewer | Review threads started"
 before_lines=$(wc -l < "$GLAB_LOG")
 all_output=$(bash "$ROOT_DIR/gitlab-stats" --project tidio/js/frontend/operators-apps --since 2026-07-01 --until 2026-07-15 --stats all --format json 2>"$TMP_DIR/cli-cache.err") || fail "CLI all cached run failed"
-assert_contains "$all_output" "Comments (thread starters, includes resolved)"
+assert_contains "$all_output" "Reviewer | Review threads started"
 after_lines=$(wc -l < "$GLAB_LOG")
 [[ "$before_lines" -eq "$after_lines" ]] || fail "cached all run made API calls"
 
