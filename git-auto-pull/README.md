@@ -13,7 +13,7 @@ Runs a shell script periodically to fetch and fast-forward configured branches i
 - **pull.sh** - The main script that checks and pulls updates
 - **install.sh** (`~/dotfiles/install.sh`) — Unified installer for all services on both macOS and Linux
 - **setup.sh** - macOS-only setup (legacy; prefer `install.sh`)
-- **repos.conf** - Configuration file listing repositories and their main branches (machine-specific, not in dotfiles)
+- **repos.conf** - Machine-specific repository and branch overrides (not in dotfiles)
 - **systemd/** - systemd user unit files for Linux
 
 ## Installation
@@ -33,7 +33,7 @@ cd ~/dotfiles/git-auto-pull
 bash setup.sh
 ```
 
-### Adding Repositories
+### Adding Repositories or Branch Overrides
 
 Edit the config file:
 
@@ -41,12 +41,12 @@ Edit the config file:
 nano ~/.config/git-auto-pull/repos.conf
 ```
 
-Add one repo per line in this format:
+Add one repository per line in this format:
 ```
 /path/to/repo:branch-name
 ```
 
-Examples:
+Configured entries always win over auto-discovery. For example:
 ```
 ~/Projects/my-app:main
 ~/work/api:master
@@ -61,6 +61,12 @@ Run manually to test:
 
 ```bash
 bash ~/.config/git-auto-pull/pull.sh
+```
+
+Run the isolated integration suite:
+
+```bash
+bash ~/dotfiles/git-auto-pull/tests/test.sh
 ```
 
 Check the log to see what was updated:
@@ -119,14 +125,18 @@ systemctl --user disable git-auto-pull.timer
 ## How It Works
 
 1. **LaunchAgent** (macOS service scheduler) triggers the script every hour
-2. **pull.sh** reads `repos.conf` and for each repo:
-   - Fetches the configured remote branch quietly
-   - Compares local branch ref vs remote branch ref
-   - Fast-forwards only the configured branch (never auto-merges/rebases)
+2. **pull.sh** builds one repository list:
+   - Entries in `repos.conf` use their explicitly configured branch
+   - Repositories discovered in `~/Projects` and `~/dotfiles` use the remote's advertised default branch
+   - Duplicate paths are processed once, with configuration taking precedence
+3. Each repository is then processed by:
+   - Fetching the selected remote branch quietly
+   - Compare the local branch ref with the remote branch ref
+   - Fast-forwards only the selected branch (never auto-merges/rebases)
    - Keeps your currently checked out branch unchanged unless it matches the configured branch
    - Logs updates to `pull.log`
-3. All repos are processed in parallel (background jobs)
-4. No output if nothing changed (silent operation)
+4. All repos are processed in parallel (background jobs)
+5. No output if nothing changed (silent operation)
 
 ## Notes
 
@@ -134,7 +144,7 @@ systemctl --user disable git-auto-pull.timer
 - No updates = no log entries (keeps logs clean)
 - Very low resource usage (~0.1% CPU for 1-2 seconds per repo)
 - Runs as background process (won't interrupt your work)
-- Only works when you're online (fails silently if no internet)
+- Only works when you're online; a default-branch lookup or fetch failure is logged in `error.log`
 - Diverged branches are skipped and logged in `error.log` (no automatic merge)
 
 ## Uninstallation
