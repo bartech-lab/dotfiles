@@ -193,7 +193,7 @@ echo ""
 
 echo "Automation Toolchain:"
 
-required_cli_tools=("rg" "fd" "sd" "jq" "yq" "git" "gh")
+required_cli_tools=("rg" "fd" "sd" "jq" "yq" "git" "gh" "shellcheck")
 for tool in "${required_cli_tools[@]}"; do
     if command -v "$tool" &>/dev/null; then
         tool_path=$(command -v "$tool")

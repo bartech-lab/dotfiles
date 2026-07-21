@@ -62,6 +62,19 @@ After installation, verify everything is working:
 ~/dotfiles/scripts/validate-setup.sh
 ```
 
+For shell changes, inspect each file's shebang first: run
+`shellcheck --severity=warning` only on Bash/POSIX `sh` files, and use
+`zsh -n` for zsh files (including `.sh` files whose shebang selects zsh).
+Keep the relevant `bash -n`/`sh -n` and integration tests, such as:
+
+```bash
+bash -n path/to/changed-bash-file.sh
+sh -n path/to/changed-posix-file.sh
+zsh -n path/to/changed-zsh-file.zsh
+bash ~/dotfiles/git-auto-pull/tests/test.sh
+bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
+```
+
 This checks:
 - System requirements (macOS version, Command Line Tools)
 - Homebrew and critical packages
@@ -195,6 +208,7 @@ See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
 
 - **macOS** 14+ (Sonoma and later) or **Linux** (EndeavourOS/Arch)
 - **zsh** (auto-installed by `./install.sh` on Linux, pre-installed on macOS)
+- **ShellCheck** (installed by `Brewfile` on macOS or `pkglist/pacman.txt` on Linux)
 - **Homebrew** (auto-installed by `./install.sh` on macOS)
 - **OpenCode** (auto-installed by `./install.sh` on both platforms)
 
