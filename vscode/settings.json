@@ -11,5 +11,8 @@
   "github.copilot.chat.organizationCustomAgents.enabled": false,
   "chat.titleBar.signIn.enabled": false,
   "git.confirmSync": false,
-  "chat.disableAIFeatures": true
+  "chat.disableAIFeatures": true,
+  "git.autorefresh": true,
+  "git.autofetch": true,
+  "git.autofetchPeriod": 60
 }
