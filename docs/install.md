@@ -83,7 +83,7 @@ Current defaults include:
 - OS files: `.DS_Store`, `._*`, `Thumbs.db`
 - Editor temp files: `*~`, `*.swp`, `*.swo`
 - Python bytecode: `__pycache__/`, `*.pyc`
-- Local AI/tool directories: `.sisyphus`, `.opencode`, `.agents/`, `.agent-browser/`, `.skill-lock.json`, `.llm/`
+- Local AI/tool directories: `.claude/`, `.codex/`, `.pi/`, `.sisyphus/`, `.opencode/`, `.commandcode/`, `.llm/`, `.playwright-mcp/`, plus `.mcp.json` and `.skill-lock.json`
 - Agent instruction files: `agents.md`, `AGENTS.md`
 
 This is handled automatically by `./install.sh`. To set it manually:
