@@ -26,6 +26,7 @@ __pycache__/
 
 # AI/agent tool files
 .mcp.json
+.pi-lsp.json
 .skill-lock.json
 
 # Agent instruction files
