@@ -23,6 +23,7 @@ __pycache__/
 .codex
 .playwright-mcp
 .mcp.json
+.pi
 
 # Agent instruction files
 agents.md
