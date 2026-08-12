@@ -1,29 +1,32 @@
 # OS files
-.DS_Store
 ._*
+.DS_Store
 Thumbs.db
 
 # Editor temp files
 *~
-*.swp
 *.swo
+*.swp
 
 # Python bytecode
-__pycache__/
 *.pyc
+__pycache__/
 
-# Local AI/tool directories
-.sisyphus
-.opencode
-.agents/
+# AI/agent tool directories
 .agent-browser/
-.skill-lock.json
-.llm/
+.agents/
+.claude/
+.codex/
 .commandcode/
-.codex
-.playwright-mcp
+.llm/
+.opencode/
+.pi/
+.playwright-mcp/
+.sisyphus/
+
+# AI/agent tool files
 .mcp.json
-.pi
+.skill-lock.json
 
 # Agent instruction files
 agents.md
@@ -31,10 +34,7 @@ AGENTS.md
 claude.md
 CLAUDE.md
 
-# AI tool directories
-.claude/
-
 # Local git config (machine-specific identities)
-.gitconfig.local
 .gitconfig-github
 .gitconfig-gitlab
+.gitconfig.local
