@@ -30,6 +30,9 @@ fi
     "$HOME/.opencode/bin"
   )
 
+  # npm global bin (fnm default alias, version-agnostic)
+  path+=("$HOME/.local/share/fnm/aliases/default/bin")
+
   # macOS-specific paths (Homebrew)
   if [[ "$DOTFILES_OS" == macos ]]; then
     path=(
