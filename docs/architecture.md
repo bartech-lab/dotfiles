@@ -51,7 +51,7 @@ dotfiles/
 │       ├── 60-macos.zsh      # macOS system functions
 │       ├── 61-discord.zsh    # Discord OpenAsar helpers
 │       ├── 62-kde.zsh        # KDE Plasma defaults (Linux)
-│       └── 70-opencode.zsh   # OpenCode helpers (launch + cleanup)
+│       └── 70-pi.zsh         # pi coding agent helpers (AGENTS.md + cleanup)
 ├── install.sh                # One-command installer
 ├── Brewfile                  # Homebrew dependencies
 └── README.md                 # Project entry point
@@ -69,7 +69,7 @@ Functions load in a specific sequence controlled by filenames:
 40-*.zsh         → Fifth (dev)
 50-*.zsh         → Sixth (media/download)
 60-*.zsh         → Seventh (macos/system + discord/kde)
-70-*.zsh         → Ninth (opencode)
+70-*.zsh         → Ninth (pi coding agent)
 ```
 
 Linux-only files (`21-pacman.zsh`, `51-download.zsh`, `62-kde.zsh`) are interspersed by their number slot and guarded by platform checks in the loader.
@@ -198,7 +198,7 @@ This is used throughout the codebase to:
             ├─ SKIP 60-macos.zsh on Linux
             ├─ source 61-discord.zsh             ← platform paths
             ├─ source 62-kde.zsh                 ← SKIPS on macOS
-            └─ source 70-opencode.zsh            ← cross-platform
+            └─ source 70-pi.zsh                  ← cross-platform
 ```
 
 ### Adding New Dependencies

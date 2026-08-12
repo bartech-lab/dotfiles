@@ -27,7 +27,6 @@ fi
   path=(
     "$HOME/dotfiles/scripts/bin"
     "$HOME/.local/bin"
-    "$HOME/.opencode/bin"
   )
 
   # npm global bin (fnm default alias, version-agnostic)

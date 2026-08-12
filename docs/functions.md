@@ -270,22 +270,32 @@ allow it to update again. Cleanup remains separate so old versions are not
 removed automatically. It does NOT run `brew bundle`; run that separately when
 you want to sync packages with Brewfile.
 
-## OpenCode Functions
+## pi Coding Agent Functions
 
-### oco
+### pi-agents
 
-Launch OpenCode.
+Rebuild pi's global `AGENTS.md`.
+
+`~/.claude/rules/*.md` is the single source of truth for the shared writing and
+workflow rules. Claude Code loads that directory automatically. pi has no import
+syntax in context files, so the rules are concatenated into
+`~/.pi/agent/AGENTS.md` instead. Run this after editing any rule file, then
+`/reload` inside pi.
 
 ```bash
-oco                   # Start OpenCode
+pi-agents             # Regenerate ~/.pi/agent/AGENTS.md
 ```
 
-### ocfix
+### pifix
 
-Clean orphaned opencode processes.
+Clean orphaned pi processes.
+
+pi runs under node, so it cannot be identified by process name. Matching is done
+on the argument list. Only processes reparented to launchd with no controlling
+terminal are killed.
 
 ```bash
-ocfix                 # Kill orphaned opencode processes
+pifix                 # Kill orphaned pi processes
 ```
 
 ## Development Utilities
@@ -469,7 +479,7 @@ See [dev.md](dev.md) for full documentation.
 | macOS | `60-macos.zsh` | System functions (macOS only) |
 | Discord | `61-discord.zsh` | OpenAsar setup/status helpers |
 | KDE | `62-kde.zsh` | KDE Plasma defaults (Linux only) |
-| OpenCode | `70-opencode.zsh` | OpenCode helpers |
+| pi | `70-pi.zsh` | pi coding agent helpers |
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
