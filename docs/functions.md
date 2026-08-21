@@ -103,6 +103,26 @@ git-open              # Open in GitHub/GitLab/Bitbucket
 
 **Handles:** SSH remotes automatically
 
+### git push auto-switch
+
+`git` is wrapped by `scripts/bin/git-autoswitch` so that after a successful
+push from a feature branch you land back on the default branch automatically.
+
+```bash
+git push                        # pushes, then switches back to the default branch
+GIT_AUTOSWITCH_OFF=1 git push   # push without switching
+```
+
+**Switches only when all of these hold:**
+- The push succeeds (failed pushes keep you where you are)
+- You are not already on the default branch (`origin/HEAD`, else develop → master → main)
+- There are no uncommitted tracked changes (untracked files don't block)
+
+`install.sh` wires the wrapper through `~/.zshenv`, so it covers interactive
+terminals and non-interactive agent shells alike. Pushes from VS Code's Source
+Control UI button bypass the wrapper. Scripts that must not switch can call
+`command git push` or set `GIT_AUTOSWITCH_OFF=1`.
+
 ## macOS Functions
 
 ### macos-defaults

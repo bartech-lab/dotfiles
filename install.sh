@@ -524,6 +524,11 @@ if [[ "$DRY_RUN" == true ]]; then
     else
         echo "  → Would create: ~/.config/zsh-dotfiles-loader.zsh → $DOTFILES_DIR/zsh/functions.zsh"
     fi
+    if [[ -L ~/.config/zsh-git-autoswitch.zsh ]]; then
+        echo "  → Would update: ~/.config/zsh-git-autoswitch.zsh → $DOTFILES_DIR/zsh/zshenv.zsh"
+    else
+        echo "  → Would create: ~/.config/zsh-git-autoswitch.zsh → $DOTFILES_DIR/zsh/zshenv.zsh"
+    fi
 else
     if [[ -L ~/.gitignore_global ]]; then
         ln -sf "$DOTFILES_DIR/git/gitignore_global" ~/.gitignore_global
@@ -544,6 +549,14 @@ else
     else
         ln -sf "$DOTFILES_DIR/zsh/functions.zsh" ~/.config/zsh-dotfiles-loader.zsh
         echo "✓ Linked functions loader"
+    fi
+
+    if [[ -L ~/.config/zsh-git-autoswitch.zsh ]]; then
+        ln -sf "$DOTFILES_DIR/zsh/zshenv.zsh" ~/.config/zsh-git-autoswitch.zsh
+        echo "✓ Updated git-autoswitch symlink"
+    else
+        ln -sf "$DOTFILES_DIR/zsh/zshenv.zsh" ~/.config/zsh-git-autoswitch.zsh
+        echo "✓ Linked git-autoswitch wrapper"
     fi
 fi
 
@@ -700,6 +713,19 @@ if ! grep -q "zsh-dotfiles-loader.zsh" ~/.zshrc 2>/dev/null; then
         echo "# Load dotfiles functions" >> ~/.zshrc
         echo 'source ~/.config/zsh-dotfiles-loader.zsh' >> ~/.zshrc
         echo "✓ Added loader to ~/.zshrc"
+    fi
+fi
+
+# Add to .zshenv if not present so non-interactive shells (agent sessions)
+# also get the git push auto-switch wrapper
+if ! grep -q "zsh-git-autoswitch.zsh" ~/.zshenv 2>/dev/null; then
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  → Would add to ~/.zshenv: source ~/.config/zsh-git-autoswitch.zsh"
+    else
+        echo "" >> ~/.zshenv
+        echo "# Load git push auto-switch wrapper" >> ~/.zshenv
+        echo 'source ~/.config/zsh-git-autoswitch.zsh' >> ~/.zshenv
+        echo "✓ Added git-autoswitch source to ~/.zshenv"
     fi
 fi
 

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Transparent git wrapper. After a successful `git push` from a non-default
+# branch with a clean tracked tree, switch back to the default branch.
+#
+# Disable for a single command:  GIT_AUTOSWITCH_OFF=1 git push
+#
+# Wired up by the `git()` function in zsh/functions/30-git.zsh.
+set -euo pipefail
+
+# Locate the real git binary, never this wrapper itself.
+resolve_real_git() {
+  local candidate self
+  self=$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")
+  for candidate in /opt/homebrew/bin/git /usr/local/bin/git /usr/bin/git; do
+    if [[ -x "$candidate" && "$(readlink -f "$candidate" 2>/dev/null)" != "$self" ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  echo "git-autoswitch: real git binary not found" >&2
+  return 1
+}
+
+REAL_GIT=$(resolve_real_git)
+
+# Everything except a push passes straight through.
+if [[ "${1:-}" != "push" || -n "${GIT_AUTOSWITCH_OFF:-}" ]]; then
+  exec "$REAL_GIT" "$@"
+fi
+
+status=0
+"$REAL_GIT" "$@" || status=$?
+if [[ "$status" -ne 0 ]]; then
+  exit "$status"
+fi
+
+# Detached HEAD or bare repository: nothing to switch.
+branch=$("$REAL_GIT" symbolic-ref --short -q HEAD) || exit 0
+
+# Default branch: the remote's own HEAD, else develop -> master -> main.
+default_branch=$("$REAL_GIT" symbolic-ref --short -q refs/remotes/origin/HEAD 2>/dev/null || true)
+default_branch=${default_branch#origin/}
+if [[ -z "$default_branch" ]]; then
+  for candidate in develop master main; do
+    if "$REAL_GIT" show-ref --verify --quiet "refs/remotes/origin/$candidate"; then
+      default_branch=$candidate
+      break
+    fi
+  done
+fi
+
+if [[ -z "$default_branch" || "$branch" == "$default_branch" ]]; then
+  exit 0
+fi
+
+# Uncommitted tracked changes mean work in progress: stay on the branch.
+# Untracked files travel with the switch harmlessly, so they don't block it.
+if [[ -n $("$REAL_GIT" status --porcelain --untracked-files=no) ]]; then
+  exit 0
+fi
+
+echo "↩ Push done — switching back to '$default_branch'"
+exec "$REAL_GIT" switch "$default_branch"
