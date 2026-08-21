@@ -45,7 +45,7 @@ Included defaults:
 - OS files: `.DS_Store`, `._*`, `Thumbs.db`
 - Editor temp files: `*~`, `*.swp`, `*.swo`
 - Python bytecode: `__pycache__/`, `*.pyc`
-- Local AI/tool directories: `.claude/`, `.codex/`, `.pi/`, `.sisyphus/`, `.opencode/`, `.commandcode/`, `.llm/`, `.playwright-mcp/`, plus `.mcp.json` and `.skill-lock.json`
+- Local AI/tool directories: `.claude/`, `.codex/`, `.sisyphus/`, `.opencode/`, `.commandcode/`, `.llm/`, `.playwright-mcp/`, plus `.mcp.json` and `.skill-lock.json`
 - Agent instruction files: `agents.md`, `AGENTS.md`
 
 To apply or refresh the symlink manually:
@@ -116,15 +116,6 @@ dotfiles-doctor
 - `video-to-gif <input>` - Convert videos to GIF
 - `video-remux [path] [--subdir]` - Lossless container conversion
 - `video-encode-cpu/gpu [path] [--subdir]` - H.265 encoding
-
-### pi Coding Agent
-
-> pi is not installed by `./install.sh`. Install it with
-> `npm install -g @earendil-works/pi-coding-agent`, then authenticate with
-> `/login` inside pi.
-
-- `pi-agents` - Rebuild pi's global `AGENTS.md` from `~/.claude/rules/*.md`
-- `pifix` - Clean orphaned pi processes
 
 ### Claude Code with OpenRouter
 
@@ -223,7 +214,6 @@ See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
 - **zsh** (auto-installed by `./install.sh` on Linux, pre-installed on macOS)
 - **ShellCheck** (installed by `Brewfile` on macOS or `pkglist/pacman.txt` on Linux)
 - **Homebrew** (auto-installed by `./install.sh` on macOS)
-- **pi coding agent** (optional, installed manually via npm)
 
 ## License
 
