@@ -481,12 +481,15 @@ See [dev.md](dev.md) for full documentation.
 ### orclaude
 
 Start Claude Code through OpenRouter. The command routes the main session and
-all task classes to `stealth/ox-alpha`. Claude Code uses a 1,000,000-token
-context window and starts auto-compaction at 900,000 tokens.
+all task classes to `stealth/ox-alpha` at `high` effort, independent of
+`~/.claude/settings.json`. Claude Code uses a 1,000,000-token context window
+and starts auto-compaction at 900,000 tokens.
 
 ```bash
 orclaude
 orclaude --help
+ORCLAUDE_EFFORT=high orclaude    # override effort for one launch
+ORCLAUDE_MODEL=<model> orclaude  # override model for one launch
 ```
 
 The command forwards all arguments to `claude`. It does not change the normal
