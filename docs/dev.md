@@ -2,6 +2,56 @@
 
 Archive handling, environment diagnostics, and development helpers.
 
+## Claude Code with OpenRouter
+
+The `orclaude` command starts Claude Code through OpenRouter. It routes all
+Claude Code task classes to the `stealth/ox-alpha` model.
+
+The normal `claude` command keeps its Anthropic connection.
+
+### Setup
+
+Add your OpenRouter API key to the local `~/.zshenv` file:
+
+```zsh
+export OPENROUTER_API_KEY="sk-or-v1-..."
+```
+
+Do not add this key to the dotfiles repository. Restrict the local file, then
+reload the shell:
+
+```bash
+chmod 600 ~/.zshenv
+source ~/.zshenv
+```
+
+Start Claude Code with the required provider:
+
+```bash
+claude       # Anthropic
+orclaude     # OpenRouter with Ox Alpha
+```
+
+The wrapper sets OpenRouter variables only for its child process. It pins the
+main session, Fable, Opus, Sonnet, Haiku, and subagent requests to
+`stealth/ox-alpha`.
+
+Run `/status` inside `orclaude` and verify these values:
+
+```text
+Auth token: ANTHROPIC_AUTH_TOKEN
+Anthropic base URL: https://openrouter.ai/api
+```
+
+The wrapper token has priority over a saved Anthropic login for this process.
+Do not run `/logout`, because it would also remove the login for normal
+`claude` sessions.
+
+Ox Alpha is a Stealth model. The
+[Stealth Program terms](https://openrouter.ai/terms/stealth) allow collection,
+provider sharing, and training use of submitted content. Do not send sensitive
+or company source code without explicit authorization.
+
 ## extract
 
 Universal archive extractor with smart directory handling.
