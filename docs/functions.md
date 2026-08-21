@@ -461,7 +461,8 @@ See [dev.md](dev.md) for full documentation.
 ### orclaude
 
 Start Claude Code through OpenRouter. The command routes the main session and
-all task classes to `stealth/ox-alpha`.
+all task classes to `stealth/ox-alpha`. Claude Code uses a 1,000,000-token
+context window and starts auto-compaction at 900,000 tokens.
 
 ```bash
 orclaude

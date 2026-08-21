@@ -36,11 +36,22 @@ The wrapper sets OpenRouter variables only for its child process. It pins the
 main session, Fable, Opus, Sonnet, Haiku, and subagent requests to
 `stealth/ox-alpha`.
 
+Claude Code does not recognize the OpenRouter model ID by default. The wrapper
+sets its assumed context window to 1,000,000 tokens and starts auto-compaction
+at 900,000 tokens. This leaves 100,000 tokens of headroom and prevents the
+client from compacting at its fallback 200,000-token window.
+
 Run `/status` inside `orclaude` and verify these values:
 
 ```text
 Auth token: ANTHROPIC_AUTH_TOKEN
 Anthropic base URL: https://openrouter.ai/api
+```
+
+Run `/autocompact` and verify this setting:
+
+```text
+Current setting: 900k tokens (from CLAUDE_CODE_AUTO_COMPACT_WINDOW)
 ```
 
 The wrapper token has priority over a saved Anthropic login for this process.
