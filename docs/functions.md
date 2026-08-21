@@ -483,6 +483,25 @@ See [dev.md](dev.md) for full documentation.
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
+| Claude Code | `scripts/bin/orclaude` | OpenRouter launcher for Ox Alpha |
+
+## Claude Code Provider Commands
+
+### orclaude
+
+Start Claude Code through OpenRouter. The command routes the main session and
+all task classes to `stealth/ox-alpha`.
+
+```bash
+orclaude
+orclaude --help
+```
+
+The command forwards all arguments to `claude`. It does not change the normal
+`claude` command.
+
+`OPENROUTER_API_KEY` must exist in the shell environment. See
+[Development Utilities](dev.md#claude-code-with-openrouter) for setup details.
 
 ### Pacman/Yay Helpers (21-pacman.zsh, Linux only)
 

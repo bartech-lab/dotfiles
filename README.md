@@ -126,6 +126,17 @@ dotfiles-doctor
 - `pi-agents` - Rebuild pi's global `AGENTS.md` from `~/.claude/rules/*.md`
 - `pifix` - Clean orphaned pi processes
 
+### Claude Code with OpenRouter
+
+> Claude Code and an OpenRouter API key are required.
+
+- `claude` - Start Claude Code with the normal Anthropic connection
+- `orclaude` - Start Claude Code through OpenRouter with Ox Alpha
+
+Keep `OPENROUTER_API_KEY` in your local `~/.zshenv`. Never add the key to this
+repository. See [Development Utilities](docs/dev.md#claude-code-with-openrouter)
+for setup and usage.
+
 ### Development Utilities
 
 - `extract <archive>` - Universal archive extractor
