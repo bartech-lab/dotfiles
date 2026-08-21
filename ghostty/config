@@ -56,6 +56,13 @@ font-synthetic-style = false
 # ---------- Theme ----------
 theme = Pro
 
+# Pro's ANSI blues are nearly invisible on black (#2009db / #0000ff).
+# Claude Code draws inline code with ANSI blue (4) and links with ANSI
+# bright blue (12), so give the slots distinct hues: code = Tokyo Night
+# blue, links = Tokyo Night violet.
+palette = 4=#7aa2f8
+palette = 12=#bb9af7
+
 # ---------- Window ----------
 # Removed window-width/height to avoid Ghostty 1.3.0 bug where tab operations
 # trigger unwanted window resizing. Let Ghostty use sensible defaults instead.
