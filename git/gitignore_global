@@ -20,13 +20,11 @@ __pycache__/
 .commandcode/
 .llm/
 .opencode/
-.pi/
 .playwright-mcp/
 .sisyphus/
 
 # AI/agent tool files
 .mcp.json
-.pi-lsp.json
 .skill-lock.json
 
 # Agent instruction files
