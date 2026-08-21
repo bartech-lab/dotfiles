@@ -41,6 +41,28 @@ sets its assumed context window to 1,000,000 tokens and starts auto-compaction
 at 900,000 tokens. This leaves 100,000 tokens of headroom and prevents the
 client from compacting at its fallback 200,000-token window.
 
+### Separate defaults from `claude`
+
+The wrapper pins its own model and effort, so `~/.claude/settings.json` (which
+plain `claude` reads) cannot change them:
+
+- Model: `stealth/ox-alpha`
+- Effort: `high`
+
+Override either for one launch:
+
+```bash
+ORCLAUDE_EFFORT=high orclaude
+ORCLAUDE_MODEL=stealth/ox-beta orclaude
+```
+
+A `--model` or `--effort` flag forwarded to `claude` still wins over the
+wrapper defaults.
+
+`/model` saved inside a session writes to the shared `~/.claude/settings.json`.
+`orclaude` re-pins its defaults on the next start, but plain `claude` follows
+the saved file.
+
 Run `/status` inside `orclaude` and verify these values:
 
 ```text

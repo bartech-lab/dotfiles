@@ -6,17 +6,24 @@ if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
   exit 1
 fi
 
+# Defaults independent of plain `claude`, which reads ~/.claude/settings.json.
+# Override per launch: ORCLAUDE_MODEL=... ORCLAUDE_EFFORT=high orclaude
+: "${ORCLAUDE_MODEL:=stealth/ox-alpha}"
+: "${ORCLAUDE_EFFORT:=high}"
+
 export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
 export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
 export ANTHROPIC_API_KEY=""
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS="1000000"
 export CLAUDE_CODE_AUTO_COMPACT_WINDOW="900000"
 
-export ANTHROPIC_MODEL="stealth/ox-alpha"
-export ANTHROPIC_DEFAULT_FABLE_MODEL="stealth/ox-alpha"
-export ANTHROPIC_DEFAULT_OPUS_MODEL="stealth/ox-alpha"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="stealth/ox-alpha"
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="stealth/ox-alpha"
-export CLAUDE_CODE_SUBAGENT_MODEL="stealth/ox-alpha"
+export ANTHROPIC_MODEL="$ORCLAUDE_MODEL"
+export ANTHROPIC_DEFAULT_FABLE_MODEL="$ORCLAUDE_MODEL"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="$ORCLAUDE_MODEL"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="$ORCLAUDE_MODEL"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="$ORCLAUDE_MODEL"
+export CLAUDE_CODE_SUBAGENT_MODEL="$ORCLAUDE_MODEL"
 
-exec claude "$@"
+# Env var and flag both pin effort: the flag wins if the user passes their own.
+export CLAUDE_CODE_EFFORT_LEVEL="$ORCLAUDE_EFFORT"
+exec claude --effort "$ORCLAUDE_EFFORT" "$@"
