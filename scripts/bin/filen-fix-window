@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# filen-fix-window: reapply the "show window on second launch" patch to
+# filen-desktop-bin's app.asar.
+#
+# Why: Filen hides its window to the tray, and its second-instance handler
+# only restore()+focus()es the hidden window instead of show()ing it. Under
+# Wayland focus() cannot unhide a hidden window, so relaunching Filen exits
+# silently and no window ever appears. The fix routes second-instance through
+# the app's own showOrOpenDriveWindow().
+#
+# Reapply after every filen-desktop-bin update/reinstall (pacman overwrites
+# app.asar). Same-length byte patch: no repacking, safe on a running install.
+#
+# Usage: filen-fix-window [--check]
+#   --check   exit 0 = patched, 1 = unpatched, 2 = unknown layout / not found
+
+set -euo pipefail
+
+ASAR="${FILEN_ASAR:-/usr/lib/filen-desktop/app.asar}"
+
+CHECK=0
+[[ "${1:-}" == "--check" ]] && CHECK=1
+
+if [[ ! -f "$ASAR" ]]; then
+    echo "filen-fix-window: $ASAR not found (filen-desktop-bin installed?)" >&2
+    exit 2
+fi
+
+if ! command -v rclone >/dev/null; then
+    echo "filen-fix-window: WARNING: rclone missing - drive features will not work (pacman -S rclone)" >&2
+fi
+
+if [[ $EUID -ne 0 && $CHECK -eq 0 ]]; then
+    exec sudo "$0" "$@"
+fi
+
+rc=0
+python3 - "$ASAR" "$CHECK" <<'PYEOF' || rc=$?
+import sys
+
+asar, check = sys.argv[1], int(sys.argv[2])
+
+old = (
+    b"                if (this.driveWindow) {\n"
+    b"                    if (this.driveWindow.isMinimized()) {\n"
+    b"                        this.driveWindow.restore();\n"
+    b"                    }\n"
+    b"                    this.driveWindow.focus();\n"
+    b"                }\n"
+)
+new_core = b"            this.showOrOpenDriveWindow();\n"
+new = new_core + b" " * (len(old) - len(new_core))
+assert len(new) == len(old)
+
+data = open(asar, "rb").read()
+
+if (new_core + b" " * 64) in data:
+    print("filen-fix-window: already patched")
+    sys.exit(0)
+count = data.count(old)
+if count == 0:
+    print("filen-fix-window: unpatched block not found. Upstream layout changed? Nothing modified.")
+    sys.exit(2)
+
+if check:
+    print(f"filen-fix-window: {count} unpatched handler(s) found")
+    sys.exit(1)
+
+with open(asar, "r+b") as f:
+    start = 0
+    for _ in range(count):
+        f.seek(data.find(old, start))
+        f.write(new)
+        start = data.find(old, start) + len(old)
+
+print(f"filen-fix-window: patched {count} handler(s) OK (same-length write, offsets intact)")
+PYEOF
+
+case "$rc" in
+    0) exit 0 ;;
+    1) # unpatched found - only an error outside --check
+       [[ $CHECK -eq 1 ]] && exit 1
+       exit 1 ;;
+    2) exit 2 ;;
+    *) exit "$rc" ;;
+esac
