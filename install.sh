@@ -7,7 +7,6 @@
 set -e
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OS="$(uname -s)"
 
 # Parse arguments
 for arg in "$@"; do
@@ -76,9 +75,7 @@ ensure_backup_dir() {
             echo "📦 Backup location: $BACKUP_DIR"
             
             # Keep only last 5 backups
-            if ls -1d "$BACKUP_ROOT"/* 2>/dev/null | grep -q .; then
-                ls -1dt "$BACKUP_ROOT"/* 2>/dev/null | tail -n +6 | xargs -r rm -rf
-            fi
+            ls -1dt "$BACKUP_ROOT"/* 2>/dev/null | tail -n +6 | xargs -r rm -rf
         fi
         BACKUP_CREATED=true
     fi
@@ -753,8 +750,8 @@ if [[ "$DRY_RUN" == false ]]; then
     
     # Platform-aware binary name
     case "$DOTFILES_OS" in
-        macos) local gs_os="darwin" ;;
-        linux) local gs_os="linux" ;;
+        macos) gs_os="darwin" ;;
+        linux) gs_os="linux" ;;
     esac
     
     if [[ ! -f "$GITSTATUS_CACHE/gitstatusd-${gs_os}-$ARCH" ]]; then
@@ -771,7 +768,7 @@ if [[ "$DRY_RUN" == false ]]; then
                 echo "Pre-caching gitstatus binary..."
                 mkdir -p "$GITSTATUS_CACHE"
                 # Run install script silently (downloads prebuilt binary)
-                (cd "$p10k_path/gitstatus" && CC= CXX= ./install -f >/dev/null 2>&1) || true
+                (cd "$p10k_path/gitstatus" && CC='' CXX='' ./install -f >/dev/null 2>&1) || true
                 
                 if [[ -f "$GITSTATUS_CACHE/gitstatusd-${gs_os}-$ARCH" ]]; then
                     echo "✓ Gitstatus binary cached"
