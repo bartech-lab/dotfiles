@@ -171,6 +171,21 @@ This sets up a background service that:
 
 See [LaunchAgent Heartbeat README](../launchd-heartbeat/README.md) for details.
 
+## AI Agent Keep-Awake (ai-caffeine)
+
+Installed automatically by `./install.sh` on both platforms. While `claude`
+or `codex` processes run, it prevents system sleep (and screen lock on
+Linux/KDE); when the last agent exits, normal sleep behavior returns.
+
+Manual install or reinstall after pulling changes:
+
+```bash
+cd ~/dotfiles/ai-caffeine
+bash setup.sh
+```
+
+See [ai-caffeine README](../ai-caffeine/README.md) for mechanisms and tuning.
+
 ## Fresh macOS Setup
 
 On a completely fresh macOS machine:

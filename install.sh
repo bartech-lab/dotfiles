@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Unified Automation Installer
-# Sets up all background services: git-auto-pull, launchd-heartbeat, system-update
+# Sets up all background services: git-auto-pull, launchd-heartbeat, system-update, ai-caffeine
 # Works on both macOS (LaunchAgents) and Linux (systemd user timers)
 
 set -e
@@ -278,6 +278,13 @@ if [[ "$DRY_RUN" == false && -d "$HOME/omniroute" ]]; then
     bash "$DOTFILES_DIR/omniroute/setup.sh"
 fi
 
+# ai-caffeine service (keep awake while AI agent sessions run; KeepAlive daemon)
+if [[ "$DRY_RUN" == true ]]; then
+    echo "  → Would run ai-caffeine/setup.sh (LaunchAgent com.bartech.ai-caffeine)"
+else
+    bash "$DOTFILES_DIR/ai-caffeine/setup.sh"
+fi
+
 # Linux package installation (pacman/yay)
 elif [[ "$DOTFILES_OS" == linux ]]; then
 
@@ -425,6 +432,15 @@ HEARTBEATCONF
             loginctl enable-linger 2>/dev/null || echo "⚠️  Run 'loginctl enable-linger' so omniroute survives logout"
             echo "✓ omniroute service enabled (see omniroute/README.md)"
         fi
+    fi
+
+    # --- ai-caffeine service (keep awake while AI agent sessions run) ---
+    if [[ "$DRY_RUN" == true ]]; then
+        echo ""
+        echo "Background service to install:"
+        echo "  → ai-caffeine (systemd user unit via ai-caffeine/setup.sh)"
+    else
+        bash "$DOTFILES_DIR/ai-caffeine/setup.sh"
     fi
 
     # --- System performance configs (sysctl, modprobe) ---
