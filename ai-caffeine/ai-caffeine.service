@@ -1,0 +1,12 @@
+[Unit]
+Description=Hold sleep/idle inhibitors while AI agent sessions run
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/ai-caffeine
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

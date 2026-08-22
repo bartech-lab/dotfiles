@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# ai-caffeine — hold OS sleep/lock inhibitors while AI agent processes run.
+# Linux: logind block inhibitor (sleep:idle) + KDE SimulateUserActivity poke.
+# macOS: caffeinate -i -w $$ (assertion dies with this process).
+# Fail-safe: every hold self-expires within ~HOLD seconds of this script dying.
+
+set -u
+
+PROCESSES="${AI_CAFFEINE_PROCESSES:-claude codex}"   # space-separated exact process names (comm)
+INTERVAL="${AI_CAFFEINE_INTERVAL:-15}"               # seconds between checks
+HOLD=$((INTERVAL * 3))                               # hold self-expiry window
+
+LOCKDIR="${AI_CAFFEINE_LOCKDIR:-${TMPDIR:-/tmp}/ai-caffeine.lock}"
+mkdir "$LOCKDIR" 2>/dev/null || exit 0
+trap 'rmdir "$LOCKDIR" 2>/dev/null; exit 0' EXIT INT TERM
+
+log() {
+    printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$1"
+}
+
+agents_running() {
+    # shellcheck disable=SC2086  # word splitting of the name list is intended
+    for name in $PROCESSES; do
+        pgrep -x "$name" >/dev/null 2>&1 && return 0
+    done
+    return 1
+}
+
+OS="$(uname -s)"
+active=0
+holder_pid=""
+
+while true; do
+    if agents_running; then
+        if [ "$OS" = "Linux" ]; then
+            if ! pgrep -f "systemd-inhibit --what=sleep:idle --who=ai-caffeine" >/dev/null 2>&1; then
+                systemd-inhibit --what=sleep:idle --who=ai-caffeine \
+                    --why="AI agent session active" --mode=block sleep "$HOLD" &
+            fi
+            if command -v qdbus6 >/dev/null 2>&1; then
+                qdbus6 org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity >/dev/null 2>&1 || true
+            fi
+        elif [ "$OS" = "Darwin" ]; then
+            if [ -z "$holder_pid" ] || ! kill -0 "$holder_pid" 2>/dev/null; then
+                caffeinate -i -w "$$" >/dev/null 2>&1 &
+                holder_pid=$!
+            fi
+        fi
+        if [ "$active" -eq 0 ]; then
+            active=1
+            log "engaged: agent process detected"
+        fi
+    else
+        if [ "$OS" = "Darwin" ] && [ -n "$holder_pid" ] && kill -0 "$holder_pid" 2>/dev/null; then
+            kill "$holder_pid" 2>/dev/null
+            wait "$holder_pid" 2>/dev/null
+        fi
+        holder_pid=""
+        if [ "$active" -eq 1 ]; then
+            active=0
+            log "released: no agent processes"
+        fi
+    fi
+    sleep "$INTERVAL"
+done
