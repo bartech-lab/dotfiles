@@ -113,6 +113,7 @@ dotfiles-doctor
 ### Media Processing
 
 - `optimize-images [path]` - Batch optimize JPEG/PNG
+- `dng-to-jpg [path] [quality]` - Convert DNG raw files to JPEG
 - `video-to-gif <input>` - Convert videos to GIF
 - `video-remux [path] [--subdir]` - Lossless container conversion
 - `video-encode-cpu/gpu [path] [--subdir]` - H.265 encoding
