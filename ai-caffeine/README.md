@@ -1,6 +1,6 @@
 # ai-caffeine
 
-Holds an OS-level keep-awake while AI agent processes (`claude`, `codex`) are
+Holds an OS-level keep-awake while AI agent processes (`claude`, `codex`, `omp`) are
 running, and releases it when the last one exits. Prevents system sleep and
 screen lock on Linux/KDE; prevents system sleep on macOS (display sleep stays
 allowed). Every hold is self-expiring: if the watcher dies, normal sleep
@@ -48,7 +48,7 @@ rm ~/Library/LaunchAgents/com.bartech.ai-caffeine.plist ~/.local/bin/ai-caffeine
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `AI_CAFFEINE_PROCESSES` | `claude codex` | Space-separated exact process names to watch |
+| `AI_CAFFEINE_PROCESSES` | `claude codex omp` | Space-separated exact process names to watch |
 | `AI_CAFFEINE_INTERVAL` | `15` | Seconds between checks |
 | `AI_CAFFEINE_LOCKDIR` | `/tmp/ai-caffeine.lock` | Single-instance lock directory |
 
