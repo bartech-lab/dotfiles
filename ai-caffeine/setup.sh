@@ -54,6 +54,8 @@ else
     else
         systemctl --user enable --now ai-caffeine.service
     fi
+    # A same-instant stop/start can lose the single-instance race; re-start.
+    systemctl --user start ai-caffeine.service || true
 
     if systemctl --user is-active --quiet ai-caffeine.service; then
         echo "Service active"

@@ -14,9 +14,16 @@ PROCESSES="${AI_CAFFEINE_PROCESSES:-claude codex omp}"   # space-separated exact
 INTERVAL="${AI_CAFFEINE_INTERVAL:-15}"               # seconds between checks
 HOLD=$((INTERVAL * 3))                               # hold self-expiry window
 
-LOCKDIR="${AI_CAFFEINE_LOCKDIR:-${TMPDIR:-/tmp}/ai-caffeine.lock}"
-STATE="$LOCKDIR/autolock-orig"                       # original Autolock value while engaged
-mkdir "$LOCKDIR" 2>/dev/null || exit 0
+LOCKFILE="${AI_CAFFEINE_LOCKFILE:-${TMPDIR:-/tmp}/ai-caffeine.lock}"
+STATE="$LOCKFILE.state"                             # original Autolock value while engaged
+# flock auto-releases on process death: no stale locks, no restart race where
+# the old instance's cleanup deletes the dir under the new instance.
+if command -v flock >/dev/null 2>&1; then
+    # Legacy mkdir-based versions left a directory here; reclaim it.
+    [ -d "$LOCKFILE" ] && rm -rf "$LOCKFILE"
+    exec 9>"$LOCKFILE"
+    flock -n 9 || exit 0
+fi
 
 log() {
     printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$1"
@@ -26,13 +33,22 @@ have_kconfig() {
     command -v kreadconfig6 >/dev/null 2>&1 && command -v kwriteconfig6 >/dev/null 2>&1
 }
 
+# kwin caches Autolock at session start; config writes alone do nothing until
+# re-login. configure() makes the running locker re-read kscreenlockerrc.
+reconfigure_screensaver() {
+    dbus-send --session --print-reply --dest=org.freedesktop.ScreenSaver \
+        /ScreenSaver org.kde.screensaver.configure >/dev/null 2>&1 || true
+}
+
 restore_autolock() {
     [ -f "$STATE" ] || return 0
     orig="$(cat "$STATE")"
     if [ -n "$orig" ]; then
         kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock "$orig"
+        reconfigure_screensaver
     else
         kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock --delete
+        reconfigure_screensaver
     fi
 }
 
@@ -41,6 +57,7 @@ engage_autolock_off() {
     orig="$(kreadconfig6 --file kscreenlockerrc --group Daemon --key Autolock)" || orig=""
     printf '%s' "$orig" > "$STATE"
     kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false
+    reconfigure_screensaver
     log "engaged: Autolock=false (was ${orig:-unset})"
 }
 
@@ -58,7 +75,7 @@ if [ "$OS" = "Linux" ] && have_kconfig; then
     # A previous run may have died while engaged; undo its override first.
     restore_autolock
 fi
-trap 'restore_autolock 2>/dev/null; rmdir "$LOCKDIR" 2>/dev/null; exit 0' EXIT INT TERM
+trap 'restore_autolock 2>/dev/null; exit 0' EXIT INT TERM
 
 active=0
 holder_pid=""
