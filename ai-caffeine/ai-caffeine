@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # ai-caffeine — hold OS sleep/lock inhibitors while AI agent processes run.
-# Linux: logind block inhibitor (sleep:idle) + KDE SimulateUserActivity poke.
-# macOS: caffeinate -i -w $$ (assertion dies with this process).
-# Fail-safe: every hold self-expires within ~HOLD seconds of this script dying.
+# Linux: logind block inhibitor (sleep:idle) + temporary KDE auto-lock disable.
+#   DPMS blanking stays untouched, so the screen still turns off — it just
+#   comes back unlocked, and suspend never triggers.
+# macOS: caffeinate -i -w $$ (assertion dies with this process; display sleep
+#   stays allowed).
+# Fail-safe: holds self-expire within ~HOLD seconds; the auto-lock override is
+#   reverted by a state file even if this script dies without running traps.
 
 set -u
 
@@ -11,11 +15,35 @@ INTERVAL="${AI_CAFFEINE_INTERVAL:-15}"               # seconds between checks
 HOLD=$((INTERVAL * 3))                               # hold self-expiry window
 
 LOCKDIR="${AI_CAFFEINE_LOCKDIR:-${TMPDIR:-/tmp}/ai-caffeine.lock}"
+STATE="$LOCKDIR/autolock-orig"                       # original Autolock value while engaged
 mkdir "$LOCKDIR" 2>/dev/null || exit 0
-trap 'rmdir "$LOCKDIR" 2>/dev/null; exit 0' EXIT INT TERM
 
 log() {
     printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$1"
+}
+
+have_kconfig() {
+    command -v kreadconfig6 >/dev/null 2>&1 && command -v kwriteconfig6 >/dev/null 2>&1
+}
+
+restore_autolock() {
+    [ -f "$STATE" ] || return 0
+    orig="$(cat "$STATE")"
+    if [ -n "$orig" ]; then
+        kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock "$orig"
+    else
+        kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock --delete
+    fi
+    rm -f "$STATE"
+    log "released: Autolock restored (${orig:-default})"
+}
+
+engage_autolock_off() {
+    [ -f "$STATE" ] && return 0
+    orig="$(kreadconfig6 --file kscreenlockerrc --group Daemon --key Autolock)" || orig=""
+    printf '%s' "$orig" > "$STATE"
+    kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false
+    log "engaged: Autolock=false (was ${orig:-unset})"
 }
 
 agents_running() {
@@ -27,6 +55,13 @@ agents_running() {
 }
 
 OS="$(uname -s)"
+
+if [ "$OS" = "Linux" ] && have_kconfig; then
+    # A previous run may have died while engaged; undo its override first.
+    restore_autolock
+fi
+trap 'restore_autolock 2>/dev/null; rmdir "$LOCKDIR" 2>/dev/null; exit 0' EXIT INT TERM
+
 active=0
 holder_pid=""
 
@@ -37,8 +72,8 @@ while true; do
                 systemd-inhibit --what=sleep:idle --who=ai-caffeine \
                     --why="AI agent session active" --mode=block sleep "$HOLD" &
             fi
-            if command -v qdbus6 >/dev/null 2>&1; then
-                qdbus6 org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity >/dev/null 2>&1 || true
+            if have_kconfig; then
+                engage_autolock_off
             fi
         elif [ "$OS" = "Darwin" ]; then
             if [ -z "$holder_pid" ] || ! kill -0 "$holder_pid" 2>/dev/null; then
@@ -56,6 +91,9 @@ while true; do
             wait "$holder_pid" 2>/dev/null
         fi
         holder_pid=""
+        if [ "$OS" = "Linux" ]; then
+            restore_autolock
+        fi
         if [ "$active" -eq 1 ]; then
             active=0
             log "released: no agent processes"
