@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ai-caffeine — hold OS sleep/lock inhibitors while AI agent processes run.
-# Linux: logind block inhibitor (sleep:idle) + temporary KDE auto-lock disable.
+# Linux: logind block inhibitor (sleep) + temporary KDE auto-lock disable.
 #   DPMS blanking stays untouched, so the screen still turns off — it just
 #   comes back unlocked, and suspend never triggers.
 # macOS: caffeinate -i -w $$ (assertion dies with this process; display sleep
@@ -34,8 +34,6 @@ restore_autolock() {
     else
         kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock --delete
     fi
-    rm -f "$STATE"
-    log "released: Autolock restored (${orig:-default})"
 }
 
 engage_autolock_off() {
@@ -68,8 +66,10 @@ holder_pid=""
 while true; do
     if agents_running; then
         if [ "$OS" = "Linux" ]; then
-            if ! pgrep -f "systemd-inhibit --what=sleep:idle --who=ai-caffeine" >/dev/null 2>&1; then
-                systemd-inhibit --what=sleep:idle --who=ai-caffeine \
+            if ! pgrep -f "systemd-inhibit --what=sleep --who=ai-caffeine" >/dev/null 2>&1; then
+                # No --what=idle: an idle inhibitor makes PowerDevil skip its
+                # idle actions (dim, blank) as well as suspend.
+                systemd-inhibit --what=sleep --who=ai-caffeine \
                     --why="AI agent session active" --mode=block sleep "$HOLD" &
             fi
             if have_kconfig; then
