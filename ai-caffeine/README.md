@@ -57,8 +57,18 @@ rm ~/Library/LaunchAgents/com.bartech.ai-caffeine.plist ~/.local/bin/ai-caffeine
 - If the KDE screen still locks while an agent runs, check System Settings →
   Power Management → Energy Saving: a "Lock Screen" idle action there bypasses
   `kscreenlockerrc` and must be disabled manually.
-- Do not delete `$AI_CAFFEINE_LOCKDIR` while the watcher is engaged: the saved
-  original Autolock value lives there and would be lost.
+- kwin caches `Autolock` at session start; the watcher therefore calls
+  `org.kde.screensaver.configure()` after every config write so the running
+  locker re-reads it.
+- On NVIDIA Wayland, DPMS-off appears in logs as an output disconnect
+  (`There are no outputs - creating placeholder screen`). This is cosmetic;
+  moving the mouse restores the output.
+- PowerDevil's dim action needs a brightness display at daemon start. If
+  powerdevil restarts while the panel is in standby, DDC detection finds 0
+  displays and dimming silently never arms until the next restart with the
+  screen awake. PowerDevil debug output:
+  `systemctl --user set-environment QT_LOGGING_RULES=org.kde.powerdevil.debug=true`
+  then restart `plasma-powerdevil.service`.
 - On macOS, never `pkill caffeinate` broadly: it also kills Claude Code's
   built-in keep-awake (`caffeinate -i -t 300`, spawned by the CLI itself
   while busy). This watcher's own `caffeinate` exits on its own via `-w`.
