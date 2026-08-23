@@ -3,7 +3,7 @@
 # ai-caffeine Setup Script
 # Keeps the machine awake while AI agent sessions (claude, codex) run.
 # macOS: LaunchAgent wrapping caffeinate. Linux: systemd user unit using
-# logind inhibitors plus KDE idle pokes. Safe to re-run (idempotent).
+# logind inhibitors plus a temporary KDE auto-lock disable. Safe to re-run.
 
 set -euo pipefail
 
@@ -49,7 +49,11 @@ else
 
     cp "$SRC_DIR/ai-caffeine.service" "$HOME/.config/systemd/user/ai-caffeine.service"
     systemctl --user daemon-reload
-    systemctl --user enable --now ai-caffeine.service
+    if systemctl --user is-active --quiet ai-caffeine.service; then
+        systemctl --user restart ai-caffeine.service
+    else
+        systemctl --user enable --now ai-caffeine.service
+    fi
 
     if systemctl --user is-active --quiet ai-caffeine.service; then
         echo "Service active"

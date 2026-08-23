@@ -11,7 +11,7 @@ behavior returns within ~45 seconds with no cleanup.
 | OS | Hold | Blocks |
 |----|------|--------|
 | Linux | `systemd-inhibit --what=sleep:idle --mode=block`, self-refreshing | suspend via logind |
-| Linux | `qdbus6 org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity` | KDE idle pipeline: dim, blank, lock, idle suspend |
+| Linux | `kscreenlockerrc` `Daemon/Autolock=false` while engaged, restored on release | screen lock only; DPMS dim/blank keeps working, wake shows an unlocked desktop |
 | macOS | `caffeinate -i -w $$` | idle system sleep |
 
 Detection is by exact process name (`comm`), polled every 15 s. Spawned child
@@ -54,9 +54,11 @@ rm ~/Library/LaunchAgents/com.bartech.ai-caffeine.plist ~/.local/bin/ai-caffeine
 
 ## Troubleshooting
 
-- If the KDE screen still locks while an agent runs, the
-  `SimulateUserActivity` poke is not reaching the idle pipeline on your
-  Plasma version — the mechanism needs revisiting.
+- If the KDE screen still locks while an agent runs, check System Settings →
+  Power Management → Energy Saving: a "Lock Screen" idle action there bypasses
+  `kscreenlockerrc` and must be disabled manually.
+- Do not delete `$AI_CAFFEINE_LOCKDIR` while the watcher is engaged: the saved
+  original Autolock value lives there and would be lost.
 - On macOS, never `pkill caffeinate` broadly: it also kills Claude Code's
   built-in keep-awake (`caffeinate -i -t 300`, spawned by the CLI itself
   while busy). This watcher's own `caffeinate` exits on its own via `-w`.
