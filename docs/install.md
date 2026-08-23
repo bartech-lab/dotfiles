@@ -124,6 +124,7 @@ All commands should resolve to valid paths.
 
 Ready-to-use video/image processing:
 - `optimize-images` - Batch optimize JPEG/PNG
+- `dng-to-jpg` - Convert DNG raw files to JPEG
 - `video-to-gif` - Convert videos to animated GIFs
 - `video-remux` - Lossless container conversion
 - `video-encode-cpu/gpu` - H.265 encoding

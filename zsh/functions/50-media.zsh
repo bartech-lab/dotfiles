@@ -1,5 +1,5 @@
 # Media Functions
-# optimize-images, video-remux, video-encode-cpu, video-encode-gpu, video-encode-av1
+# optimize-images, dng-to-jpg, video-remux, video-encode-cpu, video-encode-gpu, video-encode-av1
 
 _notify() {
     local title="$1" msg="$2"
@@ -225,9 +225,7 @@ optimize-images() {
     for f in "${dng_files[@]}"; do
       echo "  - $f"
     done
-    echo ""
-    echo "💡 Handle DNG files manually via: Finder → Right-click → Quick Actions → Convert Image"
-    echo ""
+    echo "💡 Convert them first with: dng-to-jpg [path] [quality]"
   fi
   
   if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
@@ -784,4 +782,98 @@ split[s0][s1];\
         echo "❌ Conversion failed"
         return $rc
     fi
+}
+
+# Convert DNG raw files to JPEG via ImageMagick (libraw decode)
+dng-to-jpg() {
+    emulate -L zsh
+
+    local SOURCE_PATH="${1:-.}"
+    local QUALITY="${2:-92}"
+
+    if [[ ! -d "$SOURCE_PATH" && ! -f "$SOURCE_PATH" ]]; then
+        echo "❌ Error: Path '$SOURCE_PATH' not found"
+        return 1
+    fi
+
+    if ! command -v magick >/dev/null 2>&1; then
+        echo "❌ Error: ImageMagick 7 ('magick') is required but not installed"
+        return 1
+    fi
+
+    local INPUT_DIR SINGLE_FILE=""
+    if [[ -d "$SOURCE_PATH" ]]; then
+        INPUT_DIR="$SOURCE_PATH"
+    else
+        INPUT_DIR="${SOURCE_PATH:h}"
+        SINGLE_FILE="${SOURCE_PATH:t}"
+    fi
+
+    cd "$INPUT_DIR" || return 1
+
+    local ERROR_LOG="./dng_to_jpg_errors.log"
+    rm -f "$ERROR_LOG"
+
+    local dng_files=()
+    if [[ -n "$SINGLE_FILE" ]]; then
+        local single_ext="${SINGLE_FILE##*.}"
+        if [[ "${single_ext:l}" != "dng" ]]; then
+            echo "❌ Unsupported file type: $SINGLE_FILE"
+            echo "Supported: .dng"
+            return 1
+        fi
+        dng_files+=("./$SINGLE_FILE")
+    else
+        while IFS= read -r -d '' file; do
+            dng_files+=("$file")
+        done < <(find . -maxdepth 1 -type f -iname "*.dng" -print0)
+    fi
+
+    local total_count=${#dng_files[@]}
+    if [[ $total_count -eq 0 ]]; then
+        echo "No DNG files found to process"
+        return 0
+    fi
+
+    echo "Mode: DNG → JPEG"
+    echo "Found $total_count file(s), quality: $QUALITY"
+    echo ""
+
+    printf '%s\0' "${dng_files[@]}" | xargs -0 -P 4 -I{} sh -c '
+        file="$1"
+        quality="$2"
+        error_log="$3"
+        base=$(basename "$file")
+        name="${base%.*}"
+        out="$name.jpg"
+
+        if [[ -e "$out" ]]; then
+            echo "SKIP: $out already exists"
+            exit 0
+        fi
+
+        tmp=".dng_to_jpg_tmp_${$}_${RANDOM}_$name.jpg"
+
+        if magick "$file" -auto-orient -quality "$quality" "$tmp"; then
+            mv "$tmp" "$out"
+            touch -r "$file" "$out"
+            echo "OK: $base → $out"
+        else
+            rm -f "$tmp" 2>/dev/null
+            echo "FAILED: $base" >> "$error_log"
+        fi
+    ' _ {} "$QUALITY" "$ERROR_LOG"
+
+    echo ""
+
+    if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
+        local error_count=$(wc -l < "$ERROR_LOG")
+        echo "⚠️  $error_count file(s) failed:"
+        cat "$ERROR_LOG"
+        echo ""
+        rm -f "$ERROR_LOG"
+        return 1
+    fi
+
+    echo "✅ Done! Converted $total_count file(s) in $INPUT_DIR"
 }
