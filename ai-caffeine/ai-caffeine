@@ -6,7 +6,7 @@
 
 set -u
 
-PROCESSES="${AI_CAFFEINE_PROCESSES:-claude codex}"   # space-separated exact process names (comm)
+PROCESSES="${AI_CAFFEINE_PROCESSES:-claude codex omp}"   # space-separated exact process names (comm)
 INTERVAL="${AI_CAFFEINE_INTERVAL:-15}"               # seconds between checks
 HOLD=$((INTERVAL * 3))                               # hold self-expiry window
 
