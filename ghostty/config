@@ -89,3 +89,6 @@ copy-on-select = clipboard
 # Selection: invisible empty cells, readable text on dark background
 selection-background = #1a1b26
 selection-foreground = #c0caf5
+
+# Let omp receive Option chords as plain Alt (Polish layout otherwise eats them)
+macos-option-as-alt = true
