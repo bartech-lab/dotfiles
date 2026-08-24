@@ -542,6 +542,13 @@ if [[ "$DRY_RUN" == true ]]; then
     else
         echo "  → Would create: ~/.config/zsh-git-autoswitch.zsh → $DOTFILES_DIR/zsh/zshenv.zsh"
     fi
+    if [[ -e ~/.local/bin/git && ! -L ~/.local/bin/git ]]; then
+        echo "  ⚠ Would keep existing regular file: ~/.local/bin/git"
+    elif [[ -L ~/.local/bin/git ]]; then
+        echo "  → Would update: ~/.local/bin/git → $DOTFILES_DIR/scripts/bin/git-autoswitch"
+    else
+        echo "  → Would create: ~/.local/bin/git → $DOTFILES_DIR/scripts/bin/git-autoswitch"
+    fi
 else
     if [[ -L ~/.gitignore_global ]]; then
         ln -sf "$DOTFILES_DIR/git/gitignore_global" ~/.gitignore_global
@@ -570,6 +577,17 @@ else
     else
         ln -sf "$DOTFILES_DIR/zsh/zshenv.zsh" ~/.config/zsh-git-autoswitch.zsh
         echo "✓ Linked git-autoswitch wrapper"
+    fi
+
+    mkdir -p ~/.local/bin
+    if [[ -e ~/.local/bin/git && ! -L ~/.local/bin/git ]]; then
+        echo "⚠ Kept existing regular file: ~/.local/bin/git"
+    elif [[ -L ~/.local/bin/git ]]; then
+        ln -sf "$DOTFILES_DIR/scripts/bin/git-autoswitch" ~/.local/bin/git
+        echo "✓ Updated ~/.local/bin/git autoswitch shim"
+    else
+        ln -s "$DOTFILES_DIR/scripts/bin/git-autoswitch" ~/.local/bin/git
+        echo "✓ Linked ~/.local/bin/git autoswitch shim"
     fi
 fi
 

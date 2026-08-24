@@ -118,21 +118,20 @@ GIT_AUTOSWITCH_OFF=1 git push   # push without switching
 - You are not already on the default branch (`origin/HEAD`, else develop → master → main)
 - There are no uncommitted tracked changes (untracked files don't block)
 
-The wrapper is installed twice, because one mechanism cannot cover every caller:
+The wrapper uses three entry points, because one mechanism cannot cover every caller:
 
 - `~/.zshenv` defines a `git()` function, which covers every zsh shell.
 - `scripts/shims/git` symlinks to the wrapper, and `zsh/zshrc.zsh` puts
-  `scripts/shims` first on `PATH`. Child processes inherit that order, so
-  bash-based agents get the wrapper too.
+  `scripts/shims` first on the interactive shell's `PATH`.
+- `install.sh` links `~/.local/bin/git` to the wrapper. Agent environments
+  commonly keep `~/.local/bin` before Homebrew when they rebuild `PATH`.
 
-The shim is what covers non-zsh callers. Agents such as omp, Codex and Claude
-Code run their shell tool under bash, which never reads `~/.zshenv`, so the
-function alone left their pushes unswitched.
+The shims cover non-zsh callers. Agents such as omp, Codex and Claude Code can
+run commands under bash, which never reads `~/.zshenv`.
 
 Pushes from VS Code's Source Control UI button still bypass the wrapper, and so
-does anything that does not inherit the dotfiles `PATH`. Scripts that must not
-switch can call `command git push`, `/opt/homebrew/bin/git push`, or set
-`GIT_AUTOSWITCH_OFF=1`.
+does anything that resolves Git by absolute path. Scripts that must not switch
+can call `/opt/homebrew/bin/git push` or set `GIT_AUTOSWITCH_OFF=1`.
 
 ## macOS Functions
 
