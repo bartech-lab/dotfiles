@@ -31,8 +31,38 @@ note() {
   { mkdir -p -- "${f%/*}" && echo "$(date '+%Y-%m-%dT%H:%M:%S') $*"; } >>"$f" 2>/dev/null || true
 }
 
-# Everything except a push passes straight through.
-if [[ "${1:-}" != "push" || -n "${GIT_AUTOSWITCH_OFF:-}" ]]; then
+# Everything except a push passes straight through. The subcommand is the
+# first argument that is not a global option; agents commonly call
+# `git -C <repo> push`, so options and their values must be skipped.
+repo_dir=""
+subcmd=""
+args=("$@")
+i=0
+while (( i < ${#args[@]} )); do
+  a=${args[i]}
+  case "$a" in
+    --)
+      subcmd=${args[i + 1]:-}
+      break
+      ;;
+    -C|-c|--git-dir|--work-tree|--namespace|--super-prefix)
+      [[ "$a" == "-C" ]] && repo_dir=${args[i + 1]:-}
+      (( i += 2 ))
+      ;;
+    -C*|-c*)
+      (( i += 1 ))
+      ;;
+    -*)
+      (( i += 1 ))
+      ;;
+    *)
+      subcmd=$a
+      break
+      ;;
+  esac
+done
+
+if [[ "$subcmd" != "push" || -n "${GIT_AUTOSWITCH_OFF:-}" ]]; then
   exec "$REAL_GIT" "$@"
 fi
 
@@ -41,6 +71,11 @@ status=0
 if [[ "$status" -ne 0 ]]; then
   note "push FAILED in $PWD"
   exit "$status"
+fi
+
+# Honor `git -C <dir>`: inspect the repository it targeted, not our cwd.
+if [[ -n "$repo_dir" ]]; then
+  cd -- "$repo_dir"
 fi
 
 # Detached HEAD or bare repository: nothing to switch.

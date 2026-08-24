@@ -34,4 +34,18 @@ if [[ "$branch" != "develop" ]]; then
     exit 1
 fi
 
+/usr/bin/git -C "$WORKTREE" switch -c feature/via-c >/dev/null
+/usr/bin/git -C "$WORKTREE" commit --allow-empty -m "Via C commit" >/dev/null
+
+# Agents invoke pushes as `git -C <repo> push` from another directory.
+cd "$TEST_ROOT"
+PATH="$TEST_HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin" \
+    /bin/bash -c 'git -C "$1" push origin feature/via-c' _ "$WORKTREE" >/dev/null
+
+branch=$(/usr/bin/git -C "$WORKTREE" branch --show-current)
+if [[ "$branch" != "develop" ]]; then
+    echo "Expected develop after -C push, got: $branch" >&2
+    exit 1
+fi
+
 echo "git-autoswitch test passed"
