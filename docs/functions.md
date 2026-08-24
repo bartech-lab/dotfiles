@@ -119,6 +119,11 @@ GIT_AUTOSWITCH_OFF=1 git push   # push without switching
 - You are not already on the default branch (`origin/HEAD`, else develop → master → main)
 - There are no uncommitted tracked changes (untracked files don't block)
 
+The pull is best-effort. If the default branch cannot be fast-forwarded, the
+wrapper prints a warning and leaves you on the default branch. It still exits
+with the push's own status, so `git push && ...` chains never see a post-push
+failure.
+
 `install.sh` wires the wrapper through `~/.zshenv`, so it covers interactive
 terminals and non-interactive agent shells alike. Pushes from VS Code's Source
 Control UI button bypass the wrapper. Scripts that must not switch can call

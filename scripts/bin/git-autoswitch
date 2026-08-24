@@ -59,6 +59,18 @@ if [[ -n $("$REAL_GIT" status --porcelain --untracked-files=no) ]]; then
   exit 0
 fi
 
+# The push already succeeded, so nothing below may change the exit status:
+# callers that chain on `git push` must not see a post-push failure and treat
+# the push itself as broken.
 echo "↩ Push done — switching back to '$default_branch'"
-"$REAL_GIT" switch "$default_branch" || exit $?
-exec "$REAL_GIT" pull --ff-only
+if ! "$REAL_GIT" switch "$default_branch"; then
+  echo "git-autoswitch: could not switch to '$default_branch'; staying on '$branch'" >&2
+  exit 0
+fi
+
+# --no-rebase is explicit: a global pull.rebase=true would otherwise rebase the
+# default branch instead of fast-forwarding it.
+if ! "$REAL_GIT" pull --no-rebase --ff-only; then
+  echo "git-autoswitch: '$default_branch' could not be fast-forwarded; pull it manually" >&2
+fi
+exit 0
