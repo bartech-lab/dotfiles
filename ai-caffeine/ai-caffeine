@@ -5,17 +5,17 @@
 #   comes back unlocked, and suspend never triggers.
 # macOS: caffeinate -i -w $$ (assertion dies with this process; display sleep
 #   stays allowed).
-# Fail-safe: the inhibitor child exits when this process dies (fifo write-end
-#   closes); the auto-lock override is reverted from a state file on startup.
+# Fail-safe: holds self-expire within ~HOLD seconds; the auto-lock override is
+#   reverted by a state file even if this script dies without running traps.
 
 set -u
 
 PROCESSES="${AI_CAFFEINE_PROCESSES:-claude codex omp}"   # space-separated exact process names (comm)
 INTERVAL="${AI_CAFFEINE_INTERVAL:-15}"               # seconds between checks
+HOLD=$((INTERVAL * 3))                               # hold self-expiry window
 
 LOCKFILE="${AI_CAFFEINE_LOCKFILE:-${TMPDIR:-/tmp}/ai-caffeine.lock}"
-STATE="$LOCKFILE.state"                              # original Autolock value while engaged
-
+STATE="$LOCKFILE.state"                             # original Autolock value while engaged
 # flock auto-releases on process death: no stale locks, no restart race where
 # the old instance's cleanup deletes the dir under the new instance.
 if command -v flock >/dev/null 2>&1; then
@@ -33,33 +33,32 @@ have_kconfig() {
     command -v kreadconfig6 >/dev/null 2>&1 && command -v kwriteconfig6 >/dev/null 2>&1
 }
 
-# kwin caches Autolock at session start. Plain kwriteconfig6 does not emit the
-# KConfig D-Bus change notification, so always pass --notify; configure() is a
-# belt-and-braces re-read on top.
+# kwin caches Autolock at session start; config writes alone do nothing until
+# re-login. configure() makes the running locker re-read kscreenlockerrc.
 reconfigure_screensaver() {
     dbus-send --session --print-reply --dest=org.freedesktop.ScreenSaver \
         /ScreenSaver org.kde.screensaver.configure >/dev/null 2>&1 || true
-}
-
-set_autolock() { # $1: true | false | unset
-    if [ "$1" = "unset" ]; then
-        kwriteconfig6 --notify --file kscreenlockerrc --group Daemon --key Autolock --delete
-    else
-        kwriteconfig6 --notify --file kscreenlockerrc --group Daemon --key Autolock "$1"
-    fi
-    reconfigure_screensaver
 }
 
 restore_autolock() {
     [ -f "$STATE" ] || return 0
     orig="$(cat "$STATE")"
     if [ -n "$orig" ]; then
-        set_autolock "$orig"
+        kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock "$orig"
+        reconfigure_screensaver
     else
-        set_autolock unset
+        kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock --delete
+        reconfigure_screensaver
     fi
-    rm -f "$STATE"
-    log "restored Autolock (${orig:-default})"
+}
+
+engage_autolock_off() {
+    [ -f "$STATE" ] && return 0
+    orig="$(kreadconfig6 --file kscreenlockerrc --group Daemon --key Autolock)" || orig=""
+    printf '%s' "$orig" > "$STATE"
+    kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false
+    reconfigure_screensaver
+    log "engaged: Autolock=false (was ${orig:-unset})"
 }
 
 agents_running() {
@@ -71,69 +70,27 @@ agents_running() {
 }
 
 OS="$(uname -s)"
+
 if [ "$OS" = "Linux" ] && have_kconfig; then
     # A previous run may have died while engaged; undo its override first.
     restore_autolock
 fi
-
-INHIBIT_FIFO="$LOCKFILE.inhibit-fifo"
-inhibit_pid=""
-inh_fd=""
-
-# Hold ONE logind inhibitor for the whole engagement. Recreating it every
-# cycle makes PowerDevil reset its dim/DPMS idle timers on each
-# InhibitionsChanged, so they could never fire while an agent ran.
-# The child exits when this process dies (fifo write-end closes) or when a
-# byte is written into the fifo — self-releasing either way.
-start_inhibit() {
-    if [ -n "$inhibit_pid" ] && kill -0 "$inhibit_pid" 2>/dev/null; then
-        return 0
-    fi
-    inhibit_pid=""
-    rm -f "$INHIBIT_FIFO"
-    mkfifo "$INHIBIT_FIFO" || return 1
-    systemd-inhibit --what=sleep --who=ai-caffeine \
-        --why="AI agent session active" --mode=block \
-        bash -c 'head -c 1 "$1" >/dev/null 2>&1' _ "$INHIBIT_FIFO" &
-    inhibit_pid=$!
-    exec {inh_fd}>"$INHIBIT_FIFO" || { kill "$inhibit_pid" 2>/dev/null; inhibit_pid=""; return 1; }
-}
-
-stop_inhibit() {
-    if [ -n "$inhibit_pid" ] && kill -0 "$inhibit_pid" 2>/dev/null; then
-        { printf 'x' >&"$inh_fd"; } 2>/dev/null || true
-    fi
-    [ -n "$inh_fd" ] && eval "exec ${inh_fd}>&-" 2>/dev/null
-    inh_fd=""
-    if [ -n "$inhibit_pid" ]; then
-        wait "$inhibit_pid" 2>/dev/null
-        inhibit_pid=""
-    fi
-}
-
-trap 'restore_autolock 2>/dev/null; stop_inhibit 2>/dev/null; exit 0' EXIT INT TERM
+trap 'restore_autolock 2>/dev/null; exit 0' EXIT INT TERM
 
 active=0
 holder_pid=""
-orig_saved=0
 
 while true; do
     if agents_running; then
         if [ "$OS" = "Linux" ]; then
-            start_inhibit
+            if ! pgrep -f "systemd-inhibit --what=sleep --who=ai-caffeine" >/dev/null 2>&1; then
+                # No --what=idle: an idle inhibitor makes PowerDevil skip its
+                # idle actions (dim, blank) as well as suspend.
+                systemd-inhibit --what=sleep --who=ai-caffeine \
+                    --why="AI agent session active" --mode=block sleep "$HOLD" &
+            fi
             if have_kconfig; then
-                if [ "$orig_saved" -eq 0 ]; then
-                    orig="$(kreadconfig6 --file kscreenlockerrc --group Daemon --key Autolock)" || orig=""
-                    # A leftover "false" belongs to a crashed prior run, not
-                    # to the user; treat it as unset.
-                    [ "$orig" = "false" ] && orig=""
-                    printf '%s' "$orig" > "$STATE"
-                    orig_saved=1
-                    log "engaged: Autolock=false (was ${orig:-unset})"
-                fi
-                # Re-assert every tick: cheap, idempotent, and the --notify
-                # pulse makes kwin pick it up even if an earlier apply raced.
-                set_autolock false
+                engage_autolock_off
             fi
         elif [ "$OS" = "Darwin" ]; then
             if [ -z "$holder_pid" ] || ! kill -0 "$holder_pid" 2>/dev/null; then
@@ -152,11 +109,7 @@ while true; do
         fi
         holder_pid=""
         if [ "$OS" = "Linux" ]; then
-            if [ "$orig_saved" -eq 1 ]; then
-                restore_autolock
-                orig_saved=0
-            fi
-            stop_inhibit
+            restore_autolock
         fi
         if [ "$active" -eq 1 ]; then
             active=0
