@@ -106,11 +106,10 @@ git-open              # Open in GitHub/GitLab/Bitbucket
 ### git push auto-switch
 
 `git` is wrapped by `scripts/bin/git-autoswitch` so that after a successful
-push from a feature branch you land back on the default branch automatically
-and pull its latest changes (fast-forward only).
+push from a feature branch you land back on the default branch automatically.
 
 ```bash
-git push                        # pushes, switches back, then pulls the default branch
+git push                        # pushes, then switches back to the default branch
 GIT_AUTOSWITCH_OFF=1 git push   # push without switching
 ```
 
@@ -118,11 +117,6 @@ GIT_AUTOSWITCH_OFF=1 git push   # push without switching
 - The push succeeds (failed pushes keep you where you are)
 - You are not already on the default branch (`origin/HEAD`, else develop → master → main)
 - There are no uncommitted tracked changes (untracked files don't block)
-
-The pull is best-effort. If the default branch cannot be fast-forwarded, the
-wrapper prints a warning and leaves you on the default branch. It still exits
-with the push's own status, so `git push && ...` chains never see a post-push
-failure.
 
 `install.sh` wires the wrapper through `~/.zshenv`, so it covers interactive
 terminals and non-interactive agent shells alike. Pushes from VS Code's Source
