@@ -12,7 +12,6 @@ set -u
 
 PROCESSES="${AI_CAFFEINE_PROCESSES:-claude codex omp}"   # space-separated exact process names (comm)
 INTERVAL="${AI_CAFFEINE_INTERVAL:-15}"               # seconds between checks
-HOLD=$((INTERVAL * 3))                               # hold self-expiry window
 
 LOCKFILE="${AI_CAFFEINE_LOCKFILE:-${TMPDIR:-/tmp}/ai-caffeine.lock}"
 STATE="$LOCKFILE.state"                             # original Autolock value while engaged
@@ -33,8 +32,9 @@ have_kconfig() {
     command -v kreadconfig6 >/dev/null 2>&1 && command -v kwriteconfig6 >/dev/null 2>&1
 }
 
-# kwin caches Autolock at session start; config writes alone do nothing until
-# re-login. configure() makes the running locker re-read kscreenlockerrc.
+# kwin caches Autolock at session start. Plain kwriteconfig6 does not emit the
+# KConfig D-Bus change notification, so live reload is racy — always pass
+# --notify, and call configure() as a belt-and-braces re-read.
 reconfigure_screensaver() {
     dbus-send --session --print-reply --dest=org.freedesktop.ScreenSaver \
         /ScreenSaver org.kde.screensaver.configure >/dev/null 2>&1 || true
@@ -44,10 +44,10 @@ restore_autolock() {
     [ -f "$STATE" ] || return 0
     orig="$(cat "$STATE")"
     if [ -n "$orig" ]; then
-        kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock "$orig"
+        kwriteconfig6 --notify --file kscreenlockerrc --group Daemon --key Autolock "$orig"
         reconfigure_screensaver
     else
-        kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock --delete
+        kwriteconfig6 --notify --file kscreenlockerrc --group Daemon --key Autolock --delete
         reconfigure_screensaver
     fi
 }
@@ -56,10 +56,14 @@ engage_autolock_off() {
     [ -f "$STATE" ] && return 0
     orig="$(kreadconfig6 --file kscreenlockerrc --group Daemon --key Autolock)" || orig=""
     printf '%s' "$orig" > "$STATE"
-    kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false
+    kwriteconfig6 --notify --file kscreenlockerrc --group Daemon --key Autolock false
     reconfigure_screensaver
     log "engaged: Autolock=false (was ${orig:-unset})"
 }
+
+INHIBIT_FIFO="$LOCKFILE.inhibit-fifo"
+inhibit_pid=""
+inh_fd=""
 
 agents_running() {
     # shellcheck disable=SC2086  # word splitting of the name list is intended
@@ -69,13 +73,44 @@ agents_running() {
     return 1
 }
 
+# Hold ONE logind inhibitor for the whole engagement. Recreating it every
+# cycle makes PowerDevil reset its dim/DPMS idle timers on each
+# InhibitionsChanged, so they can never fire while an agent runs.
+# The child exits when this process dies (fifo write-end closes) or when a
+# byte is written into the fifo — self-releasing either way.
+start_inhibit() {
+    if [ -n "$inhibit_pid" ] && kill -0 "$inhibit_pid" 2>/dev/null; then
+        return 0
+    fi
+    inhibit_pid=""
+    rm -f "$INHIBIT_FIFO"
+    mkfifo "$INHIBIT_FIFO" || return 1
+    systemd-inhibit --what=sleep --who=ai-caffeine \
+        --why="AI agent session active" --mode=block \
+        bash -c 'head -c 1 "$1" >/dev/null 2>&1' _ "$INHIBIT_FIFO" &
+    inhibit_pid=$!
+    exec {inh_fd}>"$INHIBIT_FIFO" || { kill "$inhibit_pid" 2>/dev/null; inhibit_pid=""; return 1; }
+}
+
+stop_inhibit() {
+    if [ -n "$inhibit_pid" ] && kill -0 "$inhibit_pid" 2>/dev/null; then
+        { printf 'x' >&"$inh_fd"; } 2>/dev/null || true
+    fi
+    [ -n "$inh_fd" ] && eval "exec ${inh_fd}>&-" 2>/dev/null
+    inh_fd=""
+    if [ -n "$inhibit_pid" ]; then
+        wait "$inhibit_pid" 2>/dev/null
+        inhibit_pid=""
+    fi
+}
+
 OS="$(uname -s)"
 
 if [ "$OS" = "Linux" ] && have_kconfig; then
     # A previous run may have died while engaged; undo its override first.
     restore_autolock
 fi
-trap 'restore_autolock 2>/dev/null; exit 0' EXIT INT TERM
+trap 'restore_autolock 2>/dev/null; stop_inhibit 2>/dev/null; exit 0' EXIT INT TERM
 
 active=0
 holder_pid=""
@@ -83,12 +118,7 @@ holder_pid=""
 while true; do
     if agents_running; then
         if [ "$OS" = "Linux" ]; then
-            if ! pgrep -f "systemd-inhibit --what=sleep --who=ai-caffeine" >/dev/null 2>&1; then
-                # No --what=idle: an idle inhibitor makes PowerDevil skip its
-                # idle actions (dim, blank) as well as suspend.
-                systemd-inhibit --what=sleep --who=ai-caffeine \
-                    --why="AI agent session active" --mode=block sleep "$HOLD" &
-            fi
+            start_inhibit
             if have_kconfig; then
                 engage_autolock_off
             fi
@@ -110,6 +140,7 @@ while true; do
         holder_pid=""
         if [ "$OS" = "Linux" ]; then
             restore_autolock
+            stop_inhibit
         fi
         if [ "$active" -eq 1 ]; then
             active=0

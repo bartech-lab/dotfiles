@@ -10,7 +10,7 @@ behavior returns within ~45 seconds with no cleanup.
 
 | OS | Hold | Blocks |
 |----|------|--------|
-| Linux | `systemd-inhibit --what=sleep --mode=block`, self-refreshing | suspend via logind (no `idle`: that would also block PowerDevil dim/blank) |
+| Linux | `systemd-inhibit --what=sleep --mode=block`, held for the whole engagement via a fifo handshake | suspend via logind (no `idle`: that would also block PowerDevil dim/blank) |
 | Linux | `kscreenlockerrc` `Daemon/Autolock=false` while engaged, restored on release | screen lock only; DPMS dim/blank keeps working, wake shows an unlocked desktop |
 | macOS | `caffeinate -i -w $$` | idle system sleep |
 
