@@ -3,8 +3,10 @@
 # branch with a clean tracked tree, switch back to the default branch.
 #
 # Disable for a single command:  GIT_AUTOSWITCH_OFF=1 git push
+# Decision log: ${GIT_AUTOSWITCH_LOG:-~/.cache/git-autoswitch.log}
 #
-# Wired up by the `git()` function in zsh/functions/30-git.zsh.
+# Wired up by the git() function in ~/.config/zsh-git-autoswitch.zsh,
+# sourced from ~/.zshenv.
 set -euo pipefail
 
 # Locate the real git binary, never this wrapper itself.
@@ -23,6 +25,12 @@ resolve_real_git() {
 
 REAL_GIT=$(resolve_real_git)
 
+# Best-effort one-line audit trail so skipped switches are diagnosable later.
+note() {
+  local f="${GIT_AUTOSWITCH_LOG:-$HOME/.cache/git-autoswitch.log}"
+  { mkdir -p -- "${f%/*}" && echo "$(date '+%Y-%m-%dT%H:%M:%S') $*"; } >>"$f" 2>/dev/null || true
+}
+
 # Everything except a push passes straight through.
 if [[ "${1:-}" != "push" || -n "${GIT_AUTOSWITCH_OFF:-}" ]]; then
   exec "$REAL_GIT" "$@"
@@ -31,6 +39,7 @@ fi
 status=0
 "$REAL_GIT" "$@" || status=$?
 if [[ "$status" -ne 0 ]]; then
+  note "push FAILED in $PWD"
   exit "$status"
 fi
 
@@ -49,15 +58,24 @@ if [[ -z "$default_branch" ]]; then
   done
 fi
 
-if [[ -z "$default_branch" || "$branch" == "$default_branch" ]]; then
+if [[ -z "$default_branch" ]]; then
+  echo "git-autoswitch: staying on '$branch' — no origin/HEAD and no origin/{develop,master,main} found" >&2
+  note "stayed on '$branch': no default branch detected"
+  exit 0
+fi
+
+if [[ "$branch" == "$default_branch" ]]; then
   exit 0
 fi
 
 # Uncommitted tracked changes mean work in progress: stay on the branch.
 # Untracked files travel with the switch harmlessly, so they don't block it.
 if [[ -n $("$REAL_GIT" status --porcelain --untracked-files=no) ]]; then
+  echo "git-autoswitch: staying on '$branch' — uncommitted tracked changes present" >&2
+  note "stayed on '$branch': uncommitted tracked changes"
   exit 0
 fi
 
 echo "↩ Push done — switching back to '$default_branch'"
+note "switched '$branch' -> '$default_branch'"
 exec "$REAL_GIT" switch "$default_branch"
