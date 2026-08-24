@@ -3,14 +3,14 @@
 Holds an OS-level keep-awake while AI agent processes (`claude`, `codex`, `omp`) are
 running, and releases it when the last one exits. Prevents system sleep and
 screen lock on Linux/KDE; prevents system sleep on macOS (display sleep stays
-allowed). Every hold is self-expiring: if the watcher dies, normal sleep
-behavior returns within ~45 seconds with no cleanup.
+allowed). A normal release is immediate. A Linux hold expires within about 45
+seconds if the watcher is killed before cleanup.
 
 ## Mechanisms
 
 | OS | Hold | Blocks |
 |----|------|--------|
-| Linux | `systemd-inhibit --what=sleep --mode=block`, self-refreshing | suspend via logind (no `idle`: that would also block PowerDevil dim/blank) |
+| Linux | `systemd-inhibit --what=sleep --mode=block`, tracked and self-refreshing | suspend via logind (no `idle`: that would also block PowerDevil dim/blank) |
 | Linux | `kscreenlockerrc` `Daemon/Autolock=false` while engaged, restored on release | screen lock only; DPMS dim/blank keeps working, wake shows an unlocked desktop |
 | macOS | `caffeinate -i -w $$` | idle system sleep |
 

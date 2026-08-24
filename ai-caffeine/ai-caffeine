@@ -5,8 +5,8 @@
 #   comes back unlocked, and suspend never triggers.
 # macOS: caffeinate -i -w $$ (assertion dies with this process; display sleep
 #   stays allowed).
-# Fail-safe: holds self-expire within ~HOLD seconds; the auto-lock override is
-#   reverted by a state file even if this script dies without running traps.
+# Fail-safe: the tracked sleep hold expires within ~HOLD seconds if this
+# watcher is killed before its cleanup trap can release the hold.
 
 set -u
 
@@ -50,6 +50,7 @@ restore_autolock() {
         kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock --delete
         reconfigure_screensaver
     fi
+    rm -f "$STATE"
 }
 
 engage_autolock_off() {
@@ -75,19 +76,36 @@ if [ "$OS" = "Linux" ] && have_kconfig; then
     # A previous run may have died while engaged; undo its override first.
     restore_autolock
 fi
-trap 'restore_autolock 2>/dev/null; exit 0' EXIT INT TERM
 
 active=0
 holder_pid=""
 
+stop_holder() {
+    [ -n "$holder_pid" ] || return 0
+    kill "$holder_pid" 2>/dev/null || true
+    wait "$holder_pid" 2>/dev/null || true
+    holder_pid=""
+}
+
+cleanup() {
+    stop_holder
+    if [ "$OS" = "Linux" ] && have_kconfig; then
+        restore_autolock
+    fi
+}
+
+trap 'cleanup; exit 0' EXIT INT TERM
+
 while true; do
     if agents_running; then
         if [ "$OS" = "Linux" ]; then
-            if ! pgrep -f "systemd-inhibit --what=sleep --who=ai-caffeine" >/dev/null 2>&1; then
+            if [ -z "$holder_pid" ] || ! kill -0 "$holder_pid" 2>/dev/null; then
                 # No --what=idle: an idle inhibitor makes PowerDevil skip its
-                # idle actions (dim, blank) as well as suspend.
+                # idle actions (dim, blank) as well as suspend. A finite hold
+                # is the fail-safe for SIGKILL or a system crash.
                 systemd-inhibit --what=sleep --who=ai-caffeine \
                     --why="AI agent session active" --mode=block sleep "$HOLD" &
+                holder_pid=$!
             fi
             if have_kconfig; then
                 engage_autolock_off
@@ -103,12 +121,8 @@ while true; do
             log "engaged: agent process detected"
         fi
     else
-        if [ "$OS" = "Darwin" ] && [ -n "$holder_pid" ] && kill -0 "$holder_pid" 2>/dev/null; then
-            kill "$holder_pid" 2>/dev/null
-            wait "$holder_pid" 2>/dev/null
-        fi
-        holder_pid=""
-        if [ "$OS" = "Linux" ]; then
+        stop_holder
+        if [ "$OS" = "Linux" ] && have_kconfig; then
             restore_autolock
         fi
         if [ "$active" -eq 1 ]; then
