@@ -60,4 +60,5 @@ if [[ -n $("$REAL_GIT" status --porcelain --untracked-files=no) ]]; then
 fi
 
 echo "↩ Push done — switching back to '$default_branch'"
-exec "$REAL_GIT" switch "$default_branch"
+"$REAL_GIT" switch "$default_branch" || exit $?
+exec "$REAL_GIT" pull --ff-only

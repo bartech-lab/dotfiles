@@ -106,10 +106,11 @@ git-open              # Open in GitHub/GitLab/Bitbucket
 ### git push auto-switch
 
 `git` is wrapped by `scripts/bin/git-autoswitch` so that after a successful
-push from a feature branch you land back on the default branch automatically.
+push from a feature branch you land back on the default branch automatically
+and pull its latest changes (fast-forward only).
 
 ```bash
-git push                        # pushes, then switches back to the default branch
+git push                        # pushes, switches back, then pulls the default branch
 GIT_AUTOSWITCH_OFF=1 git push   # push without switching
 ```
 
