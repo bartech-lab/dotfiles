@@ -57,6 +57,12 @@ fi
     /usr/sbin
     /sbin
   )
+
+  # Shims shadow real binaries, so they must win over Homebrew and /usr/bin.
+  # `typeset -U path` keeps this first copy and drops the duplicate below.
+  # Child processes inherit this order, which is what gives non-zsh tools
+  # (omp, Codex, Claude Code) the git push auto-switch. See docs/functions.md.
+  path=("$HOME/dotfiles/scripts/shims" $path)
   export PATH
 
   # ====== Environment Variables ======
