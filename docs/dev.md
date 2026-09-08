@@ -85,35 +85,6 @@ Ox Alpha is a Stealth model. The
 provider sharing, and training use of submitted content. Do not send sensitive
 or company source code without explicit authorization.
 
-## AI Agent Memory Limits
-
-Linux only. `claude` and `codex` are shell functions that launch the real CLI
-inside `ai-agents.slice`, a systemd user slice with `MemoryHigh=20G`,
-`MemoryMax=28G`, and `MemorySwapMax=0`.
-
-Every descendant inherits the cgroup, so subagents, detached
-`codex-companion.mjs` workers, and MCP servers all count against one aggregate
-limit. When the slice hits `MemoryMax` the kernel kills a process inside it
-rather than choosing a victim across the whole machine.
-
-```bash
-# Current usage and counters
-ai-agent-mem
-
-# Launch something else under the same cap
-ai-agent-scope node heavy-script.js
-
-# Bypass for one command
-AI_AGENT_NO_SCOPE=1 claude
-```
-
-`ai-agent-mem` prints `current`, `high`, `max`, and the `memory.events`
-counters. A nonzero `oom_kill` means the cap stopped a runaway fan-out.
-
-Install or update with `~/dotfiles/ai-agent-limits/setup.sh`. Existing sessions
-keep running outside the slice; restart them to pick up the cap. Tuning and
-background are in the [component README](../ai-agent-limits/README.md).
-
 ## extract
 
 Universal archive extractor with smart directory handling.
