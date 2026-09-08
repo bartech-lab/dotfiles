@@ -139,6 +139,8 @@ for setup and usage.
 - `gitlab-stats [options]` - GitLab merge request statistics
 - `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
 - `discord-openasar-status` - Check OpenAsar LaunchAgent status
+- `ai-agent-scope <command> [args...]` - Run an AI agent CLI inside the memory-capped `ai-agents.slice` cgroup (Linux)
+- `ai-agent-mem` - Report `ai-agents.slice` memory usage and throttle/OOM counters (Linux)
 
 ### Git & macOS Helpers
 
@@ -178,6 +180,17 @@ Manual one-command fix for recurring ghost RSVP invites in macOS Calendar.
 - `calendar-ghost-fix/run-now.sh` - Runs the repair immediately
 
 See [Calendar Ghost Fix README](calendar-ghost-fix/README.md) for setup details.
+
+### AI Agent Memory Limits
+
+Caps the total memory an AI agent session tree can use, so a parallel fan-out
+cannot trigger a system-wide OOM kill. Linux only. `claude` and `codex` run
+inside a memory-capped cgroup; every subagent and worker they spawn counts
+against one aggregate limit.
+
+- `ai-agent-limits/setup.sh` - Installs the slice and launcher
+
+See [AI Agent Limits README](ai-agent-limits/README.md) for the mechanism and tuning.
 
 ## Migration
 

@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# ai-agent-scope
+# Runs an AI agent CLI inside the memory-capped ai-agents.slice cgroup.
+# Every process the agent spawns (subagents, detached codex workers, MCP
+# servers) inherits the cgroup, so the cap covers the whole tree.
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+Usage: ai-agent-scope <command> [args...]
+
+Runs <command> inside the ai-agents.slice cgroup, which carries the memory
+limits defined in ~/.config/systemd/user/ai-agents.slice. All descendants
+inherit the cgroup, so a parallel fan-out is capped in aggregate rather than
+per process.
+
+Options:
+  -h, --help    Show this help and exit.
+
+Environment:
+  AI_AGENT_SCOPE_ACTIVE   Set by this script; a nested call execs directly
+                          instead of creating a second scope.
+
+Falls through to a plain exec when systemd-run is unavailable, so the command
+still runs on a non-systemd host.
+
+Examples:
+  ai-agent-scope claude
+  ai-agent-scope codex exec "fix the failing test"
+
+See also: ai-agent-mem (shell function) for current slice usage.
+USAGE
+}
+
+if [ "$#" -eq 0 ]; then
+    usage >&2
+    exit 64
+fi
+
+case "$1" in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+esac
+
+target=$1
+shift
+
+resolved=$(command -v "$target" 2>/dev/null || true)
+if [ -z "$resolved" ]; then
+    echo "ai-agent-scope: command not found: $target" >&2
+    exit 127
+fi
+
+if ! command -v systemd-run >/dev/null 2>&1; then
+    exec "$resolved" "$@"
+fi
+
+if [ -n "${AI_AGENT_SCOPE_ACTIVE:-}" ]; then
+    exec "$resolved" "$@"
+fi
+export AI_AGENT_SCOPE_ACTIVE=1
+
+exec systemd-run --user --scope \
+    --slice=ai-agents.slice \
+    --unit="ai-agent-$(basename "$target")-$$" \
+    --quiet --collect --same-dir \
+    -- "$resolved" "$@"
