@@ -1,0 +1,8 @@
+[Unit]
+Description=Memory-capped slice for AI agent CLI sessions
+
+[Slice]
+MemoryHigh=20G
+MemoryMax=28G
+MemorySwapMax=0
+TasksMax=4096
