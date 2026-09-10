@@ -619,3 +619,12 @@ For more details on specific function categories:
 
 - [Media functions](media.md) - Video/image processing
 - [Development utilities](dev.md) - Archive, extract, diagnostics
+
+## Scheduled job diagnostics
+
+- `~/.config/git-auto-pull/git-auto-pull --help` — Show automatic pull usage after installation.
+- `~/.config/launchd-heartbeat/launchd-heartbeat --help` — Show heartbeat usage after installation.
+- `systemctl --user start git-auto-pull.service` — Run automatic pull immediately on Linux.
+- `systemctl --user start launchd-heartbeat.service` — Check monitored services immediately on Linux.
+
+See [Git Auto-Pull](../git-auto-pull/README.md) and [Service Heartbeat](../launchd-heartbeat/README.md) for logs and configuration.

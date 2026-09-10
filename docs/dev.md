@@ -563,7 +563,7 @@ Format: one repo per line as `path:branch`
 Run manually:
 
 ```bash
-bash ~/.config/git-auto-pull/pull.sh
+~/.config/git-auto-pull/git-auto-pull
 ```
 
 Check status:

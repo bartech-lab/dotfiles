@@ -60,7 +60,7 @@ Lines starting with `#` are ignored (comments).
 Run manually to test:
 
 ```bash
-bash ~/.config/git-auto-pull/pull.sh
+~/.config/git-auto-pull/git-auto-pull
 ```
 
 Run the isolated integration suite:
@@ -136,12 +136,14 @@ systemctl --user disable git-auto-pull.timer
    - Keeps your currently checked out branch unchanged unless it matches the configured branch
    - Logs updates to `pull.log`
 4. All repos are processed in parallel (background jobs)
-5. No output if nothing changed (silent operation)
+5. Log each run and its completion status. Operational failures return a non-zero exit status.
 
 ## Notes
 
-- The script only logs when it actually updates something
-- No updates = no log entries (keeps logs clean)
+- Run summaries distinguish successful checks from failures, even when no repository changes.
+- Linux retries failed runs after 60 seconds, with at most three starts per 45-minute window.
+- Linux stops runs that exceed ten minutes. The hourly timer remains enabled.
+- Pulling dotfiles does not deploy updated scripts. Run the installer to refresh installed copies.
 - Very low resource usage (~0.1% CPU for 1-2 seconds per repo)
 - Runs as background process (won't interrupt your work)
 - Only works when you're online; a default-branch lookup or fetch failure is logged in `error.log`

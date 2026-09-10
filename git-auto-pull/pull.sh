@@ -4,10 +4,38 @@
 # Auto-discovers git repos in ~/Projects and ~/dotfiles
 # Optional repos.conf for explicit branch overrides and additional repositories
 
+usage() {
+    cat <<'EOF'
+Usage: pull.sh [--help]
+
+Fetch and update configured and auto-discovered Git repositories.
+EOF
+}
+
+case "${1:-}" in
+    '') ;;
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    *)
+        printf 'Error: unknown option: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+        ;;
+esac
+
 CONFIG_DIR="$HOME/.config/git-auto-pull"
 CONFIG_FILE="$CONFIG_DIR/repos.conf"
 LOG_FILE="$CONFIG_DIR/pull.log"
 ERROR_LOG="$CONFIG_DIR/error.log"
+
+if ! mkdir -p "$CONFIG_DIR"; then
+    printf 'Error: unable to create log directory: %s\n' "$CONFIG_DIR" >&2
+    exit 1
+fi
+
+export GIT_TERMINAL_PROMPT=0
 
 timestamp() {
     date '+%Y-%m-%d %H:%M:%S'
@@ -42,7 +70,9 @@ resolve_default_branch() {
     local branch_name
 
     remote=$(git -C "$repo_path" remote get-url origin 2>/dev/null || true)
-    [[ -z "$remote" ]] && return 1
+    if [[ -z "$remote" ]]; then
+        return 2
+    fi
 
     if ! head_output=$(git -C "$repo_path" ls-remote --symref origin HEAD 2>&1); then
         log_error "Default branch lookup failed for $repo_path: $head_output"
@@ -117,16 +147,22 @@ schedule_repo() {
 process_repo() {
     local repo_path="$1" branch_name="$2"
 
-    cd "$repo_path" || return
+    if ! cd "$repo_path"; then
+        log_error "Unable to enter repository $repo_path"
+        return 1
+    fi
 
     local remote
     remote=$(git remote get-url origin 2>/dev/null || true)
-    [[ -z "$remote" ]] && return
+    if [[ -z "$remote" ]]; then
+        log_error "No origin remote configured for $repo_path"
+        return 1
+    fi
 
     local fetch_output
     if ! fetch_output=$(git fetch --quiet origin "$branch_name" 2>&1); then
         log_error "Fetch failed for $repo_path ($branch_name): $fetch_output"
-        return
+        return 1
     fi
 
     local LOCAL REMOTE
@@ -135,7 +171,7 @@ process_repo() {
 
     if [[ -z "$REMOTE" ]]; then
         log_error "Unable to resolve remote ref for $repo_path ($branch_name)"
-        return
+        return 1
     fi
 
     if [[ -z "$LOCAL" ]]; then
@@ -143,6 +179,7 @@ process_repo() {
             log_info "Created local branch $branch_name for $repo_path"
         else
             log_error "Failed to create local branch $branch_name for $repo_path"
+            return 1
         fi
         return
     fi
@@ -157,22 +194,33 @@ process_repo() {
                     log_info "Updated $repo_path ($branch_name)"
                 else
                     log_error "Fast-forward failed for $repo_path ($branch_name): $merge_output"
+                    return 1
                 fi
             elif git update-ref "refs/heads/$branch_name" "$REMOTE" "$LOCAL" 2>/dev/null; then
                 log_info "Updated $repo_path ($branch_name)"
             else
                 log_error "Failed to update branch ref for $repo_path ($branch_name)"
+                return 1
             fi
         else
-            log_error "Skipped diverged branch for $repo_path ($branch_name)"
+            local merge_base_status=$?
+            if (( merge_base_status == 1 )); then
+                log_error "Skipped diverged branch for $repo_path ($branch_name)"
+            else
+                log_error "Unable to compare branches for $repo_path ($branch_name)"
+                return 1
+            fi
         fi
     fi
 }
 
 # Load explicit configuration first so it overrides auto-discovery and prevents
 # the same repository from being processed twice.
+run_status=0
+setup_failures=0
 rotate_log "$LOG_FILE"
 rotate_log "$ERROR_LOG"
+log_info "Starting git auto-pull"
 
 REPO_PATHS=()
 REPO_BRANCHES=()
@@ -188,19 +236,30 @@ if [[ -f "$CONFIG_FILE" ]]; then
         branch_name=$(echo "$branch_name" | xargs)
         [[ -z "$branch_name" ]] && {
             log_error "Missing configured branch for $repo_path"
+            run_status=1
+            setup_failures=$((setup_failures + 1))
             continue
         }
 
-        [[ ! -d "$repo_path/.git" ]] && continue
+        if [[ ! -d "$repo_path/.git" ]]; then
+            log_error "Configured repository not found: $repo_path"
+            run_status=1
+            setup_failures=$((setup_failures + 1))
+            continue
+        fi
 
         cfg_remote=$(git -C "$repo_path" remote get-url origin 2>/dev/null || true)
         cfg_host=$(remote_host "$cfg_remote")
         if [[ -n "$cfg_host" ]] && ! host_is_reachable "$cfg_host" "$repo_path"; then
+            run_status=1
+            setup_failures=$((setup_failures + 1))
             continue
         fi
 
         if repo_is_scheduled "$repo_path"; then
             log_error "Duplicate repository configuration ignored for $repo_path"
+            run_status=1
+            setup_failures=$((setup_failures + 1))
             continue
         fi
 
@@ -219,11 +278,19 @@ for d in "$HOME/Projects"/*/; do
     [[ -z "$disc_remote" ]] && continue
     disc_host=$(remote_host "$disc_remote")
     if [[ -n "$disc_host" ]] && ! host_is_reachable "$disc_host" "$repo"; then
+            run_status=1
+            setup_failures=$((setup_failures + 1))
         continue
     fi
 
     if branch=$(resolve_default_branch "$repo"); then
-        schedule_repo "$repo" "$branch"
+        [[ -n "$branch" ]] && schedule_repo "$repo" "$branch"
+    else
+        lookup_status=$?
+        if (( lookup_status != 2 )); then
+            run_status=1
+            setup_failures=$((setup_failures + 1))
+        fi
     fi
 done
 
@@ -234,14 +301,44 @@ if [[ -d "$HOME/dotfiles/.git" ]]; then
         dot_host=$(remote_host "$dot_remote")
         if [[ -z "$dot_host" ]] || host_is_reachable "$dot_host" "$repo"; then
             if branch=$(resolve_default_branch "$repo"); then
-                schedule_repo "$repo" "$branch"
+                [[ -n "$branch" ]] && schedule_repo "$repo" "$branch"
+            else
+                lookup_status=$?
+                if (( lookup_status != 2 )); then
+                    run_status=1
+                    setup_failures=$((setup_failures + 1))
+                fi
             fi
+        else
+            run_status=1
+            setup_failures=$((setup_failures + 1))
         fi
     fi
 fi
 
+pids=()
+repo_count=${#REPO_PATHS[@]}
+log_info "Scheduled git auto-pull: repositories=$repo_count setup_failures=$setup_failures"
+
 for i in "${!REPO_PATHS[@]}"; do
     process_repo "${REPO_PATHS[$i]}" "${REPO_BRANCHES[$i]}" &
+    pids[${#pids[@]}]=$!
 done
 
-wait
+completed_count=0
+failed_count=0
+for pid in "${pids[@]}"; do
+    if wait "$pid"; then
+        :
+    else
+        failed_count=$((failed_count + 1))
+    fi
+    completed_count=$((completed_count + 1))
+done
+
+if (( failed_count > 0 )); then
+    run_status=1
+fi
+
+log_info "Completed git auto-pull: repositories=$completed_count/$repo_count setup_failures=$setup_failures repo_failures=$failed_count status=$run_status"
+exit "$run_status"

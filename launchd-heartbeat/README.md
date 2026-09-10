@@ -8,7 +8,9 @@ Supports **macOS** (LaunchAgents) and **Linux** (systemd user units). Detects pl
 
 - Runs every hour
 - Checks a configurable list of service labels/units
-- Logs active/missing status
+- Logs active, failed, or missing status on Linux, including the service result.
+- An active timer does not hide a failed service.
+- Sends a desktop notification for failed or missing services.
 - Writes errors to a separate log file
 
 ## Setup

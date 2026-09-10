@@ -157,7 +157,8 @@ Automatic background syncing for git repositories.
 - `setup.sh` - One-time setup for new machines
 - Runs every hour
 - Configurable per-machine repos with different main branches
-- Logs updates to `pull.log` and failures to `error.log`
+- Logs run summaries and updates to `pull.log`, and failures to `error.log`
+- Retries failed Linux runs after 60 seconds, with three starts per 45-minute window
 
 See [Git Auto-Pull README](git-auto-pull/README.md) for setup details.
 
@@ -167,7 +168,7 @@ Optional lightweight monitor for user LaunchAgents.
 
 - `launchd-heartbeat/setup.sh` - One-time setup
 - Runs every hour
-- Logs `loaded`/`missing` status for configured LaunchAgent labels
+- Logs configured service status and reports failed Linux services, even when their timers remain active
 
 See [LaunchAgent Heartbeat README](launchd-heartbeat/README.md) for setup details.
 
