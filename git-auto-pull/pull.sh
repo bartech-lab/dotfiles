@@ -58,6 +58,44 @@ resolve_default_branch() {
     printf '%s\n' "$branch_name"
 }
 
+# One reachability probe per remote host, cached. Without this, a run started
+# while the VPN is down logs one authentication failure per repository, so a
+# single condition that has nothing to do with any individual repo produces a
+# dozen error lines. bash 3.2 has no associative arrays, hence parallel arrays.
+PROBE_HOSTS=()
+PROBE_RESULTS=()
+
+remote_host() {
+    local url="$1"
+    case "$url" in
+        *://*) printf '%s\n' "$url" | sed -e 's|^[^:]*://||' -e 's|^[^@]*@||' -e 's|[:/].*$||' ;;
+        *@*:*) printf '%s\n' "$url" | sed -e 's|^[^@]*@||' -e 's|:.*$||' ;;
+        *)     printf '%s\n' "" ;;
+    esac
+}
+
+host_is_reachable() {
+    local host="$1" repo="$2" i
+
+    for (( i = 0; i < ${#PROBE_HOSTS[@]}; i++ )); do
+        if [[ "${PROBE_HOSTS[$i]}" == "$host" ]]; then
+            [[ "${PROBE_RESULTS[$i]}" == ok ]] && return 0
+            return 1
+        fi
+    done
+
+    if GIT_TERMINAL_PROMPT=0 git -C "$repo" ls-remote origin HEAD >/dev/null 2>&1; then
+        PROBE_HOSTS[${#PROBE_HOSTS[@]}]="$host"
+        PROBE_RESULTS[${#PROBE_RESULTS[@]}]="ok"
+        return 0
+    fi
+
+    PROBE_HOSTS[${#PROBE_HOSTS[@]}]="$host"
+    PROBE_RESULTS[${#PROBE_RESULTS[@]}]="down"
+    log_error "Skipped all $host repositories: probe via $repo failed (VPN down or host unreachable)"
+    return 1
+}
+
 repo_is_scheduled() {
     local repo_path="$1"
     local scheduled_path
@@ -155,6 +193,12 @@ if [[ -f "$CONFIG_FILE" ]]; then
 
         [[ ! -d "$repo_path/.git" ]] && continue
 
+        cfg_remote=$(git -C "$repo_path" remote get-url origin 2>/dev/null || true)
+        cfg_host=$(remote_host "$cfg_remote")
+        if [[ -n "$cfg_host" ]] && ! host_is_reachable "$cfg_host" "$repo_path"; then
+            continue
+        fi
+
         if repo_is_scheduled "$repo_path"; then
             log_error "Duplicate repository configuration ignored for $repo_path"
             continue
@@ -171,6 +215,13 @@ for d in "$HOME/Projects"/*/; do
     repo="${d%/}"
     repo_is_scheduled "$repo" && continue
 
+    disc_remote=$(git -C "$repo" remote get-url origin 2>/dev/null || true)
+    [[ -z "$disc_remote" ]] && continue
+    disc_host=$(remote_host "$disc_remote")
+    if [[ -n "$disc_host" ]] && ! host_is_reachable "$disc_host" "$repo"; then
+        continue
+    fi
+
     if branch=$(resolve_default_branch "$repo"); then
         schedule_repo "$repo" "$branch"
     fi
@@ -179,8 +230,12 @@ done
 if [[ -d "$HOME/dotfiles/.git" ]]; then
     repo="$HOME/dotfiles"
     if ! repo_is_scheduled "$repo"; then
-        if branch=$(resolve_default_branch "$repo"); then
-            schedule_repo "$repo" "$branch"
+        dot_remote=$(git -C "$repo" remote get-url origin 2>/dev/null || true)
+        dot_host=$(remote_host "$dot_remote")
+        if [[ -z "$dot_host" ]] || host_is_reachable "$dot_host" "$repo"; then
+            if branch=$(resolve_default_branch "$repo"); then
+                schedule_repo "$repo" "$branch"
+            fi
         fi
     fi
 fi
