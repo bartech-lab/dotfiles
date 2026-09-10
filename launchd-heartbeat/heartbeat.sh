@@ -27,6 +27,9 @@ if [[ "$(uname -s)" == Darwin ]]; then
     check_service() {
         launchctl print "gui/$(id -u)/$1" >/dev/null 2>&1 && echo "loaded" || echo "missing"
     }
+    notify() {
+        osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true
+    }
     get_service_details() {
         local info
         info=$(launchctl print "gui/$(id -u)/$1" 2>/dev/null)
@@ -53,6 +56,9 @@ else
         fi
         echo "missing"
     }
+    notify() {
+        notify-send "$1" "$2" >/dev/null 2>&1 || true
+    }
     get_service_details() {
         local state runs
         local timer_name="${1%.service}.timer"
@@ -75,6 +81,7 @@ fi
 
 monitored=0
 loaded=0
+missing_labels=""
 
 log_info "Run started"
 
@@ -91,7 +98,13 @@ while IFS= read -r label; do
         log_info "Label=$label status=$status $details"
     else
         log_error "Label=$label status=missing"
+        missing_labels="${missing_labels}${missing_labels:+, }$label"
     fi
 done < "$LABELS_FILE"
 
 log_info "Run finished monitored=$monitored loaded=$loaded"
+
+# A log file nobody reads is not a monitor. Surface unloaded services.
+if [[ -n "$missing_labels" ]]; then
+    notify "launchd heartbeat" "Not loaded: $missing_labels"
+fi

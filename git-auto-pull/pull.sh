@@ -13,6 +13,20 @@ timestamp() {
     date '+%Y-%m-%d %H:%M:%S'
 }
 
+# Keep each log under 5 MB. One .1 generation is enough for post-mortems;
+# error.log reached 2.5 MB unbounded before this existed.
+MAX_LOG_BYTES=5242880
+
+rotate_log() {
+    local file="$1" size
+    [[ -f "$file" ]] || return 0
+    size=$(wc -c < "$file" 2>/dev/null | tr -d ' ')
+    [[ -z "$size" ]] && return 0
+    if (( size > MAX_LOG_BYTES )); then
+        mv -f "$file" "$file.1"
+    fi
+}
+
 log_info() {
     echo "$(timestamp): $1" >> "$LOG_FILE"
 }
@@ -119,6 +133,9 @@ process_repo() {
 
 # Load explicit configuration first so it overrides auto-discovery and prevents
 # the same repository from being processed twice.
+rotate_log "$LOG_FILE"
+rotate_log "$ERROR_LOG"
+
 REPO_PATHS=()
 REPO_BRANCHES=()
 
