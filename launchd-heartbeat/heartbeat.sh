@@ -25,7 +25,7 @@ log_error() {
 # Platform-aware service check
 if [[ "$(uname -s)" == Darwin ]]; then
     check_service() {
-        launchctl print "gui/$(id -u)/$1" 2>/dev/null && echo "loaded" || echo "missing"
+        launchctl print "gui/$(id -u)/$1" >/dev/null 2>&1 && echo "loaded" || echo "missing"
     }
     get_service_details() {
         local info
