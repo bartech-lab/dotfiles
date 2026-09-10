@@ -244,12 +244,12 @@ fi
 # Copy scripts to ~/.config (same as Linux, but use LaunchAgents)
 if [[ "$DRY_RUN" == false ]]; then
     mkdir -p ~/.config/git-auto-pull
-    cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/pull.sh
-    chmod +x ~/.config/git-auto-pull/pull.sh
+    cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/git-auto-pull
+    chmod +x ~/.config/git-auto-pull/git-auto-pull
 
     mkdir -p ~/.config/launchd-heartbeat
-    cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/heartbeat.sh
-    chmod +x ~/.config/launchd-heartbeat/heartbeat.sh
+    cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/launchd-heartbeat
+    chmod +x ~/.config/launchd-heartbeat/launchd-heartbeat
 
     if [[ ! -f ~/.config/git-auto-pull/repos.conf ]]; then
         cat > ~/.config/git-auto-pull/repos.conf << 'GITCONF'
@@ -260,15 +260,16 @@ GITCONF
     fi
     if [[ ! -f ~/.config/launchd-heartbeat/monitored-labels.conf ]]; then
         cat > ~/.config/launchd-heartbeat/monitored-labels.conf << 'HEARTBEATCONF'
-# Monitored services
-git-auto-pull.service
-launchd-heartbeat.service
+# LaunchAgent labels to monitor
+# One label per line
+com.user.gitautopull
+com.user.launchdheartbeat
 HEARTBEATCONF
     fi
 fi
 
-ensure_launchagent_plist "com.user.gitautopull" "$HOME/.config/git-auto-pull/pull.sh" 3600
-ensure_launchagent_plist "com.user.launchdheartbeat" "$HOME/.config/launchd-heartbeat/heartbeat.sh" 300
+ensure_launchagent_plist "com.user.gitautopull" "$HOME/.config/git-auto-pull/git-auto-pull" 3600
+ensure_launchagent_plist "com.user.launchdheartbeat" "$HOME/.config/launchd-heartbeat/launchd-heartbeat" 300
 
 # omniroute service (only on machines that have the app; KeepAlive daemon, not a timer)
 if [[ "$DRY_RUN" == false && -d "$HOME/omniroute" ]]; then
@@ -367,8 +368,8 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
     # --- git-auto-pull setup (script + config) ---
     mkdir -p ~/.config/git-auto-pull
     if [[ "$DRY_RUN" == false ]]; then
-        cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/pull.sh
-        chmod +x ~/.config/git-auto-pull/pull.sh
+        cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/git-auto-pull
+        chmod +x ~/.config/git-auto-pull/git-auto-pull
     fi
 
     if [[ ! -f ~/.config/git-auto-pull/repos.conf ]]; then
@@ -388,8 +389,8 @@ GITCONF
     # --- heartbeat setup (script + config) ---
     mkdir -p ~/.config/launchd-heartbeat
     if [[ "$DRY_RUN" == false ]]; then
-        cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/heartbeat.sh
-        chmod +x ~/.config/launchd-heartbeat/heartbeat.sh
+        cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/launchd-heartbeat
+        chmod +x ~/.config/launchd-heartbeat/launchd-heartbeat
     fi
 
     if [[ ! -f ~/.config/launchd-heartbeat/monitored-labels.conf ]]; then
