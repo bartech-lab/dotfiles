@@ -32,6 +32,8 @@ agents.md
 AGENTS.md
 claude.md
 CLAUDE.md
+claude.local.md
+CLAUDE.local.md
 
 # Local git config (machine-specific identities)
 .gitconfig-github
