@@ -271,11 +271,6 @@ fi
 ensure_launchagent_plist "com.user.gitautopull" "$HOME/.config/git-auto-pull/git-auto-pull" 3600
 ensure_launchagent_plist "com.user.launchdheartbeat" "$HOME/.config/launchd-heartbeat/launchd-heartbeat" 300
 
-# omniroute service (only on machines that have the app; KeepAlive daemon, not a timer)
-if [[ "$DRY_RUN" == false && -d "$HOME/omniroute" ]]; then
-    bash "$DOTFILES_DIR/omniroute/setup.sh"
-fi
-
 # ai-caffeine service (keep awake while AI agent sessions run; KeepAlive daemon)
 if [[ "$DRY_RUN" == true ]]; then
     echo "  → Would run ai-caffeine/setup.sh (LaunchAgent com.bartech.ai-caffeine)"
@@ -418,18 +413,6 @@ HEARTBEATCONF
         systemctl --user daemon-reload
         systemctl --user enable --now git-auto-pull.timer launchd-heartbeat.timer system-update.timer
         echo "✓ systemd user timers enabled"
-
-        # omniroute service (only on machines that have the app)
-        if [[ -d "$HOME/omniroute" ]]; then
-            mkdir -p ~/.config/omniroute
-            cp "$DOTFILES_DIR/omniroute/run.sh" ~/.config/omniroute/run.sh
-            chmod +x ~/.config/omniroute/run.sh
-            cp "$DOTFILES_DIR/omniroute/systemd/omniroute.service" ~/.config/systemd/user/
-            systemctl --user daemon-reload
-            systemctl --user enable --now omniroute
-            loginctl enable-linger 2>/dev/null || echo "⚠️  Run 'loginctl enable-linger' so omniroute survives logout"
-            echo "✓ omniroute service enabled (see omniroute/README.md)"
-        fi
     fi
 
     # --- ai-caffeine service (keep awake while AI agent sessions run) ---
