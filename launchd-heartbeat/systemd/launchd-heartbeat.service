@@ -5,4 +5,4 @@ Description=Hourly system service heartbeat
 Type=oneshot
 ExecStart=%h/.config/launchd-heartbeat/launchd-heartbeat
 StandardOutput=null
-StandardError=file:%h/.config/launchd-heartbeat/error.log
+StandardError=journal

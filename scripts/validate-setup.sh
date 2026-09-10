@@ -132,11 +132,13 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
             warn "yay not found"
         fi
 
-        if systemctl --user is-active git-auto-pull.timer &>/dev/null; then
-            pass "systemd user timers running"
-        else
-            warn "systemd user timers not active"
-        fi
+        for timer in git-auto-pull.timer launchd-heartbeat.timer system-update.timer; do
+            if systemctl --user is-active "$timer" &>/dev/null; then
+                pass "$timer active"
+            else
+                warn "$timer not active"
+            fi
+        done
 
         if systemctl is-active fstrim.timer &>/dev/null; then
             pass "fstrim.timer active"

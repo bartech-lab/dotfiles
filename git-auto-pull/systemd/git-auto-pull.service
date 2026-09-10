@@ -1,8 +1,13 @@
 [Unit]
 Description=Hourly git auto-pull
+StartLimitIntervalSec=45min
+StartLimitBurst=3
 
 [Service]
 Type=oneshot
 ExecStart=%h/.config/git-auto-pull/git-auto-pull
+Restart=on-failure
+RestartSec=60s
+TimeoutStartSec=10min
 StandardOutput=null
-StandardError=file:%h/.config/git-auto-pull/error.log
+StandardError=journal
