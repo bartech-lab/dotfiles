@@ -39,14 +39,19 @@ On macOS it also enables daily Homebrew autoupdate. On Linux it enables systemd 
 
 ## Global Git Ignore
 
-Global Git ignore rules are managed from `git/gitignore_global` and linked to `~/.gitignore_global` by `./install.sh`.
+Global Git ignore rules are managed from `config/git/gitignore_global` and linked to `~/.gitignore_global` by `./install.sh`.
 
 Included defaults:
 - OS files: `.DS_Store`, `._*`, `Thumbs.db`
 - Editor temp files: `*~`, `*.swp`, `*.swo`
 - Python bytecode: `__pycache__/`, `*.pyc`
-- Local AI/tool directories: `.claude/`, `.codex/`, `.sisyphus/`, `.opencode/`, `.commandcode/`, `.llm/`, `.playwright-mcp/`, plus `.mcp.json` and `.skill-lock.json`
-- Agent instruction files: `agents.md`, `AGENTS.md`
+- Local AI/tool directories: `.agent-browser/`, `.llm/`, `.opencode/`, `.playwright-mcp/`, plus `.skill-lock.json`
+- Local-only notes: `*.local.md`
+
+Agent instruction files (`AGENTS.md`, `CLAUDE.md`) and agent directories (`.claude/`,
+`.agents/`, `.codex/`, `.mcp.json`) are deliberately absent: repositories track some of
+them, and a global ignore over a tracked path hides new files from `git status` and makes
+`git add` refuse them without `-f`. Ignore those per repository in `.git/info/exclude`.
 
 To apply or refresh the symlink manually:
 
@@ -208,7 +213,7 @@ See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
 
 - **macOS** 14+ (Sonoma and later) or **Linux** (EndeavourOS/Arch)
 - **zsh** (auto-installed by `./install.sh` on Linux, pre-installed on macOS)
-- **ShellCheck** (installed by `Brewfile` on macOS or `pkglist/pacman.txt` on Linux)
+- **ShellCheck** (installed by `Brewfile` on macOS or `linux/pkglist/pacman.txt` on Linux)
 - **Homebrew** (auto-installed by `./install.sh` on macOS)
 
 ## License

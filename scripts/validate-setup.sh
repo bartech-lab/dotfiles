@@ -223,7 +223,7 @@ if [[ -d "$DOTFILES_DIR" ]]; then
     if [[ "$DOTFILES_OS" == macos ]]; then
         [[ -f "$DOTFILES_DIR/Brewfile" ]] && pass "Brewfile present" || fail "Brewfile missing"
     elif [[ "$DOTFILES_OS" == linux ]]; then
-        [[ -f "$DOTFILES_DIR/pkglist/pacman.txt" ]] && pass "pkglist/pacman.txt present" || fail "pkglist/pacman.txt missing"
+        [[ -f "$DOTFILES_DIR/linux/pkglist/pacman.txt" ]] && pass "pkglist/pacman.txt present" || fail "pkglist/pacman.txt missing"
     fi
     [[ -d "$DOTFILES_DIR/zsh/functions" ]] && pass "Functions directory present" || fail "Functions directory missing"
 else

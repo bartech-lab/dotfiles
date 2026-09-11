@@ -301,18 +301,18 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
     # --- Install official packages ---
     if [[ "$DRY_RUN" == true ]]; then
         echo ""
-        echo "Pacman packages to install (from pkglist/pacman.txt):"
+        echo "Pacman packages to install (from linux/pkglist/pacman.txt):"
         while IFS= read -r pkg; do
             [[ -z "$pkg" || "$pkg" == \#* ]] && continue
             pacman -Qi "$pkg" &>/dev/null || echo "  → $pkg"
-        done < "$DOTFILES_DIR/pkglist/pacman.txt"
+        done < "$DOTFILES_DIR/linux/pkglist/pacman.txt"
     else
         echo "📦 Installing pacman packages..."
         pkgs=()
         while IFS= read -r pkg; do
             [[ -z "$pkg" || "$pkg" == \#* ]] && continue
             pkgs+=("$pkg")
-        done < "$DOTFILES_DIR/pkglist/pacman.txt"
+        done < "$DOTFILES_DIR/linux/pkglist/pacman.txt"
         sudo pacman -S --needed --noconfirm "${pkgs[@]}"
         echo "✓ Pacman packages installed"
     fi
@@ -320,18 +320,18 @@ elif [[ "$DOTFILES_OS" == linux ]]; then
     # --- Install AUR packages ---
     if [[ "$DRY_RUN" == true ]]; then
         echo ""
-        echo "AUR packages to install (from pkglist/aur.txt):"
+        echo "AUR packages to install (from linux/pkglist/aur.txt):"
         while IFS= read -r pkg; do
             [[ -z "$pkg" || "$pkg" == \#* ]] && continue
             yay -Qi "$pkg" &>/dev/null || echo "  → $pkg"
-        done < "$DOTFILES_DIR/pkglist/aur.txt"
+        done < "$DOTFILES_DIR/linux/pkglist/aur.txt"
     else
         echo "📦 Installing AUR packages..."
         aur_pkgs=()
         while IFS= read -r pkg; do
             [[ -z "$pkg" || "$pkg" == \#* ]] && continue
             aur_pkgs+=("$pkg")
-        done < "$DOTFILES_DIR/pkglist/aur.txt"
+        done < "$DOTFILES_DIR/linux/pkglist/aur.txt"
         yay -S --needed --noconfirm "${aur_pkgs[@]}"
         echo "✓ AUR packages installed"
     fi
@@ -509,9 +509,9 @@ if [[ "$DRY_RUN" == true ]]; then
     echo ""
     echo "Symlinks:"
     if [[ -L ~/.gitignore_global ]]; then
-        echo "  → Would update: ~/.gitignore_global → $DOTFILES_DIR/git/gitignore_global"
+        echo "  → Would update: ~/.gitignore_global → $DOTFILES_DIR/config/git/gitignore_global"
     else
-        echo "  → Would create: ~/.gitignore_global → $DOTFILES_DIR/git/gitignore_global"
+        echo "  → Would create: ~/.gitignore_global → $DOTFILES_DIR/config/git/gitignore_global"
     fi
     if ! git config --global core.excludesfile | grep -q "gitignore_global"; then
         echo "  → Would set: git config --global core.excludesfile ~/.gitignore_global"
@@ -535,10 +535,10 @@ if [[ "$DRY_RUN" == true ]]; then
     fi
 else
     if [[ -L ~/.gitignore_global ]]; then
-        ln -sf "$DOTFILES_DIR/git/gitignore_global" ~/.gitignore_global
+        ln -sf "$DOTFILES_DIR/config/git/gitignore_global" ~/.gitignore_global
         echo "✓ Updated global gitignore symlink"
     else
-        ln -sf "$DOTFILES_DIR/git/gitignore_global" ~/.gitignore_global
+        ln -sf "$DOTFILES_DIR/config/git/gitignore_global" ~/.gitignore_global
         echo "✓ Linked global gitignore"
     fi
 
@@ -592,13 +592,13 @@ fi
 
 if [[ "$DRY_RUN" == true ]]; then
     if [[ -L "$GHOSTTY_CONFIG" ]]; then
-        echo "  → Would update: $GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+        echo "  → Would update: $GHOSTTY_CONFIG → $DOTFILES_DIR/config/ghostty/config"
     else
-        echo "  → Would create: $GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+        echo "  → Would create: $GHOSTTY_CONFIG → $DOTFILES_DIR/config/ghostty/config"
     fi
 else
     mkdir -p "$GHOSTTY_CONFIG_DIR"
-    ln -sf "$DOTFILES_DIR/ghostty/config" "$GHOSTTY_CONFIG"
+    ln -sf "$DOTFILES_DIR/config/ghostty/config" "$GHOSTTY_CONFIG"
     echo "✓ Linked Ghostty config"
 fi
 
@@ -620,13 +620,13 @@ fi
 
 if [[ "$DRY_RUN" == true ]]; then
     if [[ -L "$XDG_GHOSTTY_CONFIG" ]]; then
-        echo "  → Would update: $XDG_GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+        echo "  → Would update: $XDG_GHOSTTY_CONFIG → $DOTFILES_DIR/config/ghostty/config"
     else
-        echo "  → Would create: $XDG_GHOSTTY_CONFIG → $DOTFILES_DIR/ghostty/config"
+        echo "  → Would create: $XDG_GHOSTTY_CONFIG → $DOTFILES_DIR/config/ghostty/config"
     fi
 else
     mkdir -p "$XDG_GHOSTTY_DIR"
-    ln -sf "$DOTFILES_DIR/ghostty/config" "$XDG_GHOSTTY_CONFIG"
+    ln -sf "$DOTFILES_DIR/config/ghostty/config" "$XDG_GHOSTTY_CONFIG"
     echo "✓ Linked XDG Ghostty config"
 fi
 
@@ -652,31 +652,31 @@ config_symlinks() {
 }
 
 # git global config
-config_symlinks "$DOTFILES_DIR/git/gitconfig" "$HOME/.gitconfig" "git global config"
+config_symlinks "$DOTFILES_DIR/config/git/gitconfig" "$HOME/.gitconfig" "git global config"
 
 # curl
-config_symlinks "$DOTFILES_DIR/curl/curlrc" "$HOME/.curlrc" "curl config"
+config_symlinks "$DOTFILES_DIR/config/curl/curlrc" "$HOME/.curlrc" "curl config"
 
 # ripgrep
-config_symlinks "$DOTFILES_DIR/ripgrep/ripgreprc" "$HOME/.ripgreprc" "ripgrep config"
+config_symlinks "$DOTFILES_DIR/config/ripgrep/ripgreprc" "$HOME/.ripgreprc" "ripgrep config"
 
 # yt-dlp
-config_symlinks "$DOTFILES_DIR/yt-dlp/config" "$HOME/.config/yt-dlp/config" "yt-dlp config"
+config_symlinks "$DOTFILES_DIR/config/yt-dlp/config" "$HOME/.config/yt-dlp/config" "yt-dlp config"
 
 # aria2
-config_symlinks "$DOTFILES_DIR/aria2/aria2.conf" "$HOME/.aria2/aria2.conf" "aria2 config"
+config_symlinks "$DOTFILES_DIR/config/aria2/aria2.conf" "$HOME/.aria2/aria2.conf" "aria2 config"
 
 # bottom
-config_symlinks "$DOTFILES_DIR/bottom/bottom.toml" "$HOME/.config/bottom/bottom.toml" "bottom config"
+config_symlinks "$DOTFILES_DIR/config/bottom/bottom.toml" "$HOME/.config/bottom/bottom.toml" "bottom config"
 
 # GitHub CLI
-config_symlinks "$DOTFILES_DIR/gh/config.yml" "$HOME/.config/gh/config.yml" "gh config"
+config_symlinks "$DOTFILES_DIR/config/gh/config.yml" "$HOME/.config/gh/config.yml" "gh config"
 
 # VS Code (shared settings.json, different target per platform)
 if [[ "$DOTFILES_OS" == macos ]]; then
-    config_symlinks "$DOTFILES_DIR/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json" "VS Code settings"
+    config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json" "VS Code settings"
 else
-    config_symlinks "$DOTFILES_DIR/vscode/settings.json" "$HOME/.config/Code/User/settings.json" "VS Code settings"
+    config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/.config/Code/User/settings.json" "VS Code settings"
 fi
 
 # ============================================================================
@@ -685,7 +685,7 @@ fi
 
 if [[ "$DOTFILES_OS" == macos ]]; then
     # IINA mpv config
-    config_symlinks "$DOTFILES_DIR/iina/mpv.conf" "$HOME/Library/Application Support/iina/mpv.conf" "IINA mpv config"
+    config_symlinks "$DOTFILES_DIR/config/iina/mpv.conf" "$HOME/Library/Application Support/iina/mpv.conf" "IINA mpv config"
 fi
 
 # ============================================================================

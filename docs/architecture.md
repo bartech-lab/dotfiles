@@ -18,8 +18,22 @@ dotfiles/
 │       ├── aggressive-minimal.css          # Optional OpenAsar custom CSS
 │       ├── apply-openasar.sh              # Apply script for updates
 │       └── recover-discord.sh             # Recovery script
-├── git/
-│   └── gitignore_global      # Global Git ignore rules
+├── config/                   # One directory per application config
+│   ├── aria2/aria2.conf
+│   ├── bottom/bottom.toml
+│   ├── curl/curlrc
+│   ├── gh/config.yml
+│   ├── ghostty/config
+│   ├── git/gitconfig
+│   ├── git/gitignore_global  # Global Git ignore rules
+│   ├── iina/mpv.conf
+│   ├── ripgrep/ripgreprc
+│   ├── spicetify/Extensions/
+│   ├── ssh/config
+│   ├── vscode/settings.json
+│   └── yt-dlp/config
+├── linux/                    # Linux-only setup
+│   └── pkglist/              # pacman and AUR package lists
 ├── git-auto-pull/            # Automatic git repo syncing
 │   ├── pull.sh               # Main syncing script
 │   ├── setup.sh              # One-time setup for new machines
@@ -76,7 +90,7 @@ The numbered prefix ensures consistent loading regardless of filesystem order.
 ### 1. Symlink Creation
 
 ```bash
-~/.gitignore_global → ~/dotfiles/git/gitignore_global
+~/.gitignore_global → ~/dotfiles/config/git/gitignore_global
 ~/.config/zsh-dotfiles-loader.zsh → ~/dotfiles/zsh/functions.zsh
 ```
 
@@ -203,14 +217,14 @@ This is used throughout the codebase to:
 brew "new-tool"
 ```
 
-**Linux**: Edit `pkglist/pacman.txt` (official repos) or `pkglist/aur.txt` (AUR).
+**Linux**: Edit `linux/pkglist/pacman.txt` (official repos) or `linux/pkglist/aur.txt` (AUR).
 
 ### Linux Package Management
 
 Instead of Homebrew, Linux uses pacman/yay natively:
 
-- `pkglist/pacman.txt` — official repository packages (one per line)
-- `pkglist/aur.txt` — AUR packages installed via yay
+- `linux/pkglist/pacman.txt` — official repository packages (one per line)
+- `linux/pkglist/aur.txt` — AUR packages installed via yay
 
 Background services use systemd user timers instead of LaunchAgents:
 - `git-auto-pull/systemd/` — `.service` + `.timer` for hourly git sync
