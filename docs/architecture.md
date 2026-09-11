@@ -31,9 +31,6 @@ dotfiles/
 ├── system-update/            # Linux systemd timer for daily yay -Syu
 │   ├── system-update.service # systemd oneshot service
 │   └── system-update.timer   # Daily timer at 10:00
-├── calendar-ghost-fix/       # macOS Calendar ghost invite remover
-│   ├── run-now.sh            # Main fix script
-│   └── README.md             # Usage documentation
 ├── scripts/
 │   └── bin/                  # Executable scripts (in PATH)
 │       └── cookies           # Browser cookie extraction
@@ -176,7 +173,7 @@ This is used throughout the codebase to:
 - Branch PATH configuration for Homebrew vs native paths
 - Select platform-appropriate CLI tools (pbcopy vs xclip/wl-copy)
 - Choose GPU encoders (videotoolbox vs vaapi)
-- Prevent macOS-specific script execution on Linux (migration, calfix)
+- Prevent macOS-specific script execution on Linux (migration)
 
 ### Loading Order (Post-Linux Support)
 

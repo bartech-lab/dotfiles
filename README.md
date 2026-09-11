@@ -172,14 +172,6 @@ Optional lightweight monitor for user LaunchAgents.
 
 See [LaunchAgent Heartbeat README](launchd-heartbeat/README.md) for setup details.
 
-### Calendar Ghost Invite Fix
-
-Manual one-command fix for recurring ghost RSVP invites in macOS Calendar.
-
-- `calendar-ghost-fix/run-now.sh` - Runs the repair immediately
-
-See [Calendar Ghost Fix README](calendar-ghost-fix/README.md) for setup details.
-
 ## Migration
 
 Moving to a new Mac? Use the migration scripts:

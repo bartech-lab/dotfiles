@@ -35,7 +35,6 @@ Keep numbered function files stable and intentional.
 - `51-*` yt-dlp download helpers
 - `60-*` macOS/system defaults
 - `61-69*` desktop app helpers (Discord in `61-discord.zsh`, KDE in `62-kde.zsh`)
-- `70-*` pi coding agent helpers
 
 Rules:
 
