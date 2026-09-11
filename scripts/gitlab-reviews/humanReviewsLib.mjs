@@ -165,13 +165,20 @@ export const discussionContentHash = (discussion) =>
         .update(JSON.stringify(canonicalize(discussion)))
         .digest('hex');
 
+const NON_REVIEW_REASON = 'automated message delivered into the thread, not a review';
+
 export const processOnlyReason = (body) => {
     const compact = asText(body).trim().replace(/\s+/g, ' ');
-    if (!compact || compact.length > 160) return null;
+    if (!compact) return null;
+    // An automated post is recognised by how it opens, not by how short it is. A CI report
+    // runs to hundreds of characters, so it is matched before the sign-off length cap.
+    // Its patterns are prefix-anchored, which is why they can safely see a long body.
+    if (NON_REVIEW_PATTERNS.some((candidate) => candidate.test(compact))) return NON_REVIEW_REASON;
+    if (compact.length > 160) return null;
     const bare = stripSignOffDecoration(compact);
     if (!bare) return 'process-only approval or acknowledgement';
     const matches = (list) => list.find((candidate) => candidate.test(compact) || candidate.test(bare));
-    if (matches(NON_REVIEW_PATTERNS)) return 'automated message delivered into the thread, not a review';
+    if (matches(NON_REVIEW_PATTERNS)) return NON_REVIEW_REASON;
     return matches(PROCESS_ONLY_PATTERNS) ? 'process-only approval or acknowledgement' : null;
 };
 
