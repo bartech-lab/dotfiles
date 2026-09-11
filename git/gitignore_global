@@ -25,6 +25,10 @@ __pycache__/
 # AI/agent tool files
 .skill-lock.json
 
+# Local-only notes. The .local. suffix means the file is never shared, so no
+# repo tracks one and the ignore cannot hide a tracked path.
+*.local.md
+
 # Local git config (machine-specific identities)
 .gitconfig-github
 .gitconfig-gitlab
