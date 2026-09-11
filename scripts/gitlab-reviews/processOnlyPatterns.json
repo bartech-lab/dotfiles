@@ -25,10 +25,13 @@
     "^\\w{0,4}(?:test)+t*$",
     "^(?:asd|asdf|qwe|qwerty|zxc|rwer|jkhg|hjk|lorem|ipsum)\\w{0,4}$"
   ],
-  "nonReviewComment": "Whole-comment patterns for a message that is not a review at all, such as an email autoresponder delivered into a thread by an integration. Matched the same way as a sign-off, but recorded with its own reason.",
+  "nonReviewComment": "Whole-comment patterns for a message that is not a review at all: an email autoresponder or a CI report an integration posted into a thread. Matched before the sign-off length cap, so each pattern must be anchored at the start of the comment and specific enough that a human sentence cannot match it.",
   "nonReviewPatterns": [
     "^hello,?\\s*we received your message and our support will reach out to you as soon as possible\\.?$",
     "^(?:this is an )?automat(?:ic|ed)\\s+(?:reply|response|message)\\b.{0,80}$",
-    "^(?:out of office|ooo)\\b.{0,80}$"
+    "^(?:out of office|ooo)\\b.{0,80}$",
+    "^lighthouse report\\b",
+    "^(?:##\\s*)?(?:code ?coverage|coverage report|bundle size report|size report)\\b",
+    "^(?:the )?(?:pipeline|build|deployment)(?: for \\S+)?(?: has)? (?:succeeded|failed|passed)[.!]?$"
   ]
 }

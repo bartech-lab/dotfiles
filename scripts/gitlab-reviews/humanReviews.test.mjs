@@ -615,3 +615,21 @@ test('an autoresponder is filtered with its own reason, a real reply is not', ()
     assert.equal(processOnlyReason('lgtm'), 'process-only approval or acknowledgement');
     assert.equal(processOnlyReason('We received your message; the retry still duplicates the ticket'), null);
 });
+
+test('a long CI report is filtered, a human sentence mentioning one is not', () => {
+    const lighthouse = `Lighthouse report
+
+This pull request does not affect lighthouse score. Build pipeline can be found after
+clicking on report link: [https://example.com/pipelines/1].
+
+| Repr. diff pp. | Avg. diff pp. | Repr. Performance ratio |
+| --- | --- | --- |
+| 0 | 0 | 1 |`;
+    assert.equal(processOnlyReason(lighthouse), 'automated message delivered into the thread, not a review');
+    assert.equal(
+        processOnlyReason('The lighthouse report on this branch lost 8 points, please check the bundle'),
+        null,
+    );
+    assert.equal(processOnlyReason('Pipeline failed'), 'automated message delivered into the thread, not a review');
+    assert.equal(processOnlyReason('The pipeline failed because this test needs the flag'), null);
+});
