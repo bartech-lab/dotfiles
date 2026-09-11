@@ -443,8 +443,13 @@ z foo bar  # Jump to directory matching "foo" and "bar"
 
 Repairs macOS Calendar ghost invite state and restarts Calendar in the background.
 
+Requires the account address in `CALFIX_USER_EMAIL`. Export it from the
+untracked `~/.zshenv.local`, or pass `--email`.
+
 ```bash
 calfix
+# one-off address override
+calfix --email you@example.com
 # optional: also reset Dock badge cache
 calfix --reset-dock
 ```
