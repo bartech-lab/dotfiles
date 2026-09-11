@@ -6,9 +6,3 @@
 if [[ -x "$HOME/dotfiles/scripts/bin/git-autoswitch" ]]; then
   git() { "$HOME/dotfiles/scripts/bin/git-autoswitch" "$@" }
 fi
-
-# Machine-local overrides and secrets (untracked). Keep addresses, tokens and
-# host names out of this repository by exporting them here.
-if [[ -r "$HOME/.zshenv.local" ]]; then
-  source "$HOME/.zshenv.local"
-fi
