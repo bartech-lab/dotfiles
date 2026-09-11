@@ -1,8 +1,12 @@
 (function () {
     const target = "/collection/tracks";
 
-    function redirect() {
-        if (Spicetify?.Platform?.History?.location?.pathname === "/") {
+    function redirectHome() {
+        if (!Spicetify?.Platform?.History) return;
+
+        const path = Spicetify.Platform.History.location.pathname;
+
+        if (path === "/" || path === "/home") {
             Spicetify.Platform.History.replace(target);
         }
     }
@@ -13,8 +17,8 @@
             return;
         }
 
-        redirect();
-        Spicetify.Platform.History.listen(redirect);
+        redirectHome();
+        Spicetify.Platform.History.listen(redirectHome);
     }
 
     init();

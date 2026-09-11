@@ -672,6 +672,10 @@ config_symlinks "$DOTFILES_DIR/config/bottom/bottom.toml" "$HOME/.config/bottom/
 # GitHub CLI
 config_symlinks "$DOTFILES_DIR/config/gh/config.yml" "$HOME/.config/gh/config.yml" "gh config"
 
+# Spicetify extension. The link alone does not activate it: a new machine also needs
+# `spicetify config extensions startLikedSongs.js && spicetify apply` once.
+config_symlinks "$DOTFILES_DIR/config/spicetify/Extensions/startLikedSongs.js" "$HOME/.config/spicetify/Extensions/startLikedSongs.js" "spicetify startLikedSongs extension"
+
 # VS Code (shared settings.json, different target per platform)
 if [[ "$DOTFILES_OS" == macos ]]; then
     config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json" "VS Code settings"
