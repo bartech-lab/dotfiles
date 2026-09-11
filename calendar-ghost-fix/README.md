@@ -10,7 +10,7 @@ Manual runs from an interactive shell work reliably, so this setup is intentiona
 ## Configuration
 
 The script needs the Calendar account address to repair. It is never stored in
-this repository. Set it in `~/.zshenv.local`, which is untracked:
+this repository. Export it from `~/.zshenv`, which is untracked:
 
 ```bash
 export CALFIX_USER_EMAIL='you@example.com'
