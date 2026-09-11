@@ -15,6 +15,7 @@ import {
     mergeLedger,
     processOnlyReason,
     readLedger,
+    resolveAuthors,
     resolveReviewer,
     writeLedgerAtomic,
 } from './humanReviewsLib.mjs';
@@ -484,4 +485,75 @@ test('a dev-tested sign-off with a verdict is filtered, one with a finding is no
     ]) {
         assert.equal(processOnlyReason(body), null, body);
     }
+});
+
+test('scope approvals and a leading tick are sign-offs; the same text with a finding is not', () => {
+    for (const body of [
+        ':white_check_mark: tested by me',
+        ':white_check_mark: Tested by dev',
+        'Approved CO part',
+        'approve shared part',
+        'reviewed CO changes',
+        '@coderabbitai review full',
+    ]) {
+        assert.equal(processOnlyReason(body), 'process-only approval or acknowledgement', body);
+    }
+    for (const body of [
+        'Approved the shared part but the toast still fires twice',
+        'Approved CO part, though the migration still needs a rerun',
+    ]) {
+        assert.equal(processOnlyReason(body), null, body);
+    }
+});
+
+test('discovery collects every thread opener and buckets them by author', async () => {
+    const api = async (endpoint) => {
+        if (endpoint.includes('/merge_requests?')) {
+            const page = new URLSearchParams(endpoint.split('?')[1]).get('page');
+            return page === '1' ? [{ ...mr(71), author: { id: 9, username: 'author' } }] : [];
+        }
+        const page = new URLSearchParams(endpoint.split('?')[1]).get('page');
+        if (page !== '1') return [];
+        return [
+            { id: 'd1', notes: [note(71, REVIEWER_ID, 'Hoist this helper to module scope.', '2026-06-01T12:00:00Z')] },
+            { id: 'd2', notes: [note(72, 77, 'Use a discriminated union here.', '2026-06-01T12:00:00Z')] },
+            { id: 'd3', notes: [{ ...note(73, 500, 'system thing', '2026-06-01T12:00:00Z'), system: true }] },
+        ];
+    };
+
+    const result = await collectHumanReviews({
+        api,
+        projectId,
+        discoverReviewers: true,
+        since: '2026-03-11',
+        until: '2026-09-11',
+        concurrency: 1,
+    });
+
+    assert.deepEqual(Object.keys(result.byUser).sort(), ['other', 'reviewer']);
+    assert.equal(result.byUser.reviewer.candidates[0].noteId, '71');
+    assert.equal(result.byUser.other.candidates[0].noteId, '72');
+    assert.equal(result.candidates.length, 2);
+});
+
+test('discovery needs no reviewer list, a named run still does', async () => {
+    const api = async () => [];
+    await collectHumanReviews({ api, projectId, discoverReviewers: true, since: '2026-03-11', until: '2026-09-11' });
+    await assert.rejects(
+        () => collectHumanReviews({ api, projectId, since: '2026-03-11', until: '2026-09-11' }),
+        /requires a resolved reviewer/,
+    );
+});
+
+test('author resolution flags bots and keeps an unreadable account', async () => {
+    const api = async (endpoint) => {
+        if (endpoint === 'users/1') return { id: 1, username: 'a-bot', bot: true };
+        if (endpoint === 'users/2') return { id: 2, username: 'a-human', bot: false };
+        throw new Error('404 Not Found');
+    };
+    const resolved = await resolveAuthors(api, [1, 2, 3], { retries: 0, retryDelays: [] });
+    assert.equal(resolved.get('1').bot, true);
+    assert.equal(resolved.get('2').bot, false);
+    assert.equal(resolved.get('3').unresolved, true);
+    assert.equal(resolved.get('3').bot, false);
 });

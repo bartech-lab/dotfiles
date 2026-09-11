@@ -26,6 +26,7 @@ import {
     ledgerPathFor,
     mergeLedger,
     readLedger,
+    resolveAuthors,
     resolveReviewer,
     validateWindow,
     writeLedgerAtomic,
@@ -34,10 +35,15 @@ import {
 const repository = process.env.HR_REPO ?? DEFAULT_REPOSITORY;
 const config = REPOS[repository];
 const projectId = String(config?.projectId ?? (repository === DEFAULT_REPOSITORY ? DEFAULT_PROJECT_ID : ''));
-const usernames = (process.env.HR_USERS ?? process.env.HR_USER ?? DEFAULT_USER)
-    .split(',')
-    .map((name) => name.trim())
-    .filter(Boolean);
+const usersSetting = (process.env.HR_USERS ?? process.env.HR_USER ?? DEFAULT_USER).trim();
+// `all` collects every human who opened a thread, so nobody is excluded before curation.
+const discoverReviewers = usersSetting.toLowerCase() === 'all';
+const usernames = discoverReviewers
+    ? []
+    : usersSetting
+          .split(',')
+          .map((name) => name.trim())
+          .filter(Boolean);
 const since = process.env.HR_SINCE ?? DEFAULT_SINCE;
 const until = process.env.HR_UNTIL ?? new Date().toISOString();
 const concurrency = Number(process.env.HR_CONCURRENCY ?? DEFAULT_CONCURRENCY);
@@ -57,11 +63,14 @@ const expectedIdFor = (username) =>
 if (!repository) {
     printError(`No repository. Set HR_REPO, or add "repository" to ${CONFIG_FILE}.`);
     process.exitCode = 1;
-} else if (usernames.length === 0) {
-    printError(`No reviewer. Set HR_USERS, or add "user" to ${CONFIG_FILE}.`);
+} else if (!discoverReviewers && usernames.length === 0) {
+    printError(`No reviewer. Set HR_USERS to a list or to "all", or add "user" to ${CONFIG_FILE}.`);
     process.exitCode = 1;
 } else if (!config && !projectId) {
     printError(`Unknown repository ${repository}. Known: ${Object.keys(REPOS).join(', ')}`);
+    process.exitCode = 1;
+} else if (discoverReviewers && process.env.HR_OUT) {
+    printError('HR_OUT names a single file. Drop it when HR_USERS is "all".');
     process.exitCode = 1;
 } else if (usernames.length > 1 && process.env.HR_OUT) {
     printError('HR_OUT names a single file. Drop it when HR_USERS lists several reviewers.');
@@ -116,11 +125,13 @@ if (!repository) {
                 target.reviewer = await resolveReviewer(api, { username: target.username, expectedId: expectedIdFor(target.username) });
                 print(`${repository}: reviewer ${target.reviewer.username} (${target.reviewer.id}) -> ${target.output}`);
             }
+            if (discoverReviewers) print(`${repository}: discovering every thread opener; bots are dropped after the scan`);
             latestSnapshot = await collectHumanReviews({
                 api,
                 projectId,
                 repository,
-                users: targets.map((target) => target.reviewer),
+                users: discoverReviewers ? undefined : targets.map((target) => target.reviewer),
+                discoverReviewers,
                 since,
                 until,
                 concurrency,
@@ -130,12 +141,34 @@ if (!repository) {
                 },
                 onCheckpoint: async (snapshot) => {
                     latestSnapshot = snapshot;
-                    writeAll(snapshot, { partial: true });
+                    // Discovery cannot know its ledgers until bots are resolved, so it checkpoints in memory only.
+                    if (!discoverReviewers) writeAll(snapshot, { partial: true });
                     if (snapshot.processed % 50 === 0) {
                         print(`${repository}: checkpoint saved after ${snapshot.processed} merge requests`);
                     }
                 },
             });
+            if (discoverReviewers) {
+                const discovered = Object.values(latestSnapshot.byUser).map((slice) => slice.user);
+                const authors = await resolveAuthors(api, discovered.map((person) => person.id));
+                const kept = [];
+                const bots = [];
+                for (const person of discovered) {
+                    const resolved = authors.get(String(person.id));
+                    if (resolved?.bot) {
+                        bots.push(person.username);
+                        delete latestSnapshot.byUser[person.username];
+                        continue;
+                    }
+                    kept.push(person);
+                }
+                if (bots.length) print(`${repository}: dropped ${bots.length} bot accounts: ${bots.join(', ')}`);
+                for (const person of kept) {
+                    const output = ledgerPathFor(repository, person.username);
+                    const previous = readLedger(output) ?? emptyLedger({ repository, projectId, user: person.username, userId: person.id });
+                    targets.push({ username: person.username, output, previous, reviewer: person });
+                }
+            }
             const status = latestSnapshot.failures.length ? 'incomplete' : 'complete';
             writeAll(latestSnapshot, { completedAt: new Date().toISOString(), status });
             print(`${repository}: since ${since} through ${until}`);

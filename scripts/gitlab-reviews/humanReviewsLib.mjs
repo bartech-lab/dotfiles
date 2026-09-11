@@ -48,6 +48,8 @@ const stripSignOffDecoration = (value) => {
         text = text
             .replace(/(?::[a-z0-9_+-]+:|[\u{1F300}-\u{1FAFF}\u{2700}-\u{27BF}\u{2600}-\u{26FF}\u{FE0F}])\s*$/iu, '')
             .replace(/[\s.!,;)\-]+$/u, '')
+            // Some reviewers lead with the tick instead of trailing it.
+            .replace(/^\s*(?::[a-z0-9_+-]+:|[\u{1F300}-\u{1FAFF}\u{2700}-\u{27BF}\u{2600}-\u{26FF}\u{FE0F}])\s*/iu, '')
             .trim();
     } while (text !== previous);
     return text;
@@ -308,6 +310,14 @@ const snapshotByUser = (byUser, processed, total, failures, runId) =>
         ]),
     );
 
+// The first non-system note of a thread, as a reviewer record. Empty when there is none.
+const openerAsReviewer = (discussion) => {
+    const root = sortActualNotes(Array.isArray(discussion.notes) ? discussion.notes : [])[0];
+    const author = root?.author;
+    if (!author?.id || !author?.username || root.system === true) return [];
+    return [{ id: author.id, username: author.username, name: author.name ?? null }];
+};
+
 const ensureArray = (value, label) => {
     if (!Array.isArray(value)) throw new Error(`GitLab ${label} response is not an array`);
     return value;
@@ -315,12 +325,28 @@ const ensureArray = (value, label) => {
 
 export const ledgerPathFor = (repository, username) => `${LEDGER_DIR}/${repository}-${username}.json`;
 
+// GitLab's discussions payload carries no bot flag, so resolve each discovered author once.
+export const resolveAuthors = async (api, ids, options = {}) => {
+    const resolved = new Map();
+    for (const id of ids) {
+        try {
+            const person = await callWithRetry(api, `users/${encodeURIComponent(id)}`, options);
+            resolved.set(String(id), { id: person.id, username: person.username, bot: person.bot === true });
+        } catch {
+            // An unreadable account is kept, so a lookup failure never silently drops a reviewer.
+            resolved.set(String(id), { id, username: null, bot: false, unresolved: true });
+        }
+    }
+    return resolved;
+};
+
 export const collectHumanReviews = async ({
     api,
     projectId = DEFAULT_PROJECT_ID,
     repository = DEFAULT_REPOSITORY,
     user,
     users,
+    discoverReviewers = false,
     since = DEFAULT_SINCE,
     until = new Date().toISOString(),
     concurrency = DEFAULT_CONCURRENCY,
@@ -334,7 +360,7 @@ export const collectHumanReviews = async ({
 } = {}) => {
     if (typeof api !== 'function') throw new Error('collectHumanReviews requires an api function');
     const reviewers = users ?? (user ? [user] : []);
-    if (!reviewers.length || reviewers.some((entry) => !entry?.id || !entry?.username)) {
+    if (!discoverReviewers && (!reviewers.length || reviewers.some((entry) => !entry?.id || !entry?.username))) {
         throw new Error('collectHumanReviews requires a resolved reviewer');
     }
     validateWindow(since, until);
@@ -385,7 +411,13 @@ export const collectHumanReviews = async ({
         }
         failures.push(...mrFailures);
         for (const discussion of discussions) {
-            for (const reviewer of reviewers) {
+            // In discovery mode the thread's own opener is the reviewer, so every human is collected
+            // in the same pass and the filtering decision moves to curation.
+            const discussionReviewers = discoverReviewers ? openerAsReviewer(discussion) : reviewers;
+            for (const reviewer of discussionReviewers) {
+                if (discoverReviewers && !byUser.has(reviewer.username)) {
+                    byUser.set(reviewer.username, { user: reviewer, candidates: [], exclusions: [] });
+                }
                 const inspected = inspectDiscussion(mergeRequest, discussion, reviewer, since, until, runId);
                 const bucket = byUser.get(reviewer.username);
                 if (inspected.candidate) {
