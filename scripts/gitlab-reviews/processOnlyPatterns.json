@@ -1,0 +1,19 @@
+{
+  "comment": "Whole-comment sign-off patterns, per reviewer vocabulary. A pattern must match the entire comment (after emoji and punctuation are stripped) so a sign-off carrying a finding stays a candidate. Add a pattern here rather than editing humanReviewsLib.mjs; run reviewHumanReviews.mjs --short to see what needs one.",
+  "flags": "i",
+  "patterns": [
+    "^(?:accepting|approving)\\s+(?:the\\s+)?(?:as\\s+)?(?:co|co\\s+changes?|changes?|change\\s+requests?)\\.?$",
+    "^(?:accepting|approving)\\s+as\\s+co\\.?$",
+    "^(?:accepted?|approved?)\\s+(?:the\\s+)?(?:co|changes?|change\\s+requests?)\\.?$",
+    "^(?:co|changes?|change\\s+requests?)\\s+(?:accepted?|approved?)\\.?$",
+    "^(?:lgtm|looks\\s+good|ship\\s+it|approved?|accepted?|thanks?|thank\\s+you|done|ok|okay|conflicts|requested\\s+changes|resolved\\s+all\\s+threads)!?[.]?$",
+    "^(?:can you )?(?:please )?(?:rebase|resolve conflicts)(?: this branch| this mr)?[?.!]?$",
+    "^`?@(?:coderabbitai|coderabbit)\\s+(?:full\\s+review|review|resume|generate\\s+unit\\s+tests)`?[.!]?$",
+    "^(?:co approval only|approving co only|accepting co only)[.!]?$",
+    "^(?:re)?tested(?:\\s+(?:by|on)\\s+(?:me|dev|qa|myself|the\\s+dev))?$",
+    "^(?:approving|accepting)\\s+(?:the\\s+)?(?:co|codeowners?)(?:\\s+(?:part|changes?|section))?$",
+    "^(?:it\\s+)?(?:works|working)(?:\\s+(?:correctly|fine|well|as\\s+expected))?$",
+    "^(?:nice|great|good)\\s+(?:work|job|catch|one|stuff)\\b[^.!?]{0,40}$",
+    "^(?:dev[\\s-]*)?(?:re)?tested(?:\\s+(?:by|on)\\s+(?:me|dev|qa|myself|the\\s+dev))?(?:\\s*,?\\s*(?:web|mobile|ios|android)\\s*:?\\s*(?:correct|ok))*(?:\\s*[-,:]?\\s*(?:correct|ok|works|all\\s+seems\\s+good|looks\\s+good))?$"
+  ]
+}
