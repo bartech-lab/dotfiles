@@ -9,7 +9,7 @@ cd ~/Projects/some-gitlab-repo
 gitlab-stats                         # defaults: last 30 days, develop, merged-by
 gitlab-stats --stats all --top 5     # sprint retro — all stats, top 5
 gitlab-stats --since 2026-04-01      # since April, all defaults
-gitlab-stats --project tidio/js/frontend/operators-apps --stats mr-authors --top 0
+gitlab-stats --project org/group/repo --stats mr-authors --top 0
 ```
 
 ## Prerequisites

@@ -3,14 +3,16 @@
 set -euo pipefail
 
 CALENDAR_DB="${HOME}/Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb"
-USER_EMAIL="b.kowalski@tidio.net"
+USER_EMAIL="${CALFIX_USER_EMAIL:-}"
 RESET_DOCK=false
 
 usage() {
     cat <<'EOF'
-Usage: run-now.sh [--reset-dock]
+Usage: run-now.sh [--email ADDR] [--reset-dock]
 
 Options:
+  --email ADDR  Calendar account address to repair.
+                Defaults to $CALFIX_USER_EMAIL.
   --reset-dock  Restart Dock after repair to refresh badge cache.
   -h, --help    Show this help message.
 EOF
@@ -18,6 +20,14 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --email)
+            if [[ $# -lt 2 ]]; then
+                echo "--email requires an address" >&2
+                exit 1
+            fi
+            USER_EMAIL="$2"
+            shift
+            ;;
         --reset-dock)
             RESET_DOCK=true
             ;;
@@ -33,6 +43,17 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+if [[ -z "$USER_EMAIL" ]]; then
+    echo "No address configured. Set CALFIX_USER_EMAIL or pass --email ADDR." >&2
+    exit 1
+fi
+
+# The address is interpolated into SQL literals below, so reject quoting characters.
+if [[ "$USER_EMAIL" == *"'"* || "$USER_EMAIL" == *'\'* ]]; then
+    echo "Invalid address: $USER_EMAIL" >&2
+    exit 1
+fi
 
 if [[ ! -f "$CALENDAR_DB" ]]; then
     echo "Calendar database not found: $CALENDAR_DB"

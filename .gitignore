@@ -8,3 +8,4 @@ encoded/
 mp4/
 migration-backup.tar.gz
 
+*.local
