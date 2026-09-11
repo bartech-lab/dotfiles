@@ -34,7 +34,11 @@ export const OPEN_STATUSES = new Set(['pending', 'needs-recheck']);
 const DEFAULT_RETRY_DELAYS = [250, 750];
 // Patterns live in processOnlyPatterns.json so adding a reviewer's vocabulary is a data edit.
 const patternFile = new URL('./processOnlyPatterns.json', import.meta.url);
-const PROCESS_ONLY_PATTERNS = JSON.parse(readFileSync(patternFile, 'utf8')).patterns.map(
+const PATTERN_DATA = JSON.parse(readFileSync(patternFile, 'utf8'));
+const PROCESS_ONLY_PATTERNS = PATTERN_DATA.patterns.map((source) => new RegExp(source, 'i'));
+// A message an integration delivered into the thread is not a review at all, so it earns
+// its own reason rather than being filed as an approval.
+const NON_REVIEW_PATTERNS = (PATTERN_DATA.nonReviewPatterns ?? []).map(
     (source) => new RegExp(source, 'i'),
 );
 
@@ -50,6 +54,10 @@ const stripSignOffDecoration = (value) => {
             .replace(/[\s.!,;)\-]+$/u, '')
             // Some reviewers lead with the tick instead of trailing it.
             .replace(/^\s*(?::[a-z0-9_+-]+:|[\u{1F300}-\u{1FAFF}\u{2700}-\u{27BF}\u{2600}-\u{26FF}\u{FE0F}])\s*/iu, '')
+            // A sign-off often links its evidence; the link is not the finding.
+            .replace(/\s*(?:<)?https?:\/\/\S+(?:>)?\s*$/u, '')
+            // A bolded sign-off is still a sign-off.
+            .replace(/^\s*([*_]{1,2})([\s\S]*)\1\s*$/u, '$2')
             .trim();
     } while (text !== previous);
     return text;
@@ -162,8 +170,9 @@ export const processOnlyReason = (body) => {
     if (!compact || compact.length > 160) return null;
     const bare = stripSignOffDecoration(compact);
     if (!bare) return 'process-only approval or acknowledgement';
-    const pattern = PROCESS_ONLY_PATTERNS.find((candidate) => candidate.test(compact) || candidate.test(bare));
-    return pattern ? 'process-only approval or acknowledgement' : null;
+    const matches = (list) => list.find((candidate) => candidate.test(compact) || candidate.test(bare));
+    if (matches(NON_REVIEW_PATTERNS)) return 'automated message delivered into the thread, not a review';
+    return matches(PROCESS_ONLY_PATTERNS) ? 'process-only approval or acknowledgement' : null;
 };
 
 const normalizedNote = (note) => ({
