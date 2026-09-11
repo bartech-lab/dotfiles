@@ -557,3 +557,61 @@ test('author resolution flags bots and keeps an unreadable account', async () =>
     assert.equal(resolved.get('3').unresolved, true);
     assert.equal(resolved.get('3').bot, false);
 });
+
+test('a bolded tick sign-off is filtered, a bolded finding is not', () => {
+    assert.ok(processOnlyReason('**✅ tested by dev**'));
+    assert.ok(processOnlyReason('✅ **tested by dev**'));
+    assert.ok(processOnlyReason('**tested by me**'));
+    assert.ok(processOnlyReason('Those are simply changes, tested by me. ✅'));
+    assert.equal(processOnlyReason('**tested by dev**, but the empty state still flashes'), null);
+});
+
+test('a bare decision to not act is filtered, one carrying a reason is not', () => {
+    assert.ok(processOnlyReason("won't do"));
+    assert.ok(processOnlyReason('nevermind'));
+    assert.equal(processOnlyReason("won't do, the hook already guards this path", null), null);
+});
+
+test('any bot asked to re-review is filtered, a mention with a question is not', () => {
+    assert.ok(processOnlyReason('@some-review-bot review'));
+    assert.ok(processOnlyReason('`@some-review-bot full review`'));
+    assert.equal(processOnlyReason('@some-review-bot review — why did it skip this file?'), null);
+});
+
+test('a sign-off keeps its evidence link out of the decision', () => {
+    assert.ok(processOnlyReason('e2e approved :white_check_mark: https://example.com/jobs/1/artifacts/index.html'));
+    assert.ok(processOnlyReason('approval for e2e :white_check_mark:'));
+    assert.ok(processOnlyReason('checked e2e and daily tests :white_check_mark:'));
+    assert.equal(
+        processOnlyReason('approved, but the daily run is red: https://example.com/jobs/1'),
+        null,
+    );
+});
+
+test('a sign-off naming the approver is filtered, one carrying a change is not', () => {
+    assert.ok(processOnlyReason('Visual changes discussed and approved by A. Designer'));
+    assert.ok(processOnlyReason('Design changes consulted and approved by A. Reviewer'));
+    assert.equal(
+        processOnlyReason('Visual changes approved by A. Designer, but the spacing here is 20px'),
+        null,
+    );
+});
+
+test('a scratch comment is filtered, a real one that mentions a test is not', () => {
+    assert.ok(processOnlyReason('test'));
+    assert.ok(processOnlyReason('qwTestt'));
+    assert.ok(processOnlyReason('hjTestTestt'));
+    assert.ok(processOnlyReason('asd'));
+    assert.equal(processOnlyReason('test this with an empty list'), null);
+    assert.equal(processOnlyReason('testHelpers'), null);
+});
+
+test('an autoresponder is filtered with its own reason, a real reply is not', () => {
+    assert.equal(
+        processOnlyReason('Hello, we received your message and our support will reach out to you as soon as possible.'),
+        'automated message delivered into the thread, not a review',
+    );
+    assert.equal(processOnlyReason('Automatic reply: I am away until Monday'), 'automated message delivered into the thread, not a review');
+    assert.equal(processOnlyReason('lgtm'), 'process-only approval or acknowledgement');
+    assert.equal(processOnlyReason('We received your message; the retry still duplicates the ticket'), null);
+});

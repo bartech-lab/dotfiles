@@ -17,6 +17,18 @@
     "^(?:dev[\\s-]*)?(?:re)?tested(?:\\s+(?:by|on)\\s+(?:me|dev|qa|myself|the\\s+dev))?(?:\\s*,?\\s*(?:web|mobile|ios|android)\\s*:?\\s*(?:correct|ok))*(?:\\s*[-,:]?\\s*(?:correct|ok|works|all\\s+seems\\s+good|looks\\s+good))?$",
     "^(?:approv(?:ed?|ing)|reviewed)\\s+(?:the\\s+)?[a-z/ ]{1,20}?\\s*(?:part|parts|changes?|section)$",
     "^`?<span[^>]*>\\s*@[a-z0-9_-]*coderabbit(?:ai)?\\s*</span>\\s*(?:full\\s+)?review(?:\\s+full)?`?$",
-    "^`?@[a-z0-9_-]*coderabbit(?:ai)?\\s+(?:full\\s+review|review\\s+full|review|resume|generate\\s+unit\\s+tests)`?$"
+    "^`?@[a-z0-9_-]*coderabbit(?:ai)?\\s+(?:full\\s+review|review\\s+full|review|resume|generate\\s+unit\\s+tests)`?$",
+    "^(?:(?:dev|developer|qa|e2e|visual|design|co|codeowners?|those\\s+are\\s+simply\\s+changes)[\\s,]+)*(?:re)?(?:tested|approvals?|approved?|checked|verified|consulted|reviewed)\\b(?:\\s*[,.:;-]\\s*|\\s+(?:and|by|on|in|at|with|for|locally|me|myself|dev\\d*|qa|staging|prod|production|environment|env|changes?|approved?|approve|tested|discussed|consulted|all|everything|it|this|its|looks?|look|looking|seems?|seem|works?|work|working|good|great|fine|well|correct|correctly|ok|okay|as|expected|just|no|issues?|found|there|here|the|a|to|properly|yes|behaves?|behaviour|behavior|daily|dailies|tests?|suites?|run|runs|smoke|regression|nothing|broken|e2e|changes|renames?|moves?|files?|rename|move|simply|are|is|by\\s+[A-Za-z][\\w.'-]*))*$",
+    "^(?:won'?t\\s+do|not\\s+doing|no\\s+longer\\s+relevant|obsolete|outdated|nevermind|never\\s+mind|my\\s+bad|disregard|ignore\\s+(?:this|it))[.!]?$",
+    "^`?@[\\w.-]+\\s+(?:full\\s+)?review(?:\\s+full)?`?[.!]?$",
+    "^(?:visual\\s+|design\\s+)?changes?\\s+(?:were\\s+)?(?:discussed|consulted)?\\s*(?:and\\s+)?(?:approved|accepted)\\s+by\\s+[\\w.'-]+(?:\\s+[\\w.'-]+)?$",
+    "^\\w{0,4}(?:test)+t*$",
+    "^(?:asd|asdf|qwe|qwerty|zxc|rwer|jkhg|hjk|lorem|ipsum)\\w{0,4}$"
+  ],
+  "nonReviewComment": "Whole-comment patterns for a message that is not a review at all, such as an email autoresponder delivered into a thread by an integration. Matched the same way as a sign-off, but recorded with its own reason.",
+  "nonReviewPatterns": [
+    "^hello,?\\s*we received your message and our support will reach out to you as soon as possible\\.?$",
+    "^(?:this is an )?automat(?:ic|ed)\\s+(?:reply|response|message)\\b.{0,80}$",
+    "^(?:out of office|ooo)\\b.{0,80}$"
   ]
 }

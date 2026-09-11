@@ -14,5 +14,6 @@
   "chat.disableAIFeatures": true,
   "git.autorefresh": true,
   "git.autofetch": true,
-  "git.autofetchPeriod": 60
+  "git.autofetchPeriod": 60,
+  "terminal.integrated.enableMultiLinePasteWarning": "never"
 }
