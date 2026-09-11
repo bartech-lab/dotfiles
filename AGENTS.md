@@ -8,18 +8,25 @@ content in the owning repository's own local `AGENTS.md` instead.
 
 ## Scope
 
-- Target platform is macOS 14+ with zsh.
+- Both platforms are in active use: macOS 14+ and Linux (EndeavourOS/Arch), both with zsh.
+- Guard platform-specific work with `$DOTFILES_OS`. Never drop a Linux branch as dead code.
 - Prioritize minimal, readable, idempotent shell automation.
 - Preserve existing behavior unless the task explicitly requests a behavior change.
 
 ## Repository Map
 
+- `config/<app>/*` - per-application config files, symlinked into place by `install.sh`
 - `zsh/functions/*.zsh` - interactive shell functions and aliases
 - `scripts/bin/*` - executable scripts invoked directly
 - `scripts/shims/*` - symlinks that shadow real binaries on `PATH` (currently `git`)
+- `scripts/gitlab-reviews/*` - GitLab review harvester, identities in local config
+- `linux/*` - Linux-only setup, including `linux/pkglist/` package lists
 - `docs/*.md` - user-facing documentation
 - `Brewfile` - Homebrew formula/cask/extensions source of truth
 - `discord/openasar/*` - OpenAsar persistence assets (opt-in)
+
+A new application config goes in `config/<app>/`, with a `config_symlinks` call in
+`install.sh` and a line in the `docs/architecture.md` tree.
 
 ## Function File Numbering
 

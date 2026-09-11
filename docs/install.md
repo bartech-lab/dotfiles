@@ -32,7 +32,7 @@ The installer will:
 - On Linux: Install yay AUR helper, install packages via `pacman` and `yay`
 - Enable daily Homebrew autoupdate (macOS) or systemd timers (Linux)
 - Link dotfiles functions loader
-- Link `~/.gitignore_global` to the tracked file in `~/dotfiles/git/gitignore_global`
+- Link `~/.gitignore_global` to the tracked file in `~/dotfiles/config/git/gitignore_global`
 - Auto-install any missing critical dependencies
 - Check and report status
 
@@ -52,8 +52,8 @@ cd ~/dotfiles
 
 The Linux installer will:
 - Install `yay` (AUR helper)
-- Install all packages from `pkglist/pacman.txt` via `pacman`
-- Install AUR packages from `pkglist/aur.txt` via `yay`
+- Install all packages from `linux/pkglist/pacman.txt` via `pacman`
+- Install AUR packages from `linux/pkglist/aur.txt` via `yay`
 - Install fnm (Node.js version manager)
 - Set zsh as your default shell
 - Set up systemd user timers for git auto-pull and heartbeat
@@ -70,11 +70,11 @@ pacup
 
 ## Global Git Ignore
 
-The repo tracks a global Git ignore file at `git/gitignore_global`.
+The repo tracks a global Git ignore file at `config/git/gitignore_global`.
 
 During install, `./install.sh`:
 - Backs up an existing non-symlink `~/.gitignore_global`
-- Symlinks `~/.gitignore_global` to `~/dotfiles/git/gitignore_global`
+- Symlinks `~/.gitignore_global` to `~/dotfiles/config/git/gitignore_global`
 - Runs `git config --global core.excludesfile ~/.gitignore_global` if not already set
 
 This keeps your personal global ignore rules versioned in dotfiles while preserving the standard Git location.
