@@ -964,12 +964,3 @@ dotfiles-doctor() {
         return 1
     fi
 }
-
-# Manually repair macOS Calendar ghost invite state
-calfix() {
-    if [[ "$DOTFILES_OS" != macos ]]; then
-        echo "❌ calfix is macOS-only (repairs Calendar.sqlitedb)"
-        return 1
-    fi
-    "$HOME/dotfiles/calendar-ghost-fix/run-now.sh" "$@"
-}
