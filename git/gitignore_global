@@ -13,27 +13,17 @@ Thumbs.db
 __pycache__/
 
 # AI/agent tool directories
+# Only tools whose output no repo ever commits. Anything a repo may track
+# (.claude/, .mcp.json, AGENTS.md, CLAUDE*.md) belongs in that repo's
+# .git/info/exclude instead: a global ignore hides new files from git status
+# and makes `git add` refuse them without -f.
 .agent-browser/
-.agents/
-.claude/
-.codex/
-.commandcode/
 .llm/
 .opencode/
 .playwright-mcp/
-.sisyphus/
 
 # AI/agent tool files
-.mcp.json
 .skill-lock.json
-
-# Agent instruction files
-agents.md
-AGENTS.md
-claude.md
-CLAUDE.md
-claude.local.md
-CLAUDE.local.md
 
 # Local git config (machine-specific identities)
 .gitconfig-github
