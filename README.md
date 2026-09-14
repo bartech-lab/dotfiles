@@ -150,6 +150,7 @@ for setup and usage.
 - `git-cleanup` - Clean merged branches
 - `git-open` - Open repo in browser
 - `git-autoswitch` - Wraps `git push` to switch back to the default branch after pushing a feature branch. Installed as a zsh function and as `git` shims in `scripts/shims` and `~/.local/bin` (see [Functions Reference](docs/functions.md))
+- [WezTerm configuration](docs/wezterm.md) - Pro theme, Meslo 11 font, persistent local tabs, and direct tab shortcuts
 - `macos-defaults` - Apply comprehensive system preferences (Dock, Finder, Screenshots/Screen Recording, Keyboard, UI)
 - `macos-defaults-export` - Export current macOS settings to a backup script
 - `macos-disable-notification-sounds` - Turn off notification sounds across apps, skipping locked entries

@@ -651,6 +651,9 @@ config_symlinks() {
     fi
 }
 
+# WezTerm config (cross-platform path)
+config_symlinks "$DOTFILES_DIR/config/wezterm/wezterm.lua" "$HOME/.wezterm.lua" "WezTerm config"
+
 # git global config
 config_symlinks "$DOTFILES_DIR/config/git/gitconfig" "$HOME/.gitconfig" "git global config"
 
