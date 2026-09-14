@@ -30,8 +30,9 @@ Closing a tab terminates its panes and normally their child processes.
 Saved native conversations remain on disk. Independently detached processes can
 remain running. Use the explicit disconnect shortcut when work must continue.
 Do not assume the window close button is equivalent to disconnect.
-Run `wezterm` to reconnect locally. Opening a new application window through
-`wezterm start` can create another tab; it still belongs to the persistent server.
+Run `wezterm` to reconnect locally. The Linux application launcher uses `wezterm connect unix` to reconnect without
+creating another window. Explicit `wezterm start` creates a new terminal, so use
+`wezterm` or the application launcher for normal reattachment.
 
 The server and retained terminal buffers consume memory while disconnected.
 Closing finished tabs releases their process resources. Persistence does not

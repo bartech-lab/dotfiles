@@ -708,6 +708,8 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standardnotes-desktop.desktop" "$HOME/.local/share/applications/standardnotes-desktop.desktop" "Standard Notes desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/filen-desktop.desktop" "$HOME/.local/share/applications/filen-desktop.desktop" "Filen Desktop desktop"
 
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/org.wezfurlong.wezterm.desktop" "$HOME/.local/share/applications/org.wezfurlong.wezterm.desktop" "WezTerm reconnect launcher"
+
     # Plasma desktop session config
     config_symlinks "$DOTFILES_DIR/linux/plasma/plasmashellrc" "$HOME/.config/plasmashellrc" "Plasma shell config"
 fi

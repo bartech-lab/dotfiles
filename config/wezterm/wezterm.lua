@@ -90,7 +90,10 @@ config.mouse_bindings = {
 
 wezterm.on('gui-attached', function()
   for _, window in ipairs(wezterm.mux.all_windows()) do
-    window:gui_window():maximize()
+    local ok, gui = pcall(function() return window:gui_window() end)
+    if ok and gui then
+      gui:maximize()
+    end
   end
 end)
 
