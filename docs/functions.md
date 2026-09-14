@@ -76,6 +76,25 @@ du ~/Downloads      # Specific directory
 - Sortable columns
 - Mount point filtering
 
+## WezTerm
+
+The installer links `config/wezterm/wezterm.lua` to `~/.wezterm.lua` on both
+macOS and Linux. WezTerm starts in its local unix multiplexer domain, so tabs
+remain available when the GUI disconnects.
+
+Run `wezterm` to open the persistent local terminal. Use the normal `claude`
+or `codex` command inside a tab. Use `wezterm connect SSHMUX:mac` or
+`wezterm connect SSHMUX:linux` to attach to the other machine through the
+existing SSH configuration.
+
+On Linux, use `Ctrl+Shift+T` for a new tab and `Ctrl+Shift+W` to close it.
+On macOS, use `Cmd+T` and `Cmd+W`. Use `Ctrl+PageUp` / `Ctrl+PageDown`
+to change tabs on Linux. Use `Cmd+Shift+[` / `Cmd+Shift+]` on macOS.
+Use `Ctrl+Shift+D` to disconnect while keeping tabs and processes alive.
+Closing a tab terminates its panes; disconnecting preserves them.
+
+See [WezTerm setup and usage](wezterm.md) for persistence and remote prerequisites.
+
 ## Git Functions
 
 ### git-cleanup

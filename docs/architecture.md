@@ -31,6 +31,7 @@ dotfiles/
 │   ├── spicetify/Extensions/
 │   ├── ssh/config
 │   ├── vscode/settings.json
+│   ├── wezterm/wezterm.lua
 │   └── yt-dlp/config
 ├── linux/                    # Linux-only setup
 │   └── pkglist/              # pacman and AUR package lists
