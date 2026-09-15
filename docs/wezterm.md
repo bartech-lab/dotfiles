@@ -8,7 +8,8 @@ The package lists include WezTerm for Arch and Homebrew.
 
 The configuration matches Ghostty's Pro palette, custom blue slots, MesloLGS NF
 at 11 points, 10px padding, 97% background opacity, cyan bar cursor, and selection
-colors. Mouse selection copies to the clipboard. Attached windows maximize.
+colors. Mouse selection copies to the clipboard. Each GUI window maximizes once,
+including windows created after attachment. Later configuration reloads preserve manual resizing.
 Font rasterization differs between terminals; Ghostty's font thickening and
 synthetic-font controls are not reproduced exactly. macOS uses WebGpu, which can
 use Metal. Linux uses OpenGL. Install MesloLGS NF before comparing appearance.
@@ -23,10 +24,13 @@ or another ordinary terminal program. No agent wrapper or hook is required.
 | --- | --- | --- |
 | New tab | Ctrl+Shift+T | Cmd+T |
 | Close tab | Ctrl+Shift+W | Cmd+W |
+| New input line in compatible editors | Shift+Enter | Shift+Enter |
 | Previous/next tab | Ctrl+PageUp / Ctrl+PageDown | Cmd+Shift+[ / Cmd+Shift+] |
 | Leave running | Ctrl+Shift+D | Ctrl+Shift+D |
 
-Closing a tab terminates its panes and normally their child processes.
+Tabs and windows close without confirmation. Closing a tab terminates its panes and normally their child processes.
+Shift+Enter sends the distinct `CSI 13;2u` key sequence for multiline input.
+The application must support this sequence; it is not a universal editor command.
 Saved native conversations remain on disk. Independently detached processes can
 remain running. Use the explicit disconnect shortcut when work must continue.
 Do not assume the window close button is equivalent to disconnect.
