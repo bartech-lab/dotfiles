@@ -30,6 +30,18 @@ use Metal. Linux uses OpenGL. Install MesloLGS NF before comparing appearance.
 
 ## Start and finish work
 
+### Shell features
+
+Ghostty and WezTerm use the same zsh configuration, Powerlevel10k prompt,
+Tab completion, history suggestions, syntax highlighting, aliases, and functions.
+These features come from zsh, not the terminal application.
+The shared loader initializes completion after loading completion plugins.
+Open a new tab, or run `source ~/.zshrc` at a shell prompt, after updating shell configuration.
+Existing persistent shells retain their loaded configuration until you reload it.
+History suggestions use that shell's history; a remote Linux shell uses Linux history.
+
+### Terminal controls
+
 Open WezTerm from the application menu or run `wezterm`. Both startup paths use
 the persistent local server. Enter a project directory and run `claude`, `codex`,
 or another ordinary terminal program. No agent wrapper or hook is required.
@@ -57,6 +69,18 @@ Closing finished tabs releases their process resources. Persistence does not
 preserve live processes through reboot or server termination.
 
 ## Remote access
+
+### Shared window sizes
+
+Two GUI clients attached to the same mux tab share its terminal size.
+Resizing one client changes the shared terminal dimensions and can disrupt the other view.
+WezTerm has no documented independent-size setting for mirrored mux panes.
+Close the other GUI window before working on the same session from this machine.
+Window closure preserves the server-backed terminals. Closing a tab terminates it.
+Separate SSH sessions avoid shared sizing but do not show the same running programs.
+See [WezTerm issue #917](https://github.com/wezterm/wezterm/issues/917).
+
+### Connection requirements
 
 Install compatible WezTerm versions on both machines. Start local persistent
 terminals before testing access from the peer. Use the commands in the [connection quick reference](#connection-quick-reference).
