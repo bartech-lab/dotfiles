@@ -5,6 +5,11 @@ case "$(uname -s)" in
   *)      export DOTFILES_OS=unknown ;;
 esac
 
+# Restore interactive colors when the persistent Mac terminal inherits NO_COLOR.
+if [[ "$DOTFILES_OS" == macos && "${TERM_PROGRAM:-}" == WezTerm && -o interactive ]]; then
+  unset NO_COLOR
+fi
+
 # --- Powerlevel10k Instant Prompt (must stay first) ---
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
