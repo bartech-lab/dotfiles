@@ -81,6 +81,8 @@ end
 -- disconnect action preserves the mux server and all agent processes.
 local tab_mod = wezterm.target_triple:find('darwin') and 'SUPER' or 'CTRL|SHIFT'
 config.keys = {
+  { key = 'LeftArrow', mods = tab_mod, action = act.SendString '\x01' },
+  { key = 'RightArrow', mods = tab_mod, action = act.SendString '\x05' },
   { key = 't', mods = tab_mod, action = act.SpawnTab 'CurrentPaneDomain' },
   { key = 'w', mods = 'CTRL|SHIFT', action = act.CloseCurrentTab { confirm = false } },
   { key = 'w', mods = 'SUPER', action = act.CloseCurrentTab { confirm = false } },

@@ -56,6 +56,7 @@ or another ordinary terminal program. No agent wrapper or hook is required.
 | New tab | Ctrl+Shift+T | Cmd+T |
 | Close tab | Ctrl+Shift+W | Cmd+W |
 | New input line in compatible editors | Shift+Enter | Shift+Enter |
+| Move to line start/end | Ctrl+Shift+Left / Ctrl+Shift+Right | Cmd+Left / Cmd+Right |
 | Delete previous word | Alt+Backspace or Ctrl+Backspace | Option+Backspace or Control+Backspace |
 | Delete backward to line start | Shell default | Cmd+Backspace |
 | Previous/next tab | Ctrl+PageUp / Ctrl+PageDown | Cmd+Shift+[ / Cmd+Shift+] |
@@ -63,6 +64,8 @@ or another ordinary terminal program. No agent wrapper or hook is required.
 
 Tabs and windows close without confirmation. Closing a tab terminates its panes and normally their child processes.
 On macOS, Cmd+Backspace sends Ctrl+U, matching Ghostty.
+Line navigation sends Ctrl+A for line start and Ctrl+E for line end.
+The shell or editor determines their behavior; applications can assign different actions to these control characters.
 On both platforms, Alt/Option+Backspace sends Escape+DEL; Ctrl/Control+Backspace sends Ctrl+W.
 The shell or editor determines word boundaries and the exact Ctrl+U deletion range.
 Shift+Enter sends the distinct `CSI 13;2u` key sequence for multiline input.
