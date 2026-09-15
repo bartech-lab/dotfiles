@@ -28,6 +28,11 @@ Font rasterization differs between terminals; Ghostty's font thickening and
 synthetic-font controls are not reproduced exactly. macOS uses WebGpu, which can
 use Metal. Linux uses OpenGL. Install MesloLGS NF before comparing appearance.
 
+On macOS, interactive WezTerm shells clear inherited `NO_COLOR` to keep application colors enabled.
+Existing processes retain their environment. At an existing shell prompt, run
+`unset NO_COLOR`, then restart the affected application. You can still set
+`NO_COLOR=1` explicitly when launching an individual command.
+
 ## Start and finish work
 
 ### Shell features
