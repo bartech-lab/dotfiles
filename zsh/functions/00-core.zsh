@@ -29,6 +29,11 @@ fi
 # Load completions
 zinit ice blockf; zinit light zsh-users/zsh-completions
 
+# Initialize completion after plugins add their completion directories.
+autoload -Uz compinit
+compinit
+zinit cdreplay -q
+
 # Load autosuggestions
 zinit light zsh-users/zsh-autosuggestions
 
