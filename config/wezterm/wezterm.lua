@@ -78,12 +78,13 @@ config.keys = {
   { key = 'D', mods = 'CTRL|SHIFT', action = act.DetachDomain 'CurrentPaneDomain' },
 }
 
--- Match macOS deletion shortcuts without changing Linux key handling.
+-- Send conventional word deletion sequences on both platforms.
+table.insert(config.keys, { key = 'Backspace', mods = 'ALT', action = act.SendString '\x1b\x7f' })
+table.insert(config.keys, { key = 'Backspace', mods = 'CTRL', action = act.SendString '\x17' })
+
+-- Match Ghostty's macOS line deletion shortcut.
 if wezterm.target_triple:find('darwin') then
-  -- Send conventional editing sequences, independent of keyboard protocol.
   table.insert(config.keys, { key = 'Backspace', mods = 'SUPER', action = act.SendString '\x15' })
-  table.insert(config.keys, { key = 'Backspace', mods = 'ALT', action = act.SendString '\x1b\x7f' })
-  table.insert(config.keys, { key = 'Backspace', mods = 'CTRL', action = act.SendString '\x17' })
 end
 
 -- Preserve the Ghostty setting that sends the right Option key as Alt on macOS.
