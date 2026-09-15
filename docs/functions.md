@@ -90,8 +90,8 @@ existing SSH configuration.
 On Linux, use `Ctrl+Shift+T` for a new tab and `Ctrl+Shift+W` to close it.
 On macOS, use `Cmd+T` and `Cmd+W`. Use `Ctrl+PageUp` / `Ctrl+PageDown`
 to change tabs on Linux. Use `Cmd+Shift+[` / `Cmd+Shift+]` on macOS.
-Use `Ctrl+Shift+D` to disconnect while keeping tabs and processes alive.
-Closing a tab terminates its panes; disconnecting preserves them.
+Close the window normally to keep terminals running on the unix or SSHMUX server.
+Closing a tab terminates its panes. Run the same connection command to reconnect after closing the window.
 
 See [WezTerm setup and usage](wezterm.md) for persistence and remote prerequisites.
 

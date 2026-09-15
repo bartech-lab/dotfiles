@@ -4,6 +4,20 @@ WezTerm runs alongside Ghostty. Its configuration is linked from
 `config/wezterm/wezterm.lua` to `~/.wezterm.lua` on Linux and macOS.
 The package lists include WezTerm for Arch and Homebrew.
 
+## Connection quick reference
+
+Run the command on the machine you are using:
+
+| Connection | Command |
+| --- | --- |
+| Mac to Linux | `wezterm connect SSHMUX:linux` |
+| Linux to Mac | `wezterm connect SSHMUX:mac` |
+| Reconnect to local terminals | `wezterm connect unix` |
+
+Both machines need compatible WezTerm versions and working SSH aliases. See [Remote access](#remote-access) for prerequisites.
+Close the window normally to leave terminals running on the multiplexer server.
+Run the same connection command to return to them.
+
 ## Appearance
 
 The configuration matches Ghostty's Pro palette, custom blue slots, MesloLGS NF
@@ -26,14 +40,14 @@ or another ordinary terminal program. No agent wrapper or hook is required.
 | Close tab | Ctrl+Shift+W | Cmd+W |
 | New input line in compatible editors | Shift+Enter | Shift+Enter |
 | Previous/next tab | Ctrl+PageUp / Ctrl+PageDown | Cmd+Shift+[ / Cmd+Shift+] |
-| Leave running | Ctrl+Shift+D | Ctrl+Shift+D |
+| Leave running | Close the window | Close the window |
 
 Tabs and windows close without confirmation. Closing a tab terminates its panes and normally their child processes.
 Shift+Enter sends the distinct `CSI 13;2u` key sequence for multiline input.
 The application must support this sequence; it is not a universal editor command.
 Saved native conversations remain on disk. Independently detached processes can
-remain running. Use the explicit disconnect shortcut when work must continue.
-Do not assume the window close button is equivalent to disconnect.
+remain running. Closing the window disconnects from the unix or SSHMUX server and preserves its terminals.
+This requires server-backed terminals, as configured here; standalone terminals do not have this protection.
 Run `wezterm` to reconnect locally. The Linux application launcher uses `wezterm connect unix` to reconnect without
 creating another window. Explicit `wezterm start` creates a new terminal, so use
 `wezterm` or the application launcher for normal reattachment.
@@ -45,15 +59,7 @@ preserve live processes through reboot or server termination.
 ## Remote access
 
 Install compatible WezTerm versions on both machines. Start local persistent
-terminals before testing access from the peer. Use the existing SSH aliases:
-
-```sh
-# From Linux, for terminals running on the Mac:
-wezterm connect SSHMUX:mac
-
-# From macOS, for terminals running on Linux:
-wezterm connect SSHMUX:linux
-```
+terminals before testing access from the peer. Use the commands in the [connection quick reference](#connection-quick-reference).
 
 These commands can start the remote multiplexer. They are human-operated under
 the existing local-only agent policy. Remote setup and configuration changes
@@ -82,6 +88,7 @@ before treating end-to-end export as confirmed.
 
 Official references:
 
+- [Window close detaches multiplexer domains (stable source)](https://github.com/wezterm/wezterm/blob/20240203-110809-5046fc22/mux/src/lib.rs)
 - https://wezterm.org/multiplexing.html
 - https://wezterm.org/config/lua/config/default_domain.html
 - https://wezterm.org/config/lua/config/front_end.html
