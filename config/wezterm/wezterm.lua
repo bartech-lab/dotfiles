@@ -42,6 +42,7 @@ config.cursor_blink_rate = 0
 
 -- Keep the tab bar visible so tabs remain easy to find with one tab or many.
 config.hide_tab_bar_if_only_one_tab = false
+config.window_close_confirmation = 'NeverPrompt'
 
 -- The unix domain is the default for both `wezterm` and explicit `wezterm
 -- start` launches.  The latter is used by desktop launchers and would bypass
@@ -67,7 +68,9 @@ end
 local tab_mod = wezterm.target_triple:find('darwin') and 'SUPER' or 'CTRL|SHIFT'
 config.keys = {
   { key = 't', mods = tab_mod, action = act.SpawnTab 'CurrentPaneDomain' },
-  { key = 'w', mods = tab_mod, action = act.CloseCurrentTab { confirm = true } },
+  { key = 'w', mods = 'CTRL|SHIFT', action = act.CloseCurrentTab { confirm = false } },
+  { key = 'w', mods = 'SUPER', action = act.CloseCurrentTab { confirm = false } },
+  { key = 'Enter', mods = 'SHIFT', action = act.SendString '\x1b[13;2u' },
   { key = '[', mods = 'SUPER|SHIFT', action = act.ActivateTabRelative(-1) },
   { key = ']', mods = 'SUPER|SHIFT', action = act.ActivateTabRelative(1) },
   { key = 'PageUp', mods = 'CTRL', action = act.ActivateTabRelative(-1) },
@@ -88,11 +91,22 @@ config.mouse_bindings = {
   },
 }
 
+-- Maximize each GUI window once, including windows created after attachment.
+-- GLOBAL survives config reloads, so later reloads preserve manual resizing.
+local function maximize_once(window)
+  local key = 'initial-maximize-' .. window:window_id()
+  if not wezterm.GLOBAL[key] then
+    window:maximize()
+    wezterm.GLOBAL[key] = true
+  end
+end
+
+wezterm.on('window-config-reloaded', maximize_once)
 wezterm.on('gui-attached', function()
   for _, window in ipairs(wezterm.mux.all_windows()) do
-    local ok, gui = pcall(function() return window:gui_window() end)
-    if ok and gui then
-      gui:maximize()
+    local gui = window:gui_window()
+    if gui then
+      maximize_once(gui)
     end
   end
 end)
