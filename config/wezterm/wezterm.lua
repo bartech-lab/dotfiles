@@ -55,6 +55,20 @@ config.unix_domains = {
 config.default_domain = 'unix'
 config.default_gui_startup_args = { 'connect', 'unix' }
 
+-- The Mac's non-interactive SSH PATH is /usr/bin:/bin:/usr/sbin:/sbin, so the
+-- implicit SSHMUX:mac domain cannot find `wezterm`.  Name the app bundle path
+-- explicitly and connect with `wezterm connect mac`.
+if not wezterm.target_triple:find('darwin') then
+  config.ssh_domains = {
+    {
+      name = 'mac',
+      remote_address = 'mac',
+      multiplexing = 'WezTerm',
+      remote_wezterm_path = '/Applications/WezTerm.app/Contents/MacOS/wezterm',
+    },
+  }
+end
+
 -- Use Metal through WebGpu on macOS.  OpenGL remains the conservative Linux
 -- default for the current desktop driver stack.
 if wezterm.target_triple:find('darwin') then
