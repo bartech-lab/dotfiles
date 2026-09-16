@@ -88,7 +88,7 @@ This checks:
 - Dotfiles structure and symlinks
 - Shell integration
 - Powerlevel10k and gitstatus setup
-- Console output compatibility (instant prompt)
+- Console output compatibility (see [Shell startup](docs/functions.md#shell-startup))
 
 ## Safety First
 

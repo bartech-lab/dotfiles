@@ -2,6 +2,14 @@
 
 Complete reference for all shell functions and aliases.
 
+## Shell startup
+
+The prompt appears after shell initialization finishes. Powerlevel10k instant prompt is disabled.
+Wait for the prompt before entering commands. Ctrl+C during startup can leave functions and plugins unloaded.
+If startup was interrupted, run `exec zsh -l` from the idle prompt to start a fresh shell.
+Disabling instant prompt does not remove delays in startup commands.
+Completion initialization removes duplicate search paths before checking its cache. Security checks remain enabled.
+
 ## Modern CLI Replacements
 
 These replace default macOS commands with modern alternatives:
