@@ -3,7 +3,7 @@
 
 DOTFILES_DIR="$HOME/dotfiles"
 
-# 1. Load shell config (env vars, paths, p10k instant prompt)
+# 1. Load shell config (env vars, paths, prompt settings)
 if [[ -f "$DOTFILES_DIR/zsh/zshrc.zsh" ]]; then
   source "$DOTFILES_DIR/zsh/zshrc.zsh"
 fi

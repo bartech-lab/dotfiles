@@ -29,6 +29,10 @@ fi
 # Load completions
 zinit ice blockf; zinit light zsh-users/zsh-completions
 
+# Homebrew exports FPATH, so nested shells can inherit duplicate directories.
+# Keep the first occurrence to preserve lookup order and stable cache counts.
+typeset -U fpath
+
 # Initialize completion after plugins add their completion directories.
 autoload -Uz compinit
 compinit

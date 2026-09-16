@@ -10,10 +10,9 @@ if [[ "$DOTFILES_OS" == macos && "${TERM_PROGRAM:-}" == WezTerm && -o interactiv
   unset NO_COLOR
 fi
 
-# --- Powerlevel10k Instant Prompt (must stay first) ---
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# Show the prompt only after shell initialization finishes.
+# An early prompt can invite Ctrl+C before functions and plugins finish loading.
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
 # --- Homebrew (macOS only) ---
 if [[ "$DOTFILES_OS" == macos && -x /opt/homebrew/bin/brew ]]; then
