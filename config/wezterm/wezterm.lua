@@ -36,7 +36,7 @@ config.window_padding = {
   top = 10,
   bottom = 10,
 }
-config.window_background_opacity = 0.97
+config.window_background_opacity = 1.0
 config.default_cursor_style = 'SteadyBar'
 config.cursor_blink_rate = 0
 
@@ -77,8 +77,6 @@ if wezterm.target_triple:find('darwin') then
   config.max_fps = 120
 else
   config.front_end = 'OpenGL'
-  -- Keep the opaque background preferred in the performance trial.
-  config.window_background_opacity = 1.0
 end
 
 -- Keep routine tab navigation on direct, familiar shortcuts.  The explicit
