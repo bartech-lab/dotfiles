@@ -21,12 +21,15 @@ Run the same connection command to return to them.
 ## Appearance
 
 The configuration matches Ghostty's Pro palette, custom blue slots, MesloLGS NF
-at 11 points, 10px padding, 97% background opacity, cyan bar cursor, and selection
-colors. Mouse selection copies to the clipboard. Each GUI window maximizes once,
-including windows created after attachment. Later configuration reloads preserve manual resizing.
+at 11 points, 10px padding, cyan bar cursor, and selection colors. Backgrounds
+are opaque on Linux and 97% opaque on macOS. Mouse selection copies to the clipboard.
+Each GUI window maximizes once; later configuration reloads preserve manual resizing.
 Font rasterization differs between terminals; Ghostty's font thickening and
 synthetic-font controls are not reproduced exactly. macOS uses WebGpu, which can
 use Metal. Linux uses OpenGL. Install MesloLGS NF before comparing appearance.
+macOS uses a 120 fps cap for the built-in 120 Hz display; native Linux Wayland
+does not use `max_fps`. Both settings were retained after subjective comparison,
+not a measured latency benchmark. These changes do not resolve the Linux GUI freeze.
 
 On macOS, interactive WezTerm shells clear inherited `NO_COLOR` to keep application colors enabled.
 Existing processes retain their environment. At an existing shell prompt, run
