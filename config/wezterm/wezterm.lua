@@ -73,8 +73,12 @@ end
 -- default for the current desktop driver stack.
 if wezterm.target_triple:find('darwin') then
   config.front_end = 'WebGpu'
+  -- Match the built-in display's 120 Hz cap.
+  config.max_fps = 120
 else
   config.front_end = 'OpenGL'
+  -- Keep the opaque background preferred in the performance trial.
+  config.window_background_opacity = 1.0
 end
 
 -- Keep routine tab navigation on direct, familiar shortcuts.  The explicit
