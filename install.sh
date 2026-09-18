@@ -208,37 +208,36 @@ if [[ "$DRY_RUN" == false && -f "$DOTFILES_DIR/Brewfile" ]]; then
     fi
 fi
 
-# Configure Homebrew autoupdate (once per day)
-autoupdate_status=$(brew autoupdate status 2>&1 || true)
+# Configure Homebrew autoupdate (once per day, formulae only)
+# Casks are upgraded interactively with `brewup`; see brew-autoupdate/autoupdate.sh
+# for why an unattended cask upgrade pollutes App Management.
+legacy_autoupdate_status=$(brew autoupdate status 2>&1 || true)
+legacy_autoupdate_running=false
+[[ "$legacy_autoupdate_status" == *"installed and running"* ]] && legacy_autoupdate_running=true
 
 if [[ "$DRY_RUN" == true ]]; then
     echo ""
     echo "Homebrew autoupdate:"
-    if [[ "$autoupdate_status" == *"installed and running"* ]]; then
-        echo "  → Already running; would keep existing autoupdate settings"
-    else
-        echo "  → Would run: brew autoupdate start $AUTOUPDATE_INTERVAL --upgrade --cleanup"
+    if [[ "$legacy_autoupdate_running" == true ]]; then
+        echo "  → Would run: brew autoupdate delete (replaced by com.user.brewautoupdate)"
     fi
+    echo "  → Would install ~/.config/brew-autoupdate/brew-autoupdate"
+    echo "  → Would create LaunchAgent com.user.brewautoupdate every ${AUTOUPDATE_INTERVAL}s"
 else
     echo ""
     echo "🔄 Configuring Homebrew autoupdate..."
 
-    if [[ "$autoupdate_status" == *"installed and running"* ]]; then
-        echo "✓ Homebrew autoupdate already running"
-    else
-        set +e
-        autoupdate_start_output=$(brew autoupdate start "$AUTOUPDATE_INTERVAL" --upgrade --cleanup 2>&1)
-        autoupdate_start_status=$?
-        set -e
-
-        if (( autoupdate_start_status == 0 )); then
-            echo "✓ Homebrew autoupdate enabled (daily upgrade + cleanup)"
-        else
-            echo "⚠️ Failed to enable Homebrew autoupdate"
-            echo "$autoupdate_start_output"
-        fi
+    if [[ "$legacy_autoupdate_running" == true ]]; then
+        brew autoupdate delete >/dev/null 2>&1 || true
+        echo "✓ Removed domt4/autoupdate agent (upgraded casks unattended)"
     fi
+
+    mkdir -p ~/.config/brew-autoupdate
+    cp "$DOTFILES_DIR/brew-autoupdate/autoupdate.sh" ~/.config/brew-autoupdate/brew-autoupdate
+    chmod +x ~/.config/brew-autoupdate/brew-autoupdate
 fi
+
+ensure_launchagent_plist "com.user.brewautoupdate" "$HOME/.config/brew-autoupdate/brew-autoupdate" "$AUTOUPDATE_INTERVAL"
 
 # macOS background services (git-auto-pull + heartbeat)
 # Copy scripts to ~/.config (same as Linux, but use LaunchAgents)
