@@ -211,9 +211,11 @@ fi
 # Configure Homebrew autoupdate (once per day, formulae only)
 # Casks are upgraded interactively with `brewup`; see brew-autoupdate/autoupdate.sh
 # for why an unattended cask upgrade pollutes App Management.
-legacy_autoupdate_status=$(brew autoupdate status 2>&1 || true)
+# Detect the legacy agent by its plist, not via `brew autoupdate status`: the
+# tap may already be untapped, which leaves the agent loaded but the command gone.
+LEGACY_AUTOUPDATE_PLIST="$HOME/Library/LaunchAgents/com.github.domt4.homebrew-autoupdate.plist"
 legacy_autoupdate_running=false
-[[ "$legacy_autoupdate_status" == *"installed and running"* ]] && legacy_autoupdate_running=true
+[[ -f "$LEGACY_AUTOUPDATE_PLIST" ]] && legacy_autoupdate_running=true
 
 if [[ "$DRY_RUN" == true ]]; then
     echo ""
@@ -228,7 +230,9 @@ else
     echo "🔄 Configuring Homebrew autoupdate..."
 
     if [[ "$legacy_autoupdate_running" == true ]]; then
-        brew autoupdate delete >/dev/null 2>&1 || true
+        brew autoupdate delete >/dev/null 2>&1 \
+            || { launchctl bootout "gui/$(id -u)/com.github.domt4.homebrew-autoupdate" 2>/dev/null
+                 rm -f "$LEGACY_AUTOUPDATE_PLIST"; }
         echo "✓ Removed domt4/autoupdate agent (upgraded casks unattended)"
     fi
 
