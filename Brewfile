@@ -85,7 +85,7 @@ brew "shellcheck"       # Static analysis for Bash and POSIX sh scripts
 cask "brave-browser"            # Privacy-focused browser
 cask "android-platform-tools"   # ADB, fastboot for Android development
 cask "ghostty"                  # Modern terminal emulator (GPU-accelerated)
-cask "wezterm"                  # GPU-accelerated terminal emulator and multiplexer
+cask "wezterm@nightly"                 # GPU-accelerated terminal emulator and multiplexer
 cask "handbrake-app"            # Video transcoder (GUI for ffmpeg tasks)
 cask "iina"                     # Modern macOS video player
 cask "keka"                     # Archive extractor (7z, rar support)
