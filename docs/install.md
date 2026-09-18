@@ -30,7 +30,7 @@ source ~/.zshrc
 The installer will:
 - On macOS: Install Homebrew, install all dependencies via `brew bundle`
 - On Linux: Install yay AUR helper, install packages via `pacman` and `yay`
-- Enable daily Homebrew autoupdate (macOS) or systemd timers (Linux)
+- Enable daily Homebrew autoupdate for formulae (macOS) or systemd timers (Linux)
 - Link dotfiles functions loader
 - Link `~/.gitignore_global` to the tracked file in `~/dotfiles/config/git/gitignore_global`
 - Auto-install any missing critical dependencies
@@ -215,7 +215,7 @@ On a completely fresh macOS machine:
 The installer handles:
 - Installing Homebrew
 - Installing all Brewfile dependencies
-- Starting `brew autoupdate` once per day with `--upgrade --cleanup` (if not already running)
+- Installing `~/.config/brew-autoupdate/brew-autoupdate` and its LaunchAgent `com.user.brewautoupdate`, run once per day
 - Linking all function files
 - Verifying critical dependencies
 - Setting up shell integration
@@ -280,8 +280,14 @@ brew bundle --file=~/dotfiles/Brewfile
 To enable the same automatic daily updates manually:
 
 ```bash
-brew autoupdate start 86400 --upgrade --cleanup
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.user.brewautoupdate.plist
 ```
+
+The agent upgrades formulae only. Upgrade casks from a terminal with `brewup`.
+A launchd job has no responsible app bundle, so macOS attributes an unattended
+`brew upgrade --cask` to Homebrew's Ruby interpreter and adds a row named `ruby`
+to System Settings > Privacy & Security > App Management, one per portable-ruby
+release. Running `brewup` in a terminal attributes it to the terminal instead.
 
 To get latest dotfiles changes:
 ```bash

@@ -35,6 +35,7 @@ dotfiles/
 │   └── yt-dlp/config
 ├── linux/                    # Linux-only setup
 │   └── pkglist/              # pacman and AUR package lists
+├── brew-autoupdate/          # Daily Homebrew formula updates (macOS LaunchAgent)
 ├── git-auto-pull/            # Automatic git repo syncing
 │   ├── pull.sh               # Main syncing script
 │   ├── setup.sh              # One-time setup for new machines

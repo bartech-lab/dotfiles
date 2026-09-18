@@ -104,11 +104,14 @@ if [[ "$DOTFILES_OS" == macos ]]; then
             fi
         done
 
-        autoupdate_status=$(brew autoupdate status 2>&1 || true)
-        if [[ "$autoupdate_status" == *"installed and running"* ]]; then
-            pass "Homebrew autoupdate running"
+        if launchctl list 2>/dev/null | grep -q "com.user.brewautoupdate"; then
+            pass "Homebrew autoupdate running (formulae only)"
         else
-            warn "Homebrew autoupdate not running - run: brew autoupdate start 86400 --upgrade --cleanup"
+            warn "Homebrew autoupdate not running - run: ./install.sh"
+        fi
+
+        if launchctl list 2>/dev/null | grep -q "com.github.domt4.homebrew-autoupdate"; then
+            warn "Legacy domt4/autoupdate agent still loaded - run: brew autoupdate delete"
         fi
     else
         fail "Homebrew not installed"

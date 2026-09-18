@@ -4,10 +4,6 @@
 # To install: brew bundle --file=~/dotfiles/Brewfile
 # To check:   brew bundle check --file=~/dotfiles/Brewfile
 
-# Taps - Additional package repositories
-# autoupdate: Keeps Homebrew updated automatically
-tap "domt4/autoupdate"
-
 # ============================================================================
 # Core System Tools
 # ============================================================================

@@ -35,7 +35,7 @@ p10k configure
 
 The installer is idempotent and safe to re-run.
 
-On macOS it also enables daily Homebrew autoupdate. On Linux it enables systemd timers for automatic git syncing, heartbeat monitoring, SSD TRIM, and mirror list refresh.
+On macOS it also enables daily Homebrew autoupdate for formulae. On Linux it enables systemd timers for automatic git syncing, heartbeat monitoring, SSD TRIM, and mirror list refresh.
 
 ## Global Git Ignore
 
@@ -84,7 +84,7 @@ bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
 This checks:
 - System requirements (macOS version, Command Line Tools)
 - Homebrew and critical packages
-- Homebrew autoupdate status
+- Homebrew autoupdate status (`com.user.brewautoupdate`)
 - Dotfiles structure and symlinks
 - Shell integration
 - Powerlevel10k and gitstatus setup
