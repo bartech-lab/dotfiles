@@ -68,6 +68,29 @@ Update all packages:
 pacup
 ```
 
+## Global Git Config
+
+`~/.gitconfig` is a real file, not a symlink. `./install.sh` writes it with a single
+include:
+
+```ini
+[include]
+    path = ~/dotfiles/config/git/gitconfig
+```
+
+The tracked settings live in `config/git/gitconfig` and load through that include.
+
+Any `git config --global` write then lands in `~/.gitconfig`, which is untracked, instead
+of the tracked file. Project hooks, IDEs and containers add `safe.directory` entries that
+way, and `--add` never deduplicates, so a symlink would collect a new line on every
+checkout, merge and rebase.
+
+Personal overrides still belong in `~/.gitconfig.local`, which `config/git/gitconfig`
+includes.
+
+Re-running `./install.sh` keeps an existing `~/.gitconfig` and its entries. It only adds
+the include line when missing.
+
 ## Global Git Ignore
 
 The repo tracks a global Git ignore file at `config/git/gitignore_global`.
