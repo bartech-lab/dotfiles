@@ -8,6 +8,9 @@ set -e
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Must be initialised: every `[[ "$DRY_RUN" == false ]]` block is skipped when unset.
+DRY_RUN=false
+
 # Parse arguments
 for arg in "$@"; do
     case "$arg" in
@@ -267,7 +270,12 @@ GITCONF
 # One label per line
 com.user.gitautopull
 com.user.launchdheartbeat
+com.user.brewautoupdate
 HEARTBEATCONF
+    else
+        # The domt4 agent is gone; monitoring its label alerts forever.
+        sed -i '' 's|^com\.github\.domt4\.homebrew-autoupdate$|com.user.brewautoupdate|' \
+            ~/.config/launchd-heartbeat/monitored-labels.conf
     fi
 fi
 
