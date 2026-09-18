@@ -28,7 +28,14 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
         > "$HOME/Library/LaunchAgents/com.bartech.ai-caffeine.plist"
 
     launchctl bootout "$LAUNCH_DOMAIN/com.bartech.ai-caffeine" >/dev/null 2>&1 || true
-    launchctl bootstrap "$LAUNCH_DOMAIN" "$HOME/Library/LaunchAgents/com.bartech.ai-caffeine.plist"
+
+    # bootout is asynchronous, so an immediate bootstrap can lose the race and
+    # return 5 (Input/output error). Retry, then let the print check below decide.
+    for _ in 1 2 3; do
+        launchctl bootstrap "$LAUNCH_DOMAIN" \
+            "$HOME/Library/LaunchAgents/com.bartech.ai-caffeine.plist" 2>/dev/null && break
+        sleep 1
+    done
 
     if launchctl print "$LAUNCH_DOMAIN/com.bartech.ai-caffeine" >/dev/null 2>&1; then
         echo "LaunchAgent loaded"
