@@ -512,7 +512,7 @@ if [[ "$DRY_RUN" == true ]]; then
     else
         echo "  → Would create: ~/.gitignore_global → $DOTFILES_DIR/config/git/gitignore_global"
     fi
-    if ! git config --global core.excludesfile | grep -q "gitignore_global"; then
+    if ! git config --global --includes core.excludesfile | grep -q "gitignore_global"; then
         echo "  → Would set: git config --global core.excludesfile ~/.gitignore_global"
     fi
     if [[ -L ~/.config/zsh-dotfiles-loader.zsh ]]; then
@@ -541,7 +541,7 @@ else
         echo "✓ Linked global gitignore"
     fi
 
-    if ! git config --global core.excludesfile | grep -q "gitignore_global"; then
+    if ! git config --global --includes core.excludesfile | grep -q "gitignore_global"; then
         git config --global core.excludesfile ~/.gitignore_global
         echo "✓ Set git core.excludesfile → ~/.gitignore_global"
     fi
@@ -654,7 +654,48 @@ config_symlinks() {
 config_symlinks "$DOTFILES_DIR/config/wezterm/wezterm.lua" "$HOME/.wezterm.lua" "WezTerm config"
 
 # git global config
-config_symlinks "$DOTFILES_DIR/config/git/gitconfig" "$HOME/.gitconfig" "git global config"
+#
+# ~/.gitconfig is a real file, not a symlink, so that `git config --global`
+# writes (safe.directory entries added by project hooks, IDEs, containers)
+# land in this untracked file instead of the tracked dotfiles config.
+git_config_include() {
+    local src="$DOTFILES_DIR/config/git/gitconfig"
+    local dest="$HOME/.gitconfig"
+    local include_line="    path = $src"
+
+    if [[ -f "$dest" && ! -L "$dest" ]] && grep -Fqx "$include_line" "$dest"; then
+        [[ "$DRY_RUN" == true ]] && echo "  → git global config already includes dotfiles" \
+            || echo "✓ git global config already includes dotfiles"
+        return
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        if [[ -L "$dest" ]]; then
+            echo "  → Would replace symlink $dest with a real file including $src"
+        else
+            echo "  → Would add include of $src to $dest"
+        fi
+        return
+    fi
+
+    local existing=""
+    if [[ -f "$dest" && ! -L "$dest" ]]; then
+        existing="$(cat "$dest")"
+    fi
+
+    rm -f "$dest"
+    {
+        echo "[include]"
+        echo "$include_line"
+        if [[ -n "$existing" ]]; then
+            echo
+            echo "$existing"
+        fi
+    } > "$dest"
+    echo "✓ Linked git global config (include in real ~/.gitconfig)"
+}
+
+git_config_include
 
 # curl
 config_symlinks "$DOTFILES_DIR/config/curl/curlrc" "$HOME/.curlrc" "curl config"
