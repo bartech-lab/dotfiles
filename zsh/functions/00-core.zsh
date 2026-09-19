@@ -34,8 +34,20 @@ zinit ice blockf; zinit light zsh-users/zsh-completions
 typeset -U fpath
 
 # Initialize completion after plugins add their completion directories.
+# A full compinit rescans fpath and rewrites the dump on every shell start,
+# which cost ~600 ms of the ~750 ms startup on macOS.  Rescan at most once a
+# day and reuse the cached dump otherwise.
 autoload -Uz compinit
-compinit
+ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump"
+if [[ -n ${ZSH_COMPDUMP}(#qN.mh-24) ]]; then
+  compinit -C -d "$ZSH_COMPDUMP"
+else
+  compinit -d "$ZSH_COMPDUMP"
+fi
+# Compile the dump so later shells load bytecode instead of parsing 57 KB.
+if [[ ! -s ${ZSH_COMPDUMP}.zwc || ${ZSH_COMPDUMP} -nt ${ZSH_COMPDUMP}.zwc ]]; then
+  zcompile -R -- "${ZSH_COMPDUMP}.zwc" "$ZSH_COMPDUMP" 2>/dev/null
+fi
 zinit cdreplay -q
 
 # Load autosuggestions
