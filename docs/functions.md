@@ -9,6 +9,9 @@ Wait for the prompt before entering commands. Ctrl+C during startup can leave fu
 If startup was interrupted, run `exec zsh -l` from the idle prompt to start a fresh shell.
 Disabling instant prompt does not remove delays in startup commands.
 Completion initialization removes duplicate search paths before checking its cache. Security checks remain enabled.
+The completion dump is reused for 24 hours and recompiled to `.zcompdump.zwc`. A full rescan runs when the dump is older.
+Run `rm ~/.zcompdump*` after installing a tool whose completions must appear before the next daily rescan.
+Measured on macOS: interactive zsh startup fell from about 750 ms to about 130 ms, and a new WezTerm tab reaches the prompt in about 300 ms.
 
 ## Modern CLI Replacements
 
