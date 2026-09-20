@@ -81,7 +81,7 @@ fi
 # Collect bundled skills: directories under the bundle with a SKILL.md.
 all_skills=()
 for d in "${newest}"/*/; do
-  [[ -d "${d%/}" && -f "${d%/}SKILL.md" ]] || continue
+  [[ -d "${d%/}" && -f "${d%/}/SKILL.md" ]] || continue
   all_skills+=("${d%/}")
 done
 if [[ ${#all_skills[@]} -eq 0 ]]; then
