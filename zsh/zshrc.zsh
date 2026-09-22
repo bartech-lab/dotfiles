@@ -107,9 +107,6 @@ zstyle ':completion:*' accept-exact '*(N)'
 zstyle ':completion:*' use-cache yes
 zstyle ':completion:*' cache-path ~/.zsh/cache
 
-# bun completions
-[ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun"
-
 # fnm (Fast Node Manager), loaded lazily. Running `fnm env` at startup
 # occasionally stalled the prompt for ~6 s. The default Node is already on
 # PATH (npm global bin above), so the fnm binary first runs on the first `fnm`
