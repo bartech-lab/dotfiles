@@ -130,11 +130,8 @@ end
 
 wezterm.on('window-config-reloaded', maximize_once)
 wezterm.on('gui-attached', function()
-  for _, window in ipairs(wezterm.mux.all_windows()) do
-    local gui = window:gui_window()
-    if gui then
-      maximize_once(gui)
-    end
+  for _, win in ipairs(wezterm.gui.gui_windows()) do
+    maximize_once(win)
   end
 end)
 
