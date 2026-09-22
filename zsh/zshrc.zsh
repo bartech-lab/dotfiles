@@ -18,6 +18,7 @@ typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 if [[ "$DOTFILES_OS" == macos && -x /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
+_zst_mark brew
 
 # ====== Performance Critical Section ======
 {
@@ -52,6 +53,7 @@ fi
     export JAVA_HOME=$java_home
     path=("$JAVA_HOME/bin" $path)
   fi
+  _zst_mark java
 
   # Add system paths
   path+=(
@@ -112,6 +114,7 @@ zstyle ':completion:*' cache-path ~/.zsh/cache
 if command -v fnm &>/dev/null; then
   eval "$(fnm env --use-on-cd --log-level quiet)"
 fi
+_zst_mark fnm
 
 # Clean up PATH - remove unwanted paths inherited from parent environment
 path=(${path:#${HOME}/.rvm/bin})

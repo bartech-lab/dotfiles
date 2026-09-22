@@ -18,6 +18,7 @@ fi
 
 # Source zinit
 source "$ZINIT_HOME/bin/zinit.zsh"
+_zst_mark zinit
 autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
 
@@ -25,9 +26,11 @@ autoload -Uz _zinit
 if ! command -v p10k &>/dev/null; then
   zinit ice depth=1; zinit light romkatv/powerlevel10k
 fi
+_zst_mark p10k
 
 # Load completions
 zinit ice blockf; zinit light zsh-users/zsh-completions
+_zst_mark completions
 
 # Homebrew exports FPATH, so nested shells can inherit duplicate directories.
 # Keep the first occurrence to preserve lookup order and stable cache counts.
@@ -49,9 +52,11 @@ if [[ ! -s ${ZSH_COMPDUMP}.zwc || ${ZSH_COMPDUMP} -nt ${ZSH_COMPDUMP}.zwc ]]; th
   zcompile -R -- "${ZSH_COMPDUMP}.zwc" "$ZSH_COMPDUMP" 2>/dev/null
 fi
 zinit cdreplay -q
+_zst_mark compinit
 
 # Load autosuggestions
 zinit light zsh-users/zsh-autosuggestions
+_zst_mark autosuggest
 
 # Note: Syntax highlighting is loaded LAST in ~/.zshrc after this file
 # to ensure all aliases and functions are defined first
