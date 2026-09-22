@@ -12,7 +12,7 @@ zmodload zsh/datetime
 typeset -F SECONDS
 typeset -ga _zst_marks
 _zst_mark() {
-  local v
+  local v LC_NUMERIC=C
   printf -v v '%.3f' $SECONDS
   _zst_marks+=("$1=$v")
 }
