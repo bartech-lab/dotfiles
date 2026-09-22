@@ -114,6 +114,8 @@ zstyle ':completion:*' cache-path ~/.zsh/cache
 # occasionally stalled the prompt for ~6 s. The default Node is already on
 # PATH (npm global bin above), so the fnm binary first runs on the first `fnm`
 # call or the first cd into a directory with a Node version file.
+# install.sh installs fnm on Linux with its curl installer, into FNM_DIR.
+[[ -x "$HOME/.local/share/fnm/fnm" ]] && path+=("$HOME/.local/share/fnm")
 if command -v fnm &>/dev/null; then
   _fnm_lazy_init() {
     unfunction fnm
