@@ -52,6 +52,8 @@ if [[ ! -s ${ZSH_COMPDUMP}.zwc || ${ZSH_COMPDUMP} -nt ${ZSH_COMPDUMP}.zwc ]]; th
   zcompile -R -- "${ZSH_COMPDUMP}.zwc" "$ZSH_COMPDUMP" 2>/dev/null
 fi
 zinit cdreplay -q
+# bun ships a script that calls compdef, so it must run after compinit.
+[[ -s "$BUN_INSTALL/_bun" ]] && source "$BUN_INSTALL/_bun"
 _zst_mark compinit
 
 # Load autosuggestions
