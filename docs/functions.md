@@ -446,6 +446,14 @@ discord-openasar-status
 
 For the full workflow and file paths, see [discord-openasar.md](discord-openasar.md).
 
+## KDE Plasma Defaults (62-kde.zsh, Linux only)
+
+| Command | Description |
+|---------|-------------|
+| `kde-defaults` | Apply KDE Plasma system preferences |
+
+Applies performance-focused defaults: disables animations, enables fast key repeat, configures Dolphin with full paths and hidden files, sets tap-to-click, and disables launch feedback. Run once after installing dotfiles on a fresh Linux machine.
+
 ## Optional Tools
 
 These tools are installed but **not activated** for interactive use:
@@ -509,8 +517,10 @@ See [dev.md](dev.md) for full documentation.
 | Core | `00-core.zsh` | Zsh plugins and theme |
 | Shell | `10-shell.zsh` | Modern CLI aliases |
 | Brew | `20-brew.zsh` | Homebrew functions |
+| Pacman | `21-pacman.zsh` | Pacman/yay helpers (Linux only) |
 | Git | `30-git.zsh` | Git helpers |
 | Dev | `40-dev.zsh` | Development utilities |
+| omp | `41-omp.zsh` | omp wrapper with a trimmed tool list |
 | Media | `50-media.zsh` | Image/video processing |
 | Download | `51-download.zsh` | yt-dlp video downloading |
 | macOS | `60-macos.zsh` | System functions (macOS only) |
@@ -519,14 +529,6 @@ See [dev.md](dev.md) for full documentation.
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
-
-### KDE Plasma Defaults (62-kde.zsh, Linux only)
-
-| Command | Description |
-|---------|-------------|
-| `kde-defaults` | Apply KDE Plasma system preferences |
-
-Applies performance-focused defaults: disables animations, enables fast key repeat, configures Dolphin with full paths and hidden files, sets tap-to-click, and disables launch feedback. Run once after installing dotfiles on a fresh Linux machine.
 
 ## Browser Utilities
 
