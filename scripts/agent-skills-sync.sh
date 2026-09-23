@@ -8,8 +8,11 @@
 # Code. This script copies each skill (a directory containing SKILL.md) from
 # the newest synced bundle to:
 #
-#   ~/.codex/skills/<name>/     # Codex
-#   ~/.agents/skills/<name>/    # OMP (agent provider, native location)
+#   ~/.agents/skills/<name>/    # read natively by both Codex and OMP
+#
+# ~/.codex/skills is a deprecated Codex location that still loads, so copying
+# there too made Codex list every skill twice. A full run removes any tagged
+# mirror left in ~/.codex/skills.
 #
 # Each target directory is replaced wholesale and tagged with a
 # .agent-skills-sync marker. A full run (no name args) also removes tagged
@@ -30,7 +33,6 @@ usage() {
 Usage: agent-skills-sync [--dry-run] [name ...]
 
 Mirror skills from ~/.claude/skills/synced/<bundle> into
-  ~/.codex/skills/<name>/
   ~/.agents/skills/<name>/
 
 A full run replaces the target directories and removes stale mirrors.
@@ -107,20 +109,18 @@ fi
 if [[ ${dry_run} -eq 1 ]]; then
   echo "bundle: ${newest}"
   for d in "${targets[@]}"; do
-    echo "would mirror ${d##*/} -> ${omp_dir}/${d##*/} and ${codex_dir}/${d##*/}"
+    echo "would mirror ${d##*/} -> ${omp_dir}/${d##*/}"
   done
   exit 0
 fi
 
 for d in "${targets[@]}"; do
   name="${d##*/}"
-  for dest_dir in "${omp_dir}" "${codex_dir}"; do
-    dest="${dest_dir}/${name}"
-    echo "mirroring ${name} -> ${dest}"
-    rm -rf "${dest}"
-    cp -R "${d}" "${dest}"
-    touch "${dest}/${marker}"
-  done
+  dest="${omp_dir}/${name}"
+  echo "mirroring ${name} -> ${dest}"
+  rm -rf "${dest}"
+  cp -R "${d}" "${dest}"
+  touch "${dest}/${marker}"
 done
 
 if [[ ${#names[@]} -eq 0 ]]; then
@@ -131,7 +131,14 @@ if [[ ${#names[@]} -eq 0 ]]; then
   for dest_dir in "${omp_dir}" "${codex_dir}"; do
     for entry in "${dest_dir}"/*/; do
       [[ -d "${entry%/}" ]] || continue
-      name="${entry##*/}"
+      name="${entry%/}"; name="${name##*/}"
+      if [[ "${dest_dir}" == "${codex_dir}" ]]; then
+        if [[ -f "${entry%/}/${marker}" ]]; then
+          echo "removing legacy Codex mirror ${dest_dir}/${name}"
+          rm -rf "${entry%/}"
+        fi
+        continue
+      fi
       [[ -f "${entry%/}/${marker}" ]] || continue
       case " ${prune_names} " in
         *" ${name} "*) ;;
@@ -144,5 +151,5 @@ if [[ ${#names[@]} -eq 0 ]]; then
   done
 fi
 
-echo "done: ${#targets[@]} skill(s) mirrored to ${omp_dir} and ${codex_dir}"
+echo "done: ${#targets[@]} skill(s) mirrored to ${omp_dir}"
 echo "note: OMP reads its skill list at session start; start a new OMP session to see new skills."
