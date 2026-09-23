@@ -124,17 +124,6 @@ dotfiles-doctor
 - `video-remux [path] [--subdir]` - Lossless container conversion
 - `video-encode-cpu/gpu [path] [--subdir]` - H.265 encoding
 
-### Claude Code with OpenRouter
-
-> Claude Code and an OpenRouter API key are required.
-
-- `claude` - Start Claude Code with the normal Anthropic connection
-- `orclaude` - Start Claude Code through OpenRouter with Ox Alpha and a 1M context window
-
-Keep `OPENROUTER_API_KEY` in your local `~/.zshenv`. Never add the key to this
-repository. See [Development Utilities](docs/dev.md#claude-code-with-openrouter)
-for setup and usage.
-
 ### Development Utilities
 
 - `extract <archive>` - Universal archive extractor
