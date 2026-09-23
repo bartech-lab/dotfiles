@@ -144,7 +144,7 @@ for setup and usage.
 - `gitlab-stats [options]` - GitLab merge request statistics
 - `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
 - `discord-openasar-status` - Check OpenAsar LaunchAgent status
-- `agent-skills-sync [name ...]` - Mirror skills from the Claude-synced skill bundle into the Codex and OMP skill directories
+- `agent-skills-sync [name ...]` - Mirror skills from the Claude-synced skill bundle into ~/.agents/skills, which Codex and OMP both read
 
 ### Git & macOS Helpers
 
