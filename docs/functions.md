@@ -330,6 +330,21 @@ allow it to update again. Cleanup remains separate so old versions are not
 removed automatically. It does NOT run `brew bundle`; run that separately when
 you want to sync packages with Brewfile.
 
+## Pacman/Yay Helpers (21-pacman.zsh, Linux only)
+
+| Command | Description |
+|---------|-------------|
+| `pacup` | Update all packages (pacman -Syu + yay -Sua) |
+| `pacclean` | Clean package cache (keep 2 versions) |
+| `pacorphans` | List orphaned packages (dependencies no longer needed) |
+
+**Examples:**
+```bash
+pacup                # Full system update
+pacclean             # Free up cache space
+pacorphans           # Find packages to remove
+```
+
 ## Development Utilities
 
 ### extract
@@ -504,21 +519,6 @@ See [dev.md](dev.md) for full documentation.
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
-
-### Pacman/Yay Helpers (21-pacman.zsh, Linux only)
-
-| Command | Description |
-|---------|-------------|
-| `pacup` | Update all packages (pacman -Syu + yay -Sua) |
-| `pacclean` | Clean package cache (keep 2 versions) |
-| `pacorphans` | List orphaned packages (dependencies no longer needed) |
-
-**Examples:**
-```bash
-pacup                # Full system update
-pacclean             # Free up cache space
-pacorphans           # Find packages to remove
-```
 
 ### KDE Plasma Defaults (62-kde.zsh, Linux only)
 
