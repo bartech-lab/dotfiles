@@ -62,4 +62,20 @@ git -C "$LOCAL" status --porcelain | grep -q '^ M doc.md' || fail "edit not visi
 git -C "$LOCAL" checkout -q -- doc.md
 (cd "$LOCAL" && "$TOOL" add doc.md) 2>/dev/null && fail "accepted file without edits"
 
+# Path behind a symlinked directory: refused, and no state left behind.
+mkdir -p "$DEV/skills/demo"
+printf 'body\n' > "$DEV/skills/demo/SKILL.md"
+g -C "$DEV" add skills
+g -C "$DEV" commit -qm skills
+g -C "$DEV" push -q origin main
+git -C "$LOCAL" pull -q --ff-only
+mkdir -p "$TEST_ROOT/elsewhere"
+printf 'body (local)\n' > "$TEST_ROOT/elsewhere/SKILL.md"
+rm -rf "$LOCAL/skills/demo"
+ln -s "$TEST_ROOT/elsewhere" "$LOCAL/skills/demo"
+git -C "$LOCAL" update-index --skip-worktree -- skills/demo/SKILL.md
+(cd "$LOCAL" && "$TOOL" add skills/demo/SKILL.md) 2>/dev/null && fail "accepted path behind a symlink"
+git -C "$LOCAL" ls-files -v -- skills/demo/SKILL.md | grep -q '^S ' || fail "skip-worktree cleared on refusal"
+[[ ! -e "$LOCAL/.git/info/local-patches/skills/demo/SKILL.md.patch" ]] || fail "patch left behind on refusal"
+
 echo "ok"
