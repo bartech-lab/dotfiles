@@ -190,7 +190,9 @@ Everything lives in the repository's git dir and nothing is tracked:
 `info/local-patches/<path>.patch`, `info/attributes`, and the
 `filter.localpatch` entries in `.git/config`.
 
-Limits: regular text files only, because symlinks cannot carry a filter.
+Limits: regular text files only, because symlinks cannot carry a filter. A
+tracked path behind a symlinked directory is refused too, because git cannot
+track it at all; keep `skip-worktree` for those.
 `git diff` does not show managed edits; read the patch instead.
 
 ## macOS Functions

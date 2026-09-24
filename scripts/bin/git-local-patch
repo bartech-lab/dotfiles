@@ -21,10 +21,11 @@
 #   list              managed files, and whether each patch still applies
 #   filter smudge|clean <path>   used by git, not by hand
 #
-# Regular files only. Symlinks and binary files are refused.
+# Regular text files only. Symlinks, paths behind a symlinked directory, and
+# binary files are refused before anything changes.
 
 usage() {
-    sed -n '/^# Usage/,/^# Regular/p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '/^# Usage/,/^# binary/p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 die() {
@@ -93,36 +94,51 @@ attr_line() {
     printf '/%s filter=localpatch\n' "$1"
 }
 
+# Fails when any parent directory of the path is a symlink. Git cannot track a
+# path behind a symlink, so a filter can never apply there.
+check_no_symlinked_parent() {
+    local rel="$1" dir
+    dir=$(dirname "$rel")
+    while [[ "$dir" != . && "$dir" != / ]]; do
+        [[ -L "$dir" ]] && die "$rel: parent $dir is a symlink; git cannot filter it (keep skip-worktree for it)"
+        dir=$(dirname "$dir")
+    done
+}
+
 cmd_add() {
     local arg rel mode patch
+    local rels=()
     [[ $# -gt 0 ]] || die "add: no files given"
-    ensure_filter_config
-    mkdir -p "$(dirname "$attrs")"
-    touch "$attrs"
+
+    # Validate every file before changing anything, so a refusal leaves no half state.
     for arg in "$@"; do
         rel=$(relpath "$arg")
         mode=$(git ls-files -s -- "$rel" | awk '{print $1}')
         [[ "$mode" == 100644 || "$mode" == 100755 ]] || die "$rel: not a regular file (mode $mode)"
+        check_no_symlinked_parent "$rel"
         [[ -f "$rel" && ! -L "$rel" ]] || die "$rel: missing or not a regular file in the work tree"
         git diff --cached --quiet -- "$rel" || die "$rel: has staged changes; unstage them first"
+        cmp -s <(git show "HEAD:$rel") "$rel" && die "$rel: no local edits against HEAD"
+        rels+=("$rel")
+    done
 
+    ensure_filter_config
+    mkdir -p "$(dirname "$attrs")"
+    touch "$attrs"
+    for rel in "${rels[@]}"; do
         patch="$patches/$rel.patch"
         mkdir -p "$(dirname "$patch")"
-        if diff -u --label "a/$rel" --label "b/$rel" <(git show "HEAD:$rel") "$rel" > "$patch.new"; then
-            rm -f "$patch.new"
-            die "$rel: no local edits against HEAD"
+        diff -u --label "a/$rel" --label "b/$rel" <(git show "HEAD:$rel") "$rel" > "$patch" || true
+
+        # Round trip must be exact before git starts relying on it.
+        if ! cmp -s <(git show "HEAD:$rel" | run_filter smudge "$rel") "$rel" \
+            || ! cmp -s <(run_filter clean "$rel" < "$rel") <(git show "HEAD:$rel"); then
+            rm -f "$patch"
+            die "$rel: patch does not round-trip (binary file?); nothing changed for it"
         fi
-        mv "$patch.new" "$patch"
 
         grep -qxF "$(attr_line "$rel")" "$attrs" || attr_line "$rel" >> "$attrs"
         git update-index --no-skip-worktree -- "$rel"
-
-        # Round trip must be exact before git starts relying on it.
-        cmp -s <(git show "HEAD:$rel" | run_filter smudge "$rel") "$rel" \
-            || die "$rel: smudge does not reproduce the work tree; left the patch in $patch"
-        cmp -s <(run_filter clean "$rel" < "$rel") <(git show "HEAD:$rel") \
-            || die "$rel: clean does not reproduce HEAD; left the patch in $patch"
-
         # Refresh the index entry; clean output equals HEAD, so nothing is staged.
         git add -- "$rel"
         printf 'managed: %s\n' "$rel"
