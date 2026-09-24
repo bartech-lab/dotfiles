@@ -163,6 +163,36 @@ Pushes from VS Code's Source Control UI button still bypass the wrapper, and so
 does anything that resolves Git by absolute path. Scripts that must not switch
 can call `/opt/homebrew/bin/git push` or set `GIT_AUTOSWITCH_OFF=1`.
 
+### git local-patch
+
+`scripts/bin/git-local-patch` (on `PATH`, and linked to `~/.local/bin` for
+shells that lack `scripts/bin`) keeps
+local-only edits on tracked files: local agent instructions, tool settings, a
+debug flag. The edits never reach a commit, and `git pull --ff-only`, merges and
+branch switches keep working. `skip-worktree` does not do this: it makes a pull
+fail whenever upstream changes the file.
+
+```bash
+git local-patch add .claude/settings.json    # record the current edits (run again after changing them)
+git local-patch list                         # managed files, and whether each patch still applies
+git local-patch remove .claude/settings.json # stop managing; the edits stay and show as modified
+```
+
+A clean/smudge filter does the work. On checkout, git applies the stored patch
+to the upstream content. On `git status` and `git add`, git reverses it, so git
+only ever sees upstream content and cannot stage the edit.
+
+When upstream rewrites the patched lines, the file checks out as plain upstream
+and `.git/info/local-patches.log` records it. The pull still succeeds. Run
+`git local-patch list` to find stale patches, then edit the file and `add` again.
+
+Everything lives in the repository's git dir and nothing is tracked:
+`info/local-patches/<path>.patch`, `info/attributes`, and the
+`filter.localpatch` entries in `.git/config`.
+
+Limits: regular text files only, because symlinks cannot carry a filter.
+`git diff` does not show managed edits; read the patch instead.
+
 ## macOS Functions
 
 ### macos-defaults
