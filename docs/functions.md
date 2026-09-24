@@ -441,33 +441,6 @@ Pre-archive sanity checker (see [dev.md](dev.md)).
 repo-check              # Check for issues before archiving
 ```
 
-### claude-as
-
-`scripts/bin/claude-as` runs Claude Code signed in to another subscription
-account, for example a work account and a private one on the same machine.
-Both can run at the same time in different terminals. Works on macOS and Linux.
-
-```bash
-claude-as private        # first run: type /login and sign in to that account
-claude-as private -c     # later: any claude flags pass through
-claude                   # the default account, unchanged
-```
-
-Each profile is its own `CLAUDE_CONFIG_DIR` at `~/.claude-<name>`, so the login
-is separate: macOS keeps it in a Keychain item keyed by the directory path,
-Linux in `~/.claude-<name>/.credentials.json`.
-
-Configuration is symlinked in from `~/.claude` on every launch: `CLAUDE.md`,
-`settings.json`, `settings.local.json`, `keybindings.json`,
-`statusline-command.sh`, `hooks`, `skills`, `plugins`, `commands`, `agents`,
-`rules`, `output-styles`. Sessions, history, project memory and account data
-stay per profile, so one account never resumes the other account's
-conversations.
-
-If Claude saves a shared file by replacing the link with a real file, the next
-launch warns and leaves the copy alone. Delete it to go back to the shared one.
-Claude Desktop and IDE plugins do not use this; they read the default account.
-
 ## Download Utilities
 
 ### ytdl
@@ -588,7 +561,6 @@ See [dev.md](dev.md) for full documentation.
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
-| Claude profiles | `scripts/bin/claude-as` | Claude Code on a second subscription account |
 
 ## Browser Utilities
 
