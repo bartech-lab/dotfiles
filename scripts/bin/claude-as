@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Run Claude Code signed in to another subscription account, side by side with
+# the default one. Works on macOS and Linux.
+#
+# Each profile is its own CLAUDE_CONFIG_DIR at ~/.claude-<name>, so its login is
+# separate: macOS keeps it in a Keychain item keyed by the directory path, Linux
+# in <dir>/.credentials.json. Configuration is symlinked in from ~/.claude so the
+# profile behaves like your normal Claude. Sessions, history, project memory and
+# account data are NOT shared, so one account never resumes or reads the other
+# account's conversations.
+#
+# Usage: claude-as <name> [claude args...]
+#   claude-as private            first run: type /login and sign in to that account
+#   claude-as private -c         any claude flags pass through
+#
+# Shared (symlinked, refreshed on every launch): see SHARED below.
+
+set -euo pipefail
+
+SHARED=(
+    CLAUDE.md
+    settings.json
+    settings.local.json
+    keybindings.json
+    statusline-command.sh
+    hooks
+    skills
+    plugins
+    commands
+    agents
+    rules
+    output-styles
+)
+
+usage() {
+    sed -n '/^# Usage/,/^#   claude-as private -c/p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+if [[ $# -lt 1 || $1 == -h || $1 == --help ]]; then
+    usage
+    [[ $# -ge 1 ]] && exit 0
+    exit 2
+fi
+
+name=$1
+shift
+if [[ ! $name =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+    echo "claude-as: invalid profile name '$name' (use a-z, 0-9, - and _)" >&2
+    exit 2
+fi
+
+base="$HOME/.claude"
+profile="$HOME/.claude-$name"
+mkdir -p "$profile"
+
+for entry in "${SHARED[@]}"; do
+    src="$base/$entry"
+    dst="$profile/$entry"
+    if [[ -L $dst ]]; then
+        # Drop a link whose source was removed; keep a live one as it is.
+        [[ -e $src ]] || rm "$dst"
+    elif [[ -e $dst ]]; then
+        # Claude replaced the link with a real file (an atomic save does this).
+        echo "claude-as: $dst is a local copy, not a link to $src; it no longer follows ~/.claude" >&2
+    elif [[ -e $src ]]; then
+        ln -s "$src" "$dst"
+    fi
+done
+
+export CLAUDE_CONFIG_DIR="$profile"
+exec claude "$@"
