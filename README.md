@@ -78,6 +78,7 @@ sh -n path/to/changed-posix-file.sh
 zsh -n path/to/changed-zsh-file.zsh
 bash ~/dotfiles/scripts/tests/test-git-autoswitch.sh
 bash ~/dotfiles/scripts/tests/test-git-local-patch.sh
+bash ~/dotfiles/scripts/tests/test-claude-as.sh
 bash ~/dotfiles/git-auto-pull/tests/test.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
 ```
@@ -132,6 +133,7 @@ dotfiles-doctor
 - `repo-check` - Pre-archive sanity checker
 - `dotfiles-doctor` - Environment health check
 - `gitlab-stats [options]` - GitLab merge request statistics
+- `claude-as <name> [claude args]` - Run Claude Code signed in to a second subscription account, side by side with the default one (see [Functions Reference](docs/functions.md#claude-as))
 - `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
 - `discord-openasar-status` - Check OpenAsar LaunchAgent status
 - `agent-skills-sync [name ...]` - Mirror skills from the Claude-synced skill bundle into ~/.agents/skills, which Codex and OMP both read
