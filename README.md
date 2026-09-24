@@ -77,6 +77,7 @@ bash -n path/to/changed-bash-file.sh
 sh -n path/to/changed-posix-file.sh
 zsh -n path/to/changed-zsh-file.zsh
 bash ~/dotfiles/scripts/tests/test-git-autoswitch.sh
+bash ~/dotfiles/scripts/tests/test-git-local-patch.sh
 bash ~/dotfiles/git-auto-pull/tests/test.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
 ```
@@ -140,6 +141,7 @@ dotfiles-doctor
 - `git-cleanup` - Clean merged branches
 - `git-open` - Open repo in browser
 - `git-autoswitch` - Wraps `git push` to switch back to the default branch after pushing a feature branch. Installed as a zsh function and as `git` shims in `scripts/shims` and `~/.local/bin` (see [Functions Reference](docs/functions.md))
+- `git local-patch` - Keeps local-only edits on tracked files out of commits without breaking `git pull`, using a clean/smudge filter (see [Functions Reference](docs/functions.md#git-local-patch))
 - [WezTerm configuration](docs/wezterm.md) - Pro theme, Meslo 11 font, persistent local tabs, and direct tab shortcuts
 - `macos-defaults` - Apply comprehensive system preferences (Dock, Finder, Screenshots/Screen Recording, Keyboard, UI)
 - `macos-defaults-export` - Export current macOS settings to a backup script

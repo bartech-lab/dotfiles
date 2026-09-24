@@ -544,6 +544,11 @@ if [[ "$DRY_RUN" == true ]]; then
     else
         echo "  → Would create: ~/.local/bin/git → $DOTFILES_DIR/scripts/bin/git-autoswitch"
     fi
+    if [[ -e ~/.local/bin/git-local-patch && ! -L ~/.local/bin/git-local-patch ]]; then
+        echo "  ⚠ Would keep existing regular file: ~/.local/bin/git-local-patch"
+    else
+        echo "  → Would link: ~/.local/bin/git-local-patch → $DOTFILES_DIR/scripts/bin/git-local-patch"
+    fi
 else
     if [[ -L ~/.gitignore_global ]]; then
         ln -sf "$DOTFILES_DIR/config/git/gitignore_global" ~/.gitignore_global
@@ -583,6 +588,13 @@ else
     else
         ln -s "$DOTFILES_DIR/scripts/bin/git-autoswitch" ~/.local/bin/git
         echo "✓ Linked ~/.local/bin/git autoswitch shim"
+    fi
+
+    if [[ -e ~/.local/bin/git-local-patch && ! -L ~/.local/bin/git-local-patch ]]; then
+        echo "⚠ Kept existing regular file: ~/.local/bin/git-local-patch"
+    else
+        ln -sf "$DOTFILES_DIR/scripts/bin/git-local-patch" ~/.local/bin/git-local-patch
+        echo "✓ Linked ~/.local/bin/git-local-patch"
     fi
 fi
 

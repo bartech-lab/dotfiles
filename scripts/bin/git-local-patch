@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# Keep local-only edits on tracked files without committing them, and without
+# breaking `git pull`, `git merge --ff-only` or branch switches.
+#
+# How: a clean/smudge filter. Smudge (checkout) applies a stored patch to the
+# upstream content; clean (status, add) reverses it. Git only ever sees the
+# upstream content, so status stays clean, `git add` cannot stage the edit,
+# and an upstream change to the same file checks out with the patch reapplied.
+# If upstream rewrites the patched lines, the file checks out as plain upstream
+# and the failure is logged. The pull never fails.
+#
+# Everything lives in the repository's git dir, nothing is tracked:
+#   info/local-patches/<path>.patch   one patch per file
+#   info/attributes                   "/<path> filter=localpatch"
+#   config                            filter.localpatch.{clean,smudge}
+#   info/local-patches.log            patches that stopped applying
+#
+# Usage (as `git local-patch ...` or `git-local-patch ...`):
+#   add <file>...     record the file's current edits (also re-records)
+#   remove <file>...  stop managing; the edits stay and show as modified
+#   list              managed files, and whether each patch still applies
+#   filter smudge|clean <path>   used by git, not by hand
+#
+# Regular files only. Symlinks and binary files are refused.
+
+usage() {
+    sed -n '/^# Usage/,/^# Regular/p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+die() {
+    printf 'git-local-patch: %s\n' "$*" >&2
+    exit 1
+}
+
+# The filter must never abort: git takes empty output as the file content.
+# So this path has no `set -e`/`set -u`, and falls back to passing input through.
+run_filter() {
+    local mode="$1" path="$2" common patch tmp reverse=""
+    common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+    patch="$common/info/local-patches/$path.patch"
+    tmp=$(mktemp -d) || { cat; return 0; }
+    # shellcheck disable=SC2064 # expand $tmp now
+    trap "rm -rf '$tmp'" EXIT
+    mkdir -p "$tmp/$(dirname "$path")"
+    cat > "$tmp/$path"
+    if [[ -n "$common" && -f "$patch" ]]; then
+        [[ "$mode" == clean ]] && reverse="-R"
+        # Apply outside any repository, so git treats it as a plain patch.
+        # shellcheck disable=SC2086 # $reverse is empty or one flag
+        if (unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX; cd "$tmp" && git apply $reverse --check "$patch") 2>/dev/null; then
+            # shellcheck disable=SC2086
+            (unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX; cd "$tmp" && git apply $reverse "$patch")
+        elif [[ "$mode" == smudge && -z "${GIT_LOCAL_PATCH_NOLOG:-}" ]]; then
+            printf '%s %s: local patch no longer applies\n' "$(date '+%F %T')" "$path" >> "$common/info/local-patches.log"
+        fi
+    fi
+    cat "$tmp/$path"
+}
+
+if [[ "${1:-}" == filter ]]; then
+    [[ $# -eq 3 ]] || { cat; exit 0; }
+    run_filter "$2" "$3"
+    exit 0
+fi
+
+set -euo pipefail
+
+# Path git will call the filter with. Keep a symlink path as-is, so moving the
+# target does not break every configured repository.
+case "$0" in
+    */*) self=$(cd "$(dirname "$0")" && pwd)/$(basename "$0") ;;
+    *) self=$(command -v "$0") || die "cannot resolve own path" ;;
+esac
+top=$(git rev-parse --show-toplevel 2>/dev/null) || die "not inside a git work tree"
+common=$(git rev-parse --path-format=absolute --git-common-dir)
+patches="$common/info/local-patches"
+attrs="$common/info/attributes"
+cd "$top"
+
+# Repo-relative path of a user-supplied path.
+relpath() {
+    local rel
+    rel=$(git -C "$OLDPWD" ls-files --full-name --error-unmatch -- "$1" 2>/dev/null) || die "not a tracked file: $1"
+    printf '%s\n' "$rel"
+}
+
+ensure_filter_config() {
+    git config filter.localpatch.smudge "'$self' filter smudge %f"
+    git config filter.localpatch.clean "'$self' filter clean %f"
+}
+
+attr_line() {
+    printf '/%s filter=localpatch\n' "$1"
+}
+
+cmd_add() {
+    local arg rel mode patch
+    [[ $# -gt 0 ]] || die "add: no files given"
+    ensure_filter_config
+    mkdir -p "$(dirname "$attrs")"
+    touch "$attrs"
+    for arg in "$@"; do
+        rel=$(relpath "$arg")
+        mode=$(git ls-files -s -- "$rel" | awk '{print $1}')
+        [[ "$mode" == 100644 || "$mode" == 100755 ]] || die "$rel: not a regular file (mode $mode)"
+        [[ -f "$rel" && ! -L "$rel" ]] || die "$rel: missing or not a regular file in the work tree"
+        git diff --cached --quiet -- "$rel" || die "$rel: has staged changes; unstage them first"
+
+        patch="$patches/$rel.patch"
+        mkdir -p "$(dirname "$patch")"
+        if diff -u --label "a/$rel" --label "b/$rel" <(git show "HEAD:$rel") "$rel" > "$patch.new"; then
+            rm -f "$patch.new"
+            die "$rel: no local edits against HEAD"
+        fi
+        mv "$patch.new" "$patch"
+
+        grep -qxF "$(attr_line "$rel")" "$attrs" || attr_line "$rel" >> "$attrs"
+        git update-index --no-skip-worktree -- "$rel"
+
+        # Round trip must be exact before git starts relying on it.
+        cmp -s <(git show "HEAD:$rel" | run_filter smudge "$rel") "$rel" \
+            || die "$rel: smudge does not reproduce the work tree; left the patch in $patch"
+        cmp -s <(run_filter clean "$rel" < "$rel") <(git show "HEAD:$rel") \
+            || die "$rel: clean does not reproduce HEAD; left the patch in $patch"
+
+        # Refresh the index entry; clean output equals HEAD, so nothing is staged.
+        git add -- "$rel"
+        printf 'managed: %s\n' "$rel"
+    done
+}
+
+cmd_remove() {
+    local arg rel tmp
+    [[ $# -gt 0 ]] || die "remove: no files given"
+    for arg in "$@"; do
+        rel=$(relpath "$arg")
+        rm -f "$patches/$rel.patch"
+        if [[ -f "$attrs" ]]; then
+            tmp=$(mktemp)
+            grep -vxF "$(attr_line "$rel")" "$attrs" > "$tmp" || true
+            mv "$tmp" "$attrs"
+        fi
+        touch "$rel"
+        git update-index --refresh -q >/dev/null || true
+        printf 'released: %s (local edits kept, now visible to git)\n' "$rel"
+    done
+}
+
+cmd_list() {
+    local patch rel state
+    export GIT_LOCAL_PATCH_NOLOG=1
+    [[ -d "$patches" ]] || return 0
+    while IFS= read -r patch; do
+        rel=${patch#"$patches/"}
+        rel=${rel%.patch}
+        # A recorded patch always changes something, so smudge == HEAD means it failed.
+        if git show "HEAD:$rel" | run_filter smudge "$rel" 2>/dev/null | cmp -s - <(git show "HEAD:$rel"); then
+            state="NOT APPLIED (upstream rewrote the patched lines; see info/local-patches.log)"
+        elif cmp -s <(run_filter clean "$rel" < "$rel") <(git show "HEAD:$rel"); then
+            state=applied
+        else
+            state="applied, plus unrecorded edits (run add again to record them)"
+        fi
+        printf '%s\t%s\n' "$rel" "$state"
+    done < <(find "$patches" -type f -name '*.patch' | sort)
+}
+
+case "${1:-}" in
+    add) shift; cmd_add "$@" ;;
+    remove) shift; cmd_remove "$@" ;;
+    list) cmd_list ;;
+    -h|--help|'') usage ;;
+    *) usage >&2; exit 2 ;;
+esac
