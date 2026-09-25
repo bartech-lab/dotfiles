@@ -34,9 +34,6 @@ _zst_mark brew
     "$HOME/.local/bin"
   )
 
-  # npm global bin (fnm default alias, version-agnostic)
-  path+=("$HOME/.local/share/fnm/aliases/default/bin")
-
   # macOS-specific paths (Homebrew)
   if [[ "$DOTFILES_OS" == macos ]]; then
     path=(
@@ -47,6 +44,10 @@ _zst_mark brew
       $path
     )
   fi
+
+  # fnm default Node and npm global bin, ahead of Homebrew so a Homebrew node
+  # pulled in as a dependency never shadows the fnm-managed version.
+  path=("$HOME/.local/share/fnm/aliases/default/bin" $path)
 
   # ====== Java Configuration (macOS only) ======
   if [[ "$DOTFILES_OS" == macos ]] && java_home=$(/usr/libexec/java_home 2>/dev/null); then
@@ -119,7 +120,7 @@ if command -v fnm &>/dev/null; then
     add-zsh-hook -d chpwd _fnm_lazy_chpwd
     eval "$(command fnm env --use-on-cd --log-level quiet)"
   }
-  fnm() { _fnm_lazy_init; fnm "$@"; }
+  fnm() { _fnm_lazy_init; command fnm "$@"; }
   _fnm_lazy_chpwd() {
     [[ -f .node-version || -f .nvmrc || -f package.json ]] || return 0
     _fnm_lazy_init
