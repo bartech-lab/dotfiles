@@ -162,7 +162,18 @@ const canonicalize = (value) => {
 
 export const discussionContentHash = (discussion) =>
     createHash('sha256')
-        .update(JSON.stringify(canonicalize(discussion)))
+        .update(
+            JSON.stringify(
+                canonicalize({
+                    discussionId: discussion.discussionId ?? null,
+                    notes: (discussion.notes ?? []).map((note) => ({
+                        id: noteId(note),
+                        authorId: getAuthorId(note),
+                        body: note.body ?? '',
+                    })),
+                }),
+            ),
+        )
         .digest('hex');
 
 const NON_REVIEW_REASON = 'automated message delivered into the thread, not a review';
