@@ -16,12 +16,11 @@
 #          back when a JS adapter is configured.
 #
 # Kept deliberately:
-#   hub    `task` depends on it for `hub cancel` on a hung worker, `hub jobs`
-#          snapshots, and sibling coordination before same-file edits.
+#   wait   `task` and `bash` use it to list and cancel background jobs. It
+#          replaced `hub`, deprecated in omp 18.3.0 and rejected by --tools since.
 #   lsp, ast_edit          worth their 1,620 tokens on a large codebase.
 #   retain/recall/reflect/memory_edit   the Mnemopi memory suite, 986 tokens.
-OMP_TOOLS="read,bash,edit,write,grep,glob,task,web_search,lsp,ast_edit,retain,recall,reflect,memory_edit,hub"
-
 omp() {
-  command omp --tools="$OMP_TOOLS" "$@"
+  local tools="read,bash,edit,write,grep,glob,task,web_search,lsp,ast_edit,retain,recall,reflect,memory_edit,wait"
+  command omp --tools="$tools" "$@"
 }
