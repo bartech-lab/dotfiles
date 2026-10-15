@@ -235,6 +235,23 @@ test('a corrective reply reopens a reviewed learning without changing its root t
     assert.equal(next.entries[0].status, 'needs-recheck');
 });
 
+test('author profile and resolution changes do not reopen a reviewed learning', () => {
+    const run = { repository: 'example-repo', projectId, username: 'reviewer', userId: REVIEWER_ID };
+    const profile = (v) => ({ author: { id: REVIEWER_ID, username: 'reviewer', avatar_url: `https://example.com/a.png?v=${v}` } });
+    const discussion = { notes: [note(911, REVIEWER_ID, 'Use this cache.', '2026-06-01T00:00:00Z', profile(1))] };
+    const entry = { id: `${projectId}:911`, noteId: '911', body: 'Use this cache.', discussion, contentHash: discussionContentHash(discussion), status: 'applied' };
+    const ledger = mergeLedger(null, { candidates: [entry] }, run);
+    const refreshed = {
+        notes: [note(911, REVIEWER_ID, 'Use this cache.', '2026-06-01T00:00:00Z', {
+            ...profile(2),
+            resolved: true,
+            updated_at: '2026-06-03T00:00:00Z',
+        })],
+    };
+    const next = mergeLedger(ledger, { candidates: [{ ...entry, discussion: refreshed, contentHash: discussionContentHash(refreshed) }] }, run);
+    assert.equal(next.entries[0].status, 'applied');
+});
+
 test('glab API uses execFile with a GET request and parses JSON', async () => {
     let invocation;
     const api = createGlabApi({
