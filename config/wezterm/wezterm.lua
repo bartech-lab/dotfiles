@@ -103,9 +103,11 @@ table.insert(config.keys, { key = 'Backspace', mods = 'CTRL', action = act.SendS
 -- Match Ghostty's macOS line deletion shortcut.
 if wezterm.target_triple:find('darwin') then
   table.insert(config.keys, { key = 'Backspace', mods = 'SUPER', action = act.SendString '\x15' })
-  table.insert(config.keys, { key = 'LeftArrow', mods = 'SUPER|SHIFT', action = act.MoveTabRelative(-1) })
-  table.insert(config.keys, { key = 'RightArrow', mods = 'SUPER|SHIFT', action = act.MoveTabRelative(1) })
 end
+
+local move_tab_mod = wezterm.target_triple:find('darwin') and 'SUPER|SHIFT' or 'CTRL|SHIFT|ALT'
+table.insert(config.keys, { key = 'LeftArrow', mods = move_tab_mod, action = act.MoveTabRelative(-1) })
+table.insert(config.keys, { key = 'RightArrow', mods = move_tab_mod, action = act.MoveTabRelative(1) })
 
 -- Preserve the Ghostty setting that sends the right Option key as Alt on macOS.
 config.send_composed_key_when_left_alt_is_pressed = true
