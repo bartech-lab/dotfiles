@@ -65,8 +65,10 @@ or another ordinary terminal program. No agent wrapper or hook is required.
 | Delete previous word | Alt+Backspace or Ctrl+Backspace | Option+Backspace or Control+Backspace |
 | Delete backward to line start | Shell default | Cmd+Backspace |
 | Previous/next tab | Ctrl+PageUp / Ctrl+PageDown | Cmd+Shift+[ / Cmd+Shift+] |
+| Move tab left/right | Ctrl+Shift+PageUp / Ctrl+Shift+PageDown | Cmd+Shift+Left / Cmd+Shift+Right |
 | Leave running | Close the window | Close the window |
 
+A moved tab keeps its place only in the current GUI. Reconnecting to the unix or SSHMUX server restores the server's tab order.
 Tabs and windows close without confirmation. Closing a tab terminates its panes and normally their child processes.
 On macOS, Cmd+Backspace sends Ctrl+U, matching Ghostty.
 Line navigation sends Ctrl+A for line start and Ctrl+E for line end.
