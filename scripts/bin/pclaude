@@ -30,6 +30,7 @@ EXCLUDE=(
     remote-settings.json
     remote-settings.json.synced-at
     mcp-needs-auth-cache.json
+    stats-cache.json
     daemon
     daemon.log
     sessions
