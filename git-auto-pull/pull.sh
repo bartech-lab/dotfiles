@@ -196,6 +196,8 @@ process_repo() {
                     log_error "Fast-forward failed for $repo_path ($branch_name): $merge_output"
                     return 1
                 fi
+            elif git worktree list --porcelain | grep -qxF "branch refs/heads/$branch_name"; then
+                log_error "Skipped $repo_path ($branch_name): checked out in another worktree"
             elif git update-ref "refs/heads/$branch_name" "$REMOTE" "$LOCAL" 2>/dev/null; then
                 log_info "Updated $repo_path ($branch_name)"
             else
