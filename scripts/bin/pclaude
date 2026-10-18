@@ -121,6 +121,7 @@ try:
         dst = json.load(f)
 except FileNotFoundError:
     dst = {}
+before = json.dumps(dst, sort_keys=True)
 
 for key in GLOBAL_KEYS:
     if key in src:
@@ -136,6 +137,9 @@ for path, sp in src.get("projects", {}).items():
             dp[key] = sp[key]
         else:
             dp.pop(key, None)
+
+if json.dumps(dst, sort_keys=True) == before:
+    sys.exit(0)
 
 fd, tmp = tempfile.mkstemp(dir=os.path.dirname(dst_path), prefix=".claude.json.")
 with os.fdopen(fd, "w") as f:
