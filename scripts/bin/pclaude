@@ -93,6 +93,9 @@ GLOBAL_KEYS = (
     "cachedChromeExtensionInstalled",
     "deepLinkTerminal",
     "githubRepoPaths",
+    "codeReviewLastEffort",
+    "diffSidebarOpen",
+    "showExpandedTodos",
 )
 PROJECT_KEYS = (
     "mcpServers",
