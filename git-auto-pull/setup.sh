@@ -18,8 +18,8 @@ mkdir -p ~/Library/LaunchAgents
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Copy the pull script
-cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/pull.sh
-chmod +x ~/.config/git-auto-pull/pull.sh
+cp "$DOTFILES_DIR/git-auto-pull/pull.sh" ~/.config/git-auto-pull/git-auto-pull
+chmod +x ~/.config/git-auto-pull/git-auto-pull
 
 # Create empty config file if it doesn't exist
 if [[ ! -f ~/.config/git-auto-pull/repos.conf ]]; then
@@ -49,8 +49,7 @@ cat > "$PLIST_PATH" << EOF
     <string>com.user.gitautopull</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>$HOME/.config/git-auto-pull/pull.sh</string>
+        <string>$HOME/.config/git-auto-pull/git-auto-pull</string>
     </array>
     <key>StartInterval</key>
     <integer>3600</integer>
@@ -98,7 +97,7 @@ echo ""
 echo "Next steps:"
 echo "1. Edit ~/.config/git-auto-pull/repos.conf to add your repositories"
 echo "2. Format: /path/to/repo:branch-name"
-echo "3. Test with: bash ~/.config/git-auto-pull/pull.sh"
+echo "3. Test with: ~/.config/git-auto-pull/git-auto-pull"
 echo ""
 echo "The script runs every hour automatically."
 echo "Logs: ~/.config/git-auto-pull/pull.log"
