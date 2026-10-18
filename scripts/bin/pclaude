@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Run Claude Code signed in to the private subscription account, side by side
+# with the default (work) one. Works on macOS and Linux.
+#
+# The private account is its own CLAUDE_CONFIG_DIR at ~/.claude-private, so its
+# login is separate: macOS keeps it in a Keychain item keyed by the directory
+# path, Linux in ~/.claude-private/.credentials.json. Everything else is shared
+# with ~/.claude through symlinks refreshed on every launch: settings, hooks,
+# skills, plugins, sessions, history and project memory. User and project MCP
+# servers, trust and allowed tools are copied from ~/.claude.json on every launch.
+#
+# Usage: pclaude [claude args...]
+#   pclaude                 first run: type /login and sign in to the private account
+#   pclaude -c              any claude flags pass through
+#   pclaude mcp add ...     MCP changes go to the shared ~/.claude.json
+
+set -euo pipefail
+
+base="$HOME/.claude"
+profile="$HOME/.claude-private"
+
+# Login, account and runtime state that must stay per account.
+EXCLUDE=(
+    .credentials.json
+    .claude.json
+    .DS_Store
+    backups
+    policy-limits.json
+    policy-limits.json.stamp.json
+    remote-settings.json
+    remote-settings.json.synced-at
+    mcp-needs-auth-cache.json
+    daemon
+    daemon.log
+    sessions
+    jobs
+    bridge-spawn
+    seed-admin
+)
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '/^# Usage/,/^#   pclaude mcp add/p' "$0" | sed 's/^# \{0,1\}//'
+    echo "Run 'claude --help' for claude flags."
+    exit 0
+fi
+
+if [[ ${1:-} == mcp ]]; then
+    unset CLAUDE_CONFIG_DIR
+    exec claude "$@"
+fi
+
+shopt -s nullglob
+mkdir -p "$profile"
+chmod 700 "$profile"
+
+excluded() {
+    local e
+    for e in "${EXCLUDE[@]}"; do
+        [[ $1 == "$e" ]] && return 0
+    done
+    return 1
+}
+
+for dst in "$profile"/* "$profile"/.[!.]*; do
+    # Drop a link whose source was removed.
+    [[ -L $dst && ! -e $dst ]] && rm "$dst"
+done
+
+for src in "$base"/* "$base"/.[!.]*; do
+    [[ -e $src || -L $src ]] || continue
+    name=${src##*/}
+    excluded "$name" && continue
+    dst="$profile/$name"
+    if [[ -L $dst ]]; then
+        continue
+    elif [[ -e $dst ]]; then
+        echo "pclaude: $dst is a local copy, not a link to $src; delete it to share again" >&2
+    else
+        ln -s "$src" "$dst"
+    fi
+done
+
+python3 - "$HOME/.claude.json" "$profile/.claude.json" <<'PY'
+import json, os, sys, tempfile
+
+GLOBAL_KEYS = (
+    "mcpServers",
+    "autoUpdates",
+    "autoUpdatesProtectedForNative",
+    "installMethod",
+    "claudeInChromeDefaultEnabled",
+    "hasCompletedClaudeInChromeOnboarding",
+    "cachedChromeExtensionInstalled",
+    "deepLinkTerminal",
+    "githubRepoPaths",
+)
+PROJECT_KEYS = (
+    "mcpServers",
+    "enabledMcpjsonServers",
+    "disabledMcpjsonServers",
+    "disabledMcpServers",
+    "mcpContextUris",
+    "allowedTools",
+    "hasTrustDialogAccepted",
+    "hasClaudeMdExternalIncludesApproved",
+    "hasClaudeMdExternalIncludesWarningShown",
+)
+
+src_path, dst_path = sys.argv[1], sys.argv[2]
+try:
+    with open(src_path) as f:
+        src = json.load(f)
+except FileNotFoundError:
+    sys.exit(0)
+try:
+    with open(dst_path) as f:
+        dst = json.load(f)
+except FileNotFoundError:
+    dst = {}
+
+for key in GLOBAL_KEYS:
+    if key in src:
+        dst[key] = src[key]
+    else:
+        dst.pop(key, None)
+
+projects = dst.setdefault("projects", {})
+for path, sp in src.get("projects", {}).items():
+    dp = projects.setdefault(path, {})
+    for key in PROJECT_KEYS:
+        if key in sp:
+            dp[key] = sp[key]
+        else:
+            dp.pop(key, None)
+
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(dst_path), prefix=".claude.json.")
+with os.fdopen(fd, "w") as f:
+    json.dump(dst, f, indent=2)
+os.chmod(tmp, 0o600)
+os.replace(tmp, dst_path)
+PY
+
+export CLAUDE_CONFIG_DIR="$profile"
+exec claude "$@"
