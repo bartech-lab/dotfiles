@@ -42,7 +42,7 @@ typeset -U fpath
 # day and reuse the cached dump otherwise.
 autoload -Uz compinit
 ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump"
-if [[ -n ${ZSH_COMPDUMP}(#qN.mh-24) ]]; then
+if () { setopt local_options extended_glob; [[ -n ${ZSH_COMPDUMP}(#qN.mh-24) ]] }; then
   compinit -C -d "$ZSH_COMPDUMP"
 else
   compinit -d "$ZSH_COMPDUMP"

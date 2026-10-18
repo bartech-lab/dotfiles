@@ -205,7 +205,7 @@ archive() {
         )
         
         echo ""
-        echo "... and $((total_count - 20)) more files"
+        (( total_count > 20 )) && echo "... and $((total_count - 20)) more files"
         echo ""
         echo "Would create: $outfile"
         if [[ "$use_gnu_tar" == false ]]; then
@@ -224,6 +224,7 @@ archive() {
     # Create archive
     echo "📦 Creating archive..."
     
+    setopt local_options pipe_fail
     if [[ "$use_gzip" == true ]]; then
         $tar_cmd \
             "${tar_opts[@]}" \
@@ -237,14 +238,16 @@ archive() {
             -cf - . 2>/dev/null | \
             zstd -12 -T0 -q -o "$outfile"
     fi
+    local archive_status=$?
 
-    if [[ -f "$outfile" ]]; then
+    if (( archive_status == 0 )) && [[ -f "$outfile" ]]; then
         local size=$(_stat_size "$outfile" | awk '{split("B KB MB GB TB PB", unit); u=1; while($1>=1024 && u<6) {$1/=1024; u++} printf "%.1f %s", $1, unit[u]}')
         echo "✅ Created: $outfile ($size)"
         if [[ "$use_gnu_tar" == false ]]; then
             echo "💡 For reproducible archives, install: brew install gnu-tar"
         fi
     else
+        rm -f "$outfile"
         echo "❌ Failed to create archive"
         return 1
     fi
@@ -300,7 +303,7 @@ repo-check() {
     if [[ "$in_git_repo" == true ]]; then
         while IFS= read -r file; do
             [[ -n "$file" ]] && env_files+=("$file")
-        done < <(git ls-files 2>/dev/null | grep -E '^\.env' | head -5)
+        done < <(git ls-files 2>/dev/null | grep -E '^\.env($|\.)' | grep -vE '\.(example|sample|template)$' | head -5)
     fi
 
     # Also check for .env files not in .gitignore
@@ -344,7 +347,7 @@ repo-check() {
     # Also check filesystem
     local fs_secrets=()
     for pattern in '*.pem' '*.key' '*.p12' '*.pfx' 'id_rsa' 'id_dsa' 'id_ecdsa' 'id_ed25519'; do
-        for file in $pattern(N); do
+        for file in ${~pattern}(N); do
             if [[ -f "$file" ]]; then
                 if [[ "$in_git_repo" == true ]]; then
                     if ! git check-ignore -q "$file" 2>/dev/null; then
@@ -709,6 +712,7 @@ dotfiles-doctor() {
 
     local missing_tools=()
     for tool in zstd gtar ffmpeg cjpeg parallel eza rg dust btm duf; do
+        [[ "$tool" == gtar && "$DOTFILES_OS" != macos ]] && continue
         if command -v "$tool" &>/dev/null; then
             local version=""
             case "$tool" in
@@ -854,7 +858,7 @@ dotfiles-doctor() {
     echo "Shell:"
 
     # Check zinit
-    if [[ -d "$HOME/.local/share/zinit/zinit.git" ]] || [[ -d "/opt/homebrew/opt/zinit" ]]; then
+    if [[ -d "${ZINIT_HOME:-$HOME/.zinit}" ]] || [[ -d "$HOME/.local/share/zinit/zinit.git" ]] || [[ -d "/opt/homebrew/opt/zinit" ]]; then
         local zinit_version=$(zinit --version 2>/dev/null | head -1 | awk '{print $2}')
         [[ -n "$zinit_version" ]] && echo "  ✅ zinit $zinit_version" || echo "  ✅ zinit installed"
     else

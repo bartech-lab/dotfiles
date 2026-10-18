@@ -117,6 +117,10 @@ fi
 for d in "${targets[@]}"; do
   name="${d##*/}"
   dest="${omp_dir}/${name}"
+  if [[ -e "${dest}" && ! -e "${dest}/${marker}" ]]; then
+    echo "skipping ${name}: ${dest} is not a mirrored skill" >&2
+    continue
+  fi
   echo "mirroring ${name} -> ${dest}"
   rm -rf "${dest}"
   cp -R "${d}" "${dest}"
