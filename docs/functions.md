@@ -449,6 +449,37 @@ Pre-archive sanity checker (see [dev.md](dev.md)).
 repo-check              # Check for issues before archiving
 ```
 
+### pclaude
+
+`scripts/bin/pclaude` runs Claude Code signed in to the private subscription
+account. Plain `claude` stays on the default account. Both can run at the same
+time in different terminals, on macOS and Linux.
+
+```bash
+pclaude                 # first run: type /login and sign in to the private account
+pclaude -c              # any claude flags pass through
+pclaude mcp add ...     # MCP changes go to the shared ~/.claude.json
+```
+
+The private account uses `CLAUDE_CONFIG_DIR=~/.claude-private`, so its login is
+separate: macOS keeps it in a Keychain item keyed by the directory path, Linux
+in `~/.claude-private/.credentials.json`.
+
+Every other entry in `~/.claude` is symlinked in on each launch, including
+settings, hooks, skills, plugins, `projects` (sessions and memory) and
+`history.jsonl`. `--resume` therefore sees sessions from both accounts. Login,
+org policy and daemon state stay per account (see `EXCLUDE` in the script).
+
+`~/.claude.json` is not shared, because it holds the account identity. On each
+launch `pclaude` copies user MCP servers, update settings, and per-project MCP
+servers, trust and allowed tools from it. MCP changes made inside a `pclaude`
+session are overwritten on the next launch; use `pclaude mcp ...` or `claude
+mcp ...` instead. Connectors added on claude.ai follow the account.
+
+If Claude replaces a link with a real file, the next launch warns and leaves the
+copy alone. Delete it to share again. Claude Desktop and IDE extensions ignore
+`CLAUDE_CONFIG_DIR`.
+
 ## Download Utilities
 
 ### ytdl
@@ -570,6 +601,7 @@ See [dev.md](dev.md) for full documentation.
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
+| Claude private | `scripts/bin/pclaude` | Claude Code on the private subscription account |
 
 ## Browser Utilities
 
