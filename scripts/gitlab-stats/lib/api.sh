@@ -231,7 +231,7 @@ fetch_discussion_data() {
   fi
 
   local raw_discussions
-  raw_discussions=$(for output_file in "${output_files[@]}"; do cat "$output_file"; done | jq -s '.') || {
+  raw_discussions=$(for output_file in ${output_files[@]+"${output_files[@]}"}; do cat "$output_file"; done | jq -s '.') || {
     echo "Error: could not combine REST discussion responses." >&2
     rm -rf "$tmp_dir"
     return 1

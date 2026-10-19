@@ -129,30 +129,30 @@ if (process.exitCode) {
             for (const group of ordered) {
                 process.stdout.write(`${String(group.count).padStart(4)}x  ${group.sample}\n`);
             }
-            process.exit(0);
-        }
-        for (const entry of entries) {
-            process.stdout.write(`\n[${entry.id}] ${entry.status ?? 'pending'} !${entry.mr} ${entry.createdAt ?? ''}\n`);
-            process.stdout.write(`  ${entry.mrUrl ?? '(no MR URL)'}\n`);
-            process.stdout.write(`  reason: ${entry.selectionReason ?? 'new-thread-root authored by reviewer'}\n`);
-            if (entry.selfAuthored) process.stdout.write(`  self-authored: the reviewer also authored this merge request, so the comment can be a self-review note rather than a finding\n`);
-            process.stdout.write(`  note: ${entry.noteId}; discussion: ${entry.discussionId ?? '(individual note)'}\n`);
-            process.stdout.write(`  ${entry.body}\n`);
-            if (entry.previousVerdict) process.stdout.write(`  previous verdict: ${entry.previousVerdict}; content changed: recheck required\n`);
-            if (entry.reviewNote) process.stdout.write(`  review note: ${entry.reviewNote}\n`);
-        }
-        if (showExclusions) {
-            process.stdout.write(`\nExclusions: ${ledger.exclusions.length}\n`);
-            for (const exclusion of ledger.exclusions) {
-                process.stdout.write(`\n[${exclusion.id}] !${exclusion.mr} ${exclusion.reason}\n`);
-                process.stdout.write(`  ${exclusion.mrUrl ?? '(no MR URL)'}\n`);
-                process.stdout.write(`  note: ${exclusion.noteId}; ${exclusion.body}\n`);
+        } else {
+            for (const entry of entries) {
+                process.stdout.write(`\n[${entry.id}] ${entry.status ?? 'pending'} !${entry.mr} ${entry.createdAt ?? ''}\n`);
+                process.stdout.write(`  ${entry.mrUrl ?? '(no MR URL)'}\n`);
+                process.stdout.write(`  reason: ${entry.selectionReason ?? 'new-thread-root authored by reviewer'}\n`);
+                if (entry.selfAuthored) process.stdout.write(`  self-authored: the reviewer also authored this merge request, so the comment can be a self-review note rather than a finding\n`);
+                process.stdout.write(`  note: ${entry.noteId}; discussion: ${entry.discussionId ?? '(individual note)'}\n`);
+                process.stdout.write(`  ${entry.body}\n`);
+                if (entry.previousVerdict) process.stdout.write(`  previous verdict: ${entry.previousVerdict}; content changed: recheck required\n`);
+                if (entry.reviewNote) process.stdout.write(`  review note: ${entry.reviewNote}\n`);
             }
-        }
-        if (ledger.lastRun?.failures) {
-            process.stdout.write(`\nRun failures recorded: ${ledger.lastRun.failures}\n`);
-            for (const failure of ledger.lastRun.failureDetails ?? []) {
-                process.stdout.write(`  ${failure.kind} ${failure.endpoint ?? ''}: ${failure.message}\n`);
+            if (showExclusions) {
+                process.stdout.write(`\nExclusions: ${ledger.exclusions.length}\n`);
+                for (const exclusion of ledger.exclusions) {
+                    process.stdout.write(`\n[${exclusion.id}] !${exclusion.mr} ${exclusion.reason}\n`);
+                    process.stdout.write(`  ${exclusion.mrUrl ?? '(no MR URL)'}\n`);
+                    process.stdout.write(`  note: ${exclusion.noteId}; ${exclusion.body}\n`);
+                }
+            }
+            if (ledger.lastRun?.failures) {
+                process.stdout.write(`\nRun failures recorded: ${ledger.lastRun.failures}\n`);
+                for (const failure of ledger.lastRun.failureDetails ?? []) {
+                    process.stdout.write(`  ${failure.kind} ${failure.endpoint ?? ''}: ${failure.message}\n`);
+                }
             }
         }
     } catch (error) {
