@@ -9,11 +9,14 @@ alias lt='eza --tree --level=2 --icons'
 # System monitoring (btm)
 alias top='btm'
 
+# Agent shells (Claude Code, Codex) keep the standard du and df output.
+if [[ -z "$CLAUDECODE" && -z "$CODEX_SANDBOX" && -z "$CODEX_THREAD_ID" ]]; then
 # Disk usage (dust)
 alias du='dust'
 
 # Disk free (duf)
 alias df='duf'
+fi
 
 # Note: coreutils are available but not aliased to avoid conflicts
 # Use g-prefix for GNU versions: gls, gcat, etc.
