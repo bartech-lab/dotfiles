@@ -48,4 +48,18 @@ if [[ "$branch" != "develop" ]]; then
     exit 1
 fi
 
+/usr/bin/git -C "$WORKTREE" switch -c feature/dry-run >/dev/null
+/usr/bin/git -C "$WORKTREE" commit --allow-empty -m "Dry run commit" >/dev/null
+
+# A dry run pushes nothing, so it must not leave the branch.
+for flag in --dry-run -n; do
+    PATH="$TEST_HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin" \
+        /bin/bash -c 'cd "$1" && git push "$2" origin feature/dry-run' _ "$WORKTREE" "$flag" >/dev/null 2>&1
+    branch=$(/usr/bin/git -C "$WORKTREE" branch --show-current)
+    if [[ "$branch" != "feature/dry-run" ]]; then
+        echo "Expected feature/dry-run after push $flag, got: $branch" >&2
+        exit 1
+    fi
+done
+
 echo "git-autoswitch test passed"
