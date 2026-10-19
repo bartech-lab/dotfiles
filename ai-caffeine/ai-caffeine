@@ -15,7 +15,10 @@ INTERVAL="${AI_CAFFEINE_INTERVAL:-15}"               # seconds between checks
 HOLD=$((INTERVAL * 3))                               # hold self-expiry window
 
 LOCKFILE="${AI_CAFFEINE_LOCKFILE:-${TMPDIR:-/tmp}/ai-caffeine.lock}"
-STATE="$LOCKFILE.state"                             # original Autolock value while engaged
+STATE_DIR="${AI_CAFFEINE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/ai-caffeine}"
+STATE="$STATE_DIR/autolock.orig"                    # original Autolock value while engaged; must survive a reboot
+mkdir -p "$STATE_DIR"
+[ -f "$LOCKFILE.state" ] && [ ! -f "$STATE" ] && mv "$LOCKFILE.state" "$STATE"
 # flock auto-releases on process death: no stale locks, no restart race where
 # the old instance's cleanup deletes the dir under the new instance.
 if command -v flock >/dev/null 2>&1; then
@@ -65,7 +68,12 @@ engage_autolock_off() {
 agents_running() {
     # shellcheck disable=SC2086  # word splitting of the name list is intended
     for name in $PROCESSES; do
-        pgrep -x "$name" >/dev/null 2>&1 && return 0
+        for pid in $(pgrep -x "$name" 2>/dev/null); do
+            case " $(ps -o args= -p "$pid" 2>/dev/null) " in
+                *" app-server "*) ;;
+                *) return 0 ;;
+            esac
+        done
     done
     return 1
 }
