@@ -239,7 +239,7 @@ optimize-images() {
 }
 
 video-remux() {
-  local SOURCE_PATH="${1:-.}"
+  local SOURCE_PATH="."
   local INPUT_DIR=""
   local SINGLE_FILE=""
   local USE_SUBDIR=0
@@ -393,7 +393,7 @@ video-remux() {
 }
 
 video-encode-cpu() {
-  local SOURCE_DIR="${1:-.}"
+  local SOURCE_DIR="."
   local USE_SUBDIR=0
   
   # Parse arguments
@@ -498,7 +498,7 @@ video-encode-cpu() {
 }
 
 video-encode-gpu() {
-  local SOURCE_DIR="${1:-.}"
+  local SOURCE_DIR="."
   local USE_SUBDIR=0
   
   # Parse arguments
@@ -620,7 +620,7 @@ video-encode-gpu() {
 }
 
 video-encode-av1() {
-  local SOURCE_DIR="${1:-.}"
+  local SOURCE_DIR="."
   local USE_SUBDIR=0
 
   while [[ $# -gt 0 ]]; do

@@ -116,9 +116,9 @@ macos-defaults() {
     # Finder: allow quitting via ⌘ + Q
     defaults write com.apple.finder QuitMenuItem -bool true
     
-    # Finder: set new window target to ~/timac/
+    # Finder: set new window target to the home folder
     defaults write com.apple.finder NewWindowTarget -string "PfLo"
-    defaults write com.apple.finder NewWindowTargetPath -string "file:///Users/timac/"
+    defaults write com.apple.finder NewWindowTargetPath -string "file://$HOME/"
     
     # Finder: show the ~/Library folder
     chflags nohidden ~/Library
@@ -467,8 +467,8 @@ macos-debloat() {
             # iOS DeviceSupport - debug symbols for old devices
             if [[ -d "$HOME/Library/Developer/Xcode/iOS DeviceSupport" ]]; then
                 echo "  Cleaning old iOS DeviceSupport files..."
-                # Keep only the latest iOS version for each device
-                find "$HOME/Library/Developer/Xcode/iOS DeviceSupport" -maxdepth 1 -type d -mtime +30 -exec rm -rf {} + 2>/dev/null || true
+                # Remove version folders not modified in 30 days
+                find "$HOME/Library/Developer/Xcode/iOS DeviceSupport" -mindepth 1 -maxdepth 1 -type d -mtime +30 -exec rm -rf {} + 2>/dev/null || true
             fi
             
             # Unavailable simulators
@@ -660,127 +660,127 @@ macos-defaults-export() {
     # System settings (require sudo)
     echo "# System settings (require sudo)"
     echo "sudo nvram SystemAudioVolume=\" \""
-    sudo defaults read /Library/Preferences/com.apple.loginwindow AdminHostInfo 2>/dev/null && echo "sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName"
+    sudo defaults read /Library/Preferences/com.apple.loginwindow AdminHostInfo >/dev/null 2>&1 && echo "sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName"
     
     echo ""
     
     # Dock settings
     echo "# Dock settings"
-    defaults read com.apple.dock autohide 2>/dev/null && echo "defaults write com.apple.dock autohide -bool $(defaults read com.apple.dock autohide)"
-    defaults read com.apple.dock autohide-delay 2>/dev/null && echo "defaults write com.apple.dock autohide-delay -float $(defaults read com.apple.dock autohide-delay)"
-    defaults read com.apple.dock autohide-time-modifier 2>/dev/null && echo "defaults write com.apple.dock autohide-time-modifier -float $(defaults read com.apple.dock autohide-time-modifier)"
-    defaults read com.apple.dock tilesize 2>/dev/null && echo "defaults write com.apple.dock tilesize -int $(defaults read com.apple.dock tilesize)"
-    defaults read com.apple.dock show-process-indicators 2>/dev/null && echo "defaults write com.apple.dock show-process-indicators -bool $(defaults read com.apple.dock show-process-indicators)"
-    defaults read com.apple.dock showhidden 2>/dev/null && echo "defaults write com.apple.dock showhidden -bool $(defaults read com.apple.dock showhidden)"
-    defaults read com.apple.dock show-recents 2>/dev/null && echo "defaults write com.apple.dock show-recents -bool $(defaults read com.apple.dock show-recents)"
-    defaults read com.apple.dock expose-animation-duration 2>/dev/null && echo "defaults write com.apple.dock expose-animation-duration -float $(defaults read com.apple.dock expose-animation-duration)"
-    defaults read com.apple.dock mru-spaces 2>/dev/null && echo "defaults write com.apple.dock mru-spaces -bool $(defaults read com.apple.dock mru-spaces)"
-    defaults read com.apple.dock mineffect 2>/dev/null && echo "defaults write com.apple.dock mineffect -string '$(defaults read com.apple.dock mineffect)'"
-    defaults read com.apple.dock minimize-to-application 2>/dev/null && echo "defaults write com.apple.dock minimize-to-application -bool $(defaults read com.apple.dock minimize-to-application)"
-    defaults read com.apple.dock launchanim 2>/dev/null && echo "defaults write com.apple.dock launchanim -bool $(defaults read com.apple.dock launchanim)"
-    defaults read com.apple.dock wvous-tl-corner 2>/dev/null && echo "defaults write com.apple.dock wvous-tl-corner -int $(defaults read com.apple.dock wvous-tl-corner)"
-    defaults read com.apple.dock wvous-tl-modifier 2>/dev/null && echo "defaults write com.apple.dock wvous-tl-modifier -int $(defaults read com.apple.dock wvous-tl-modifier)"
-    defaults read com.apple.dock wvous-tr-corner 2>/dev/null && echo "defaults write com.apple.dock wvous-tr-corner -int $(defaults read com.apple.dock wvous-tr-corner)"
-    defaults read com.apple.dock wvous-tr-modifier 2>/dev/null && echo "defaults write com.apple.dock wvous-tr-modifier -int $(defaults read com.apple.dock wvous-tr-modifier)"
-    defaults read com.apple.dock wvous-bl-corner 2>/dev/null && echo "defaults write com.apple.dock wvous-bl-corner -int $(defaults read com.apple.dock wvous-bl-corner)"
-    defaults read com.apple.dock wvous-bl-modifier 2>/dev/null && echo "defaults write com.apple.dock wvous-bl-modifier -int $(defaults read com.apple.dock wvous-bl-modifier)"
-    defaults read com.apple.dock wvous-br-corner 2>/dev/null && echo "defaults write com.apple.dock wvous-br-corner -int $(defaults read com.apple.dock wvous-br-corner)"
-    defaults read com.apple.dock wvous-br-modifier 2>/dev/null && echo "defaults write com.apple.dock wvous-br-modifier -int $(defaults read com.apple.dock wvous-br-modifier)"
+    defaults read com.apple.dock autohide >/dev/null 2>&1 && echo "defaults write com.apple.dock autohide -bool $(defaults read com.apple.dock autohide)"
+    defaults read com.apple.dock autohide-delay >/dev/null 2>&1 && echo "defaults write com.apple.dock autohide-delay -float $(defaults read com.apple.dock autohide-delay)"
+    defaults read com.apple.dock autohide-time-modifier >/dev/null 2>&1 && echo "defaults write com.apple.dock autohide-time-modifier -float $(defaults read com.apple.dock autohide-time-modifier)"
+    defaults read com.apple.dock tilesize >/dev/null 2>&1 && echo "defaults write com.apple.dock tilesize -int $(defaults read com.apple.dock tilesize)"
+    defaults read com.apple.dock show-process-indicators >/dev/null 2>&1 && echo "defaults write com.apple.dock show-process-indicators -bool $(defaults read com.apple.dock show-process-indicators)"
+    defaults read com.apple.dock showhidden >/dev/null 2>&1 && echo "defaults write com.apple.dock showhidden -bool $(defaults read com.apple.dock showhidden)"
+    defaults read com.apple.dock show-recents >/dev/null 2>&1 && echo "defaults write com.apple.dock show-recents -bool $(defaults read com.apple.dock show-recents)"
+    defaults read com.apple.dock expose-animation-duration >/dev/null 2>&1 && echo "defaults write com.apple.dock expose-animation-duration -float $(defaults read com.apple.dock expose-animation-duration)"
+    defaults read com.apple.dock mru-spaces >/dev/null 2>&1 && echo "defaults write com.apple.dock mru-spaces -bool $(defaults read com.apple.dock mru-spaces)"
+    defaults read com.apple.dock mineffect >/dev/null 2>&1 && echo "defaults write com.apple.dock mineffect -string '$(defaults read com.apple.dock mineffect)'"
+    defaults read com.apple.dock minimize-to-application >/dev/null 2>&1 && echo "defaults write com.apple.dock minimize-to-application -bool $(defaults read com.apple.dock minimize-to-application)"
+    defaults read com.apple.dock launchanim >/dev/null 2>&1 && echo "defaults write com.apple.dock launchanim -bool $(defaults read com.apple.dock launchanim)"
+    defaults read com.apple.dock wvous-tl-corner >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-tl-corner -int $(defaults read com.apple.dock wvous-tl-corner)"
+    defaults read com.apple.dock wvous-tl-modifier >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-tl-modifier -int $(defaults read com.apple.dock wvous-tl-modifier)"
+    defaults read com.apple.dock wvous-tr-corner >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-tr-corner -int $(defaults read com.apple.dock wvous-tr-corner)"
+    defaults read com.apple.dock wvous-tr-modifier >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-tr-modifier -int $(defaults read com.apple.dock wvous-tr-modifier)"
+    defaults read com.apple.dock wvous-bl-corner >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-bl-corner -int $(defaults read com.apple.dock wvous-bl-corner)"
+    defaults read com.apple.dock wvous-bl-modifier >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-bl-modifier -int $(defaults read com.apple.dock wvous-bl-modifier)"
+    defaults read com.apple.dock wvous-br-corner >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-br-corner -int $(defaults read com.apple.dock wvous-br-corner)"
+    defaults read com.apple.dock wvous-br-modifier >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-br-modifier -int $(defaults read com.apple.dock wvous-br-modifier)"
     
     echo ""
     
     # Finder settings
     echo "# Finder settings"
-    defaults read com.apple.finder ShowPathbar 2>/dev/null && echo "defaults write com.apple.finder ShowPathbar -bool $(defaults read com.apple.finder ShowPathbar)"
-    defaults read com.apple.finder ShowStatusBar 2>/dev/null && echo "defaults write com.apple.finder ShowStatusBar -bool $(defaults read com.apple.finder ShowStatusBar)"
-    defaults read com.apple.finder _FXSortFoldersFirst 2>/dev/null && echo "defaults write com.apple.finder _FXSortFoldersFirst -bool $(defaults read com.apple.finder _FXSortFoldersFirst)"
-    defaults read com.apple.finder FXDefaultSearchScope 2>/dev/null && echo "defaults write com.apple.finder FXDefaultSearchScope -string '$(defaults read com.apple.finder FXDefaultSearchScope)'"
-    defaults read com.apple.finder FXEnableExtensionChangeWarning 2>/dev/null && echo "defaults write com.apple.finder FXEnableExtensionChangeWarning -bool $(defaults read com.apple.finder FXEnableExtensionChangeWarning)"
-    defaults read com.apple.finder DisableAllAnimations 2>/dev/null && echo "defaults write com.apple.finder DisableAllAnimations -bool $(defaults read com.apple.finder DisableAllAnimations)"
-    defaults read com.apple.finder _FXShowPosixPathInTitle 2>/dev/null && echo "defaults write com.apple.finder _FXShowPosixPathInTitle -bool $(defaults read com.apple.finder _FXShowPosixPathInTitle)"
-    defaults read com.apple.finder QuitMenuItem 2>/dev/null && echo "defaults write com.apple.finder QuitMenuItem -bool $(defaults read com.apple.finder QuitMenuItem)"
-    defaults read com.apple.finder NewWindowTarget 2>/dev/null && echo "defaults write com.apple.finder NewWindowTarget -string '$(defaults read com.apple.finder NewWindowTarget)'"
-    defaults read com.apple.finder NewWindowTargetPath 2>/dev/null && echo "defaults write com.apple.finder NewWindowTargetPath -string '$(defaults read com.apple.finder NewWindowTargetPath)'"
-    defaults read com.apple.desktopservices DSDontWriteNetworkStores 2>/dev/null && echo "defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool $(defaults read com.apple.desktopservices DSDontWriteNetworkStores)"
-    defaults read com.apple.desktopservices DSDontWriteUSBStores 2>/dev/null && echo "defaults write com.apple.desktopservices DSDontWriteUSBStores -bool $(defaults read com.apple.desktopservices DSDontWriteUSBStores)"
+    defaults read com.apple.finder ShowPathbar >/dev/null 2>&1 && echo "defaults write com.apple.finder ShowPathbar -bool $(defaults read com.apple.finder ShowPathbar)"
+    defaults read com.apple.finder ShowStatusBar >/dev/null 2>&1 && echo "defaults write com.apple.finder ShowStatusBar -bool $(defaults read com.apple.finder ShowStatusBar)"
+    defaults read com.apple.finder _FXSortFoldersFirst >/dev/null 2>&1 && echo "defaults write com.apple.finder _FXSortFoldersFirst -bool $(defaults read com.apple.finder _FXSortFoldersFirst)"
+    defaults read com.apple.finder FXDefaultSearchScope >/dev/null 2>&1 && echo "defaults write com.apple.finder FXDefaultSearchScope -string '$(defaults read com.apple.finder FXDefaultSearchScope)'"
+    defaults read com.apple.finder FXEnableExtensionChangeWarning >/dev/null 2>&1 && echo "defaults write com.apple.finder FXEnableExtensionChangeWarning -bool $(defaults read com.apple.finder FXEnableExtensionChangeWarning)"
+    defaults read com.apple.finder DisableAllAnimations >/dev/null 2>&1 && echo "defaults write com.apple.finder DisableAllAnimations -bool $(defaults read com.apple.finder DisableAllAnimations)"
+    defaults read com.apple.finder _FXShowPosixPathInTitle >/dev/null 2>&1 && echo "defaults write com.apple.finder _FXShowPosixPathInTitle -bool $(defaults read com.apple.finder _FXShowPosixPathInTitle)"
+    defaults read com.apple.finder QuitMenuItem >/dev/null 2>&1 && echo "defaults write com.apple.finder QuitMenuItem -bool $(defaults read com.apple.finder QuitMenuItem)"
+    defaults read com.apple.finder NewWindowTarget >/dev/null 2>&1 && echo "defaults write com.apple.finder NewWindowTarget -string '$(defaults read com.apple.finder NewWindowTarget)'"
+    defaults read com.apple.finder NewWindowTargetPath >/dev/null 2>&1 && echo "defaults write com.apple.finder NewWindowTargetPath -string '$(defaults read com.apple.finder NewWindowTargetPath)'"
+    defaults read com.apple.desktopservices DSDontWriteNetworkStores >/dev/null 2>&1 && echo "defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool $(defaults read com.apple.desktopservices DSDontWriteNetworkStores)"
+    defaults read com.apple.desktopservices DSDontWriteUSBStores >/dev/null 2>&1 && echo "defaults write com.apple.desktopservices DSDontWriteUSBStores -bool $(defaults read com.apple.desktopservices DSDontWriteUSBStores)"
     
     echo ""
     
     # Screenshot settings
     echo "# Screenshot settings"
-    defaults read com.apple.screencapture location 2>/dev/null && echo "defaults write com.apple.screencapture location -string '$(defaults read com.apple.screencapture location)'"
-    defaults read com.apple.screencapture disable-shadow 2>/dev/null && echo "defaults write com.apple.screencapture disable-shadow -bool $(defaults read com.apple.screencapture disable-shadow)"
-    defaults read com.apple.screencapture type 2>/dev/null && echo "defaults write com.apple.screencapture type -string '$(defaults read com.apple.screencapture type)'"
-    defaults read com.apple.screencapture target 2>/dev/null && echo "defaults write com.apple.screencapture target -string '$(defaults read com.apple.screencapture target)'"
-    defaults read com.apple.screencapture show-thumbnail 2>/dev/null && echo "defaults write com.apple.screencapture show-thumbnail -bool $(defaults read com.apple.screencapture show-thumbnail)"
+    defaults read com.apple.screencapture location >/dev/null 2>&1 && echo "defaults write com.apple.screencapture location -string '$(defaults read com.apple.screencapture location)'"
+    defaults read com.apple.screencapture disable-shadow >/dev/null 2>&1 && echo "defaults write com.apple.screencapture disable-shadow -bool $(defaults read com.apple.screencapture disable-shadow)"
+    defaults read com.apple.screencapture type >/dev/null 2>&1 && echo "defaults write com.apple.screencapture type -string '$(defaults read com.apple.screencapture type)'"
+    defaults read com.apple.screencapture target >/dev/null 2>&1 && echo "defaults write com.apple.screencapture target -string '$(defaults read com.apple.screencapture target)'"
+    defaults read com.apple.screencapture show-thumbnail >/dev/null 2>&1 && echo "defaults write com.apple.screencapture show-thumbnail -bool $(defaults read com.apple.screencapture show-thumbnail)"
     
     echo ""
     
     # Global settings (NSGlobalDomain)
     echo "# Global settings"
-    defaults read NSGlobalDomain AppleShowAllExtensions 2>/dev/null && echo "defaults write NSGlobalDomain AppleShowAllExtensions -bool $(defaults read NSGlobalDomain AppleShowAllExtensions)"
-    defaults read NSGlobalDomain ApplePressAndHoldEnabled 2>/dev/null && echo "defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool $(defaults read NSGlobalDomain ApplePressAndHoldEnabled)"
-    defaults read NSGlobalDomain KeyRepeat 2>/dev/null && echo "defaults write NSGlobalDomain KeyRepeat -int $(defaults read NSGlobalDomain KeyRepeat)"
-    defaults read NSGlobalDomain InitialKeyRepeat 2>/dev/null && echo "defaults write NSGlobalDomain InitialKeyRepeat -int $(defaults read NSGlobalDomain InitialKeyRepeat)"
-    defaults read NSGlobalDomain AppleKeyboardUIMode 2>/dev/null && echo "defaults write NSGlobalDomain AppleKeyboardUIMode -int $(defaults read NSGlobalDomain AppleKeyboardUIMode)"
-    defaults read NSGlobalDomain NSAutomaticCapitalizationEnabled 2>/dev/null && echo "defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool $(defaults read NSGlobalDomain NSAutomaticCapitalizationEnabled)"
-    defaults read NSGlobalDomain NSAutomaticDashSubstitutionEnabled 2>/dev/null && echo "defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticDashSubstitutionEnabled)"
-    defaults read NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled 2>/dev/null && echo "defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled)"
-    defaults read NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled 2>/dev/null && echo "defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled)"
-    defaults read NSGlobalDomain NSAutomaticSpellingCorrectionEnabled 2>/dev/null && echo "defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticSpellingCorrectionEnabled)"
-    defaults read NSGlobalDomain NSWindowResizeTime 2>/dev/null && echo "defaults write NSGlobalDomain NSWindowResizeTime -float $(defaults read NSGlobalDomain NSWindowResizeTime)"
-    defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode 2>/dev/null && echo "defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool $(defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode)"
-    defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 2>/dev/null && echo "defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool $(defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode2)"
-    defaults read NSGlobalDomain PMPrintingExpandedStateForPrint 2>/dev/null && echo "defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool $(defaults read NSGlobalDomain PMPrintingExpandedStateForPrint)"
-    defaults read NSGlobalDomain PMPrintingExpandedStateForPrint2 2>/dev/null && echo "defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool $(defaults read NSGlobalDomain PMPrintingExpandedStateForPrint2)"
-    defaults read NSGlobalDomain AppleShowScrollBars 2>/dev/null && echo "defaults write NSGlobalDomain AppleShowScrollBars -string '$(defaults read NSGlobalDomain AppleShowScrollBars)'"
-    defaults read NSGlobalDomain NSUseAnimatedFocusRing 2>/dev/null && echo "defaults write NSGlobalDomain NSUseAnimatedFocusRing -bool $(defaults read NSGlobalDomain NSUseAnimatedFocusRing)"
-    defaults read NSGlobalDomain com.apple.mouse.tapBehavior 2>/dev/null && echo "defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int $(defaults read NSGlobalDomain com.apple.mouse.tapBehavior)"
+    defaults read NSGlobalDomain AppleShowAllExtensions >/dev/null 2>&1 && echo "defaults write NSGlobalDomain AppleShowAllExtensions -bool $(defaults read NSGlobalDomain AppleShowAllExtensions)"
+    defaults read NSGlobalDomain ApplePressAndHoldEnabled >/dev/null 2>&1 && echo "defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool $(defaults read NSGlobalDomain ApplePressAndHoldEnabled)"
+    defaults read NSGlobalDomain KeyRepeat >/dev/null 2>&1 && echo "defaults write NSGlobalDomain KeyRepeat -int $(defaults read NSGlobalDomain KeyRepeat)"
+    defaults read NSGlobalDomain InitialKeyRepeat >/dev/null 2>&1 && echo "defaults write NSGlobalDomain InitialKeyRepeat -int $(defaults read NSGlobalDomain InitialKeyRepeat)"
+    defaults read NSGlobalDomain AppleKeyboardUIMode >/dev/null 2>&1 && echo "defaults write NSGlobalDomain AppleKeyboardUIMode -int $(defaults read NSGlobalDomain AppleKeyboardUIMode)"
+    defaults read NSGlobalDomain NSAutomaticCapitalizationEnabled >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool $(defaults read NSGlobalDomain NSAutomaticCapitalizationEnabled)"
+    defaults read NSGlobalDomain NSAutomaticDashSubstitutionEnabled >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticDashSubstitutionEnabled)"
+    defaults read NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled)"
+    defaults read NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled)"
+    defaults read NSGlobalDomain NSAutomaticSpellingCorrectionEnabled >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool $(defaults read NSGlobalDomain NSAutomaticSpellingCorrectionEnabled)"
+    defaults read NSGlobalDomain NSWindowResizeTime >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSWindowResizeTime -float $(defaults read NSGlobalDomain NSWindowResizeTime)"
+    defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool $(defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode)"
+    defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool $(defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode2)"
+    defaults read NSGlobalDomain PMPrintingExpandedStateForPrint >/dev/null 2>&1 && echo "defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool $(defaults read NSGlobalDomain PMPrintingExpandedStateForPrint)"
+    defaults read NSGlobalDomain PMPrintingExpandedStateForPrint2 >/dev/null 2>&1 && echo "defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool $(defaults read NSGlobalDomain PMPrintingExpandedStateForPrint2)"
+    defaults read NSGlobalDomain AppleShowScrollBars >/dev/null 2>&1 && echo "defaults write NSGlobalDomain AppleShowScrollBars -string '$(defaults read NSGlobalDomain AppleShowScrollBars)'"
+    defaults read NSGlobalDomain NSUseAnimatedFocusRing >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSUseAnimatedFocusRing -bool $(defaults read NSGlobalDomain NSUseAnimatedFocusRing)"
+    defaults read NSGlobalDomain com.apple.mouse.tapBehavior >/dev/null 2>&1 && echo "defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int $(defaults read NSGlobalDomain com.apple.mouse.tapBehavior)"
     
     echo ""
     
     # LaunchServices
     echo "# Security settings"
-    defaults read com.apple.LaunchServices LSQuarantine 2>/dev/null && echo "defaults write com.apple.LaunchServices LSQuarantine -bool $(defaults read com.apple.LaunchServices LSQuarantine)"
+    defaults read com.apple.LaunchServices LSQuarantine >/dev/null 2>&1 && echo "defaults write com.apple.LaunchServices LSQuarantine -bool $(defaults read com.apple.LaunchServices LSQuarantine)"
     
     echo ""
     
     # Trackpad
     echo "# Trackpad settings"
-    defaults read com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking 2>/dev/null && echo "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool $(defaults read com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking)"
+    defaults read com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking >/dev/null 2>&1 && echo "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool $(defaults read com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking)"
     
     echo ""
     
     # Photos
     echo "# Photos settings"
-    defaults read -currentHost com.apple.ImageCapture disableHotPlug 2>/dev/null && echo "defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool $(defaults read -currentHost com.apple.ImageCapture disableHotPlug)"
+    defaults read -currentHost com.apple.ImageCapture disableHotPlug >/dev/null 2>&1 && echo "defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool $(defaults read -currentHost com.apple.ImageCapture disableHotPlug)"
     
     echo ""
     
     # Chrome
     echo "# Chrome settings"
-    defaults read com.google.Chrome AppleEnableSwipeNavigateWithScrolls 2>/dev/null && echo "defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool $(defaults read com.google.Chrome AppleEnableSwipeNavigateWithScrolls)"
-    defaults read com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls 2>/dev/null && echo "defaults write com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls -bool $(defaults read com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls)"
-    defaults read com.google.Chrome DisablePrintPreview 2>/dev/null && echo "defaults write com.google.Chrome DisablePrintPreview -bool $(defaults read com.google.Chrome DisablePrintPreview)"
-    defaults read com.google.Chrome.canary DisablePrintPreview 2>/dev/null && echo "defaults write com.google.Chrome.canary DisablePrintPreview -bool $(defaults read com.google.Chrome.canary DisablePrintPreview)"
-    defaults read com.google.Chrome PMPrintingExpandedStateForPrint2 2>/dev/null && echo "defaults write com.google.Chrome PMPrintingExpandedStateForPrint2 -bool $(defaults read com.google.Chrome PMPrintingExpandedStateForPrint2)"
-    defaults read com.google.Chrome.canary PMPrintingExpandedStateForPrint2 2>/dev/null && echo "defaults write com.google.Chrome.canary PMPrintingExpandedStateForPrint2 -bool $(defaults read com.google.Chrome.canary PMPrintingExpandedStateForPrint2)"
+    defaults read com.google.Chrome AppleEnableSwipeNavigateWithScrolls >/dev/null 2>&1 && echo "defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool $(defaults read com.google.Chrome AppleEnableSwipeNavigateWithScrolls)"
+    defaults read com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls >/dev/null 2>&1 && echo "defaults write com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls -bool $(defaults read com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls)"
+    defaults read com.google.Chrome DisablePrintPreview >/dev/null 2>&1 && echo "defaults write com.google.Chrome DisablePrintPreview -bool $(defaults read com.google.Chrome DisablePrintPreview)"
+    defaults read com.google.Chrome.canary DisablePrintPreview >/dev/null 2>&1 && echo "defaults write com.google.Chrome.canary DisablePrintPreview -bool $(defaults read com.google.Chrome.canary DisablePrintPreview)"
+    defaults read com.google.Chrome PMPrintingExpandedStateForPrint2 >/dev/null 2>&1 && echo "defaults write com.google.Chrome PMPrintingExpandedStateForPrint2 -bool $(defaults read com.google.Chrome PMPrintingExpandedStateForPrint2)"
+    defaults read com.google.Chrome.canary PMPrintingExpandedStateForPrint2 >/dev/null 2>&1 && echo "defaults write com.google.Chrome.canary PMPrintingExpandedStateForPrint2 -bool $(defaults read com.google.Chrome.canary PMPrintingExpandedStateForPrint2)"
     
     echo ""
     
     # VS Code
     echo "# VS Code settings"
-    defaults read com.microsoft.VSCode ApplePressAndHoldEnabled 2>/dev/null && echo "defaults write com.microsoft.VSCode ApplePressAndHoldEnabled -bool $(defaults read com.microsoft.VSCode ApplePressAndHoldEnabled)"
-    defaults read com.vscodium ApplePressAndHoldEnabled 2>/dev/null && echo "defaults write com.vscodium ApplePressAndHoldEnabled -bool $(defaults read com.vscodium ApplePressAndHoldEnabled)"
-    defaults read com.microsoft.VSCode AppleWindowTabbingMode 2>/dev/null && echo "defaults write com.microsoft.VSCode AppleWindowTabbingMode -string '$(defaults read com.microsoft.VSCode AppleWindowTabbingMode)'"
-    defaults read com.vscodium AppleWindowTabbingMode 2>/dev/null && echo "defaults write com.vscodium AppleWindowTabbingMode -string '$(defaults read com.vscodium AppleWindowTabbingMode)'"
+    defaults read com.microsoft.VSCode ApplePressAndHoldEnabled >/dev/null 2>&1 && echo "defaults write com.microsoft.VSCode ApplePressAndHoldEnabled -bool $(defaults read com.microsoft.VSCode ApplePressAndHoldEnabled)"
+    defaults read com.vscodium ApplePressAndHoldEnabled >/dev/null 2>&1 && echo "defaults write com.vscodium ApplePressAndHoldEnabled -bool $(defaults read com.vscodium ApplePressAndHoldEnabled)"
+    defaults read com.microsoft.VSCode AppleWindowTabbingMode >/dev/null 2>&1 && echo "defaults write com.microsoft.VSCode AppleWindowTabbingMode -string '$(defaults read com.microsoft.VSCode AppleWindowTabbingMode)'"
+    defaults read com.vscodium AppleWindowTabbingMode >/dev/null 2>&1 && echo "defaults write com.vscodium AppleWindowTabbingMode -string '$(defaults read com.vscodium AppleWindowTabbingMode)'"
     
     echo ""
     
     # Spotify
     echo "# Spotify settings"
-    defaults read com.spotify.client AutoStart 2>/dev/null && echo "defaults write com.spotify.client AutoStart -bool $(defaults read com.spotify.client AutoStart)"
-    defaults read com.spotify.client DisableHardwareAcceleration 2>/dev/null && echo "defaults write com.spotify.client DisableHardwareAcceleration -bool $(defaults read com.spotify.client DisableHardwareAcceleration)"
+    defaults read com.spotify.client AutoStart >/dev/null 2>&1 && echo "defaults write com.spotify.client AutoStart -bool $(defaults read com.spotify.client AutoStart)"
+    defaults read com.spotify.client DisableHardwareAcceleration >/dev/null 2>&1 && echo "defaults write com.spotify.client DisableHardwareAcceleration -bool $(defaults read com.spotify.client DisableHardwareAcceleration)"
     
     echo ""
     
@@ -791,9 +791,9 @@ macos-defaults-export() {
     
     # Slack
     echo "# Slack settings"
-    defaults read com.tinyspeck.slackmacgap SpellCheckingEnabled 2>/dev/null && echo "defaults write com.tinyspeck.slackmacgap SpellCheckingEnabled -bool $(defaults read com.tinyspeck.slackmacgap SpellCheckingEnabled)"
-    defaults read com.tinyspeck.slackmacgap AutomaticQuoteSubstitutionEnabled 2>/dev/null && echo "defaults write com.tinyspeck.slackmacgap AutomaticQuoteSubstitutionEnabled -bool $(defaults read com.tinyspeck.slackmacgap AutomaticQuoteSubstitutionEnabled)"
-    defaults read com.tinyspeck.slackmacgap AutomaticDashSubstitutionEnabled 2>/dev/null && echo "defaults write com.tinyspeck.slackmacgap AutomaticDashSubstitutionEnabled -bool $(defaults read com.tinyspeck.slackmacgap AutomaticDashSubstitutionEnabled)"
+    defaults read com.tinyspeck.slackmacgap SpellCheckingEnabled >/dev/null 2>&1 && echo "defaults write com.tinyspeck.slackmacgap SpellCheckingEnabled -bool $(defaults read com.tinyspeck.slackmacgap SpellCheckingEnabled)"
+    defaults read com.tinyspeck.slackmacgap AutomaticQuoteSubstitutionEnabled >/dev/null 2>&1 && echo "defaults write com.tinyspeck.slackmacgap AutomaticQuoteSubstitutionEnabled -bool $(defaults read com.tinyspeck.slackmacgap AutomaticQuoteSubstitutionEnabled)"
+    defaults read com.tinyspeck.slackmacgap AutomaticDashSubstitutionEnabled >/dev/null 2>&1 && echo "defaults write com.tinyspeck.slackmacgap AutomaticDashSubstitutionEnabled -bool $(defaults read com.tinyspeck.slackmacgap AutomaticDashSubstitutionEnabled)"
     
     echo ""
     echo 'echo "Restarting affected applications..."'
