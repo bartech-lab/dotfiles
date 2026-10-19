@@ -336,7 +336,8 @@ function writeOutput(outputArg, content) {
   if (outputArg && outputArg !== '-') {
     const dir = path.dirname(outputArg);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(outputArg, content, 'utf-8');
+    fs.writeFileSync(outputArg, content, { encoding: 'utf-8', mode: 0o600 });
+    fs.chmodSync(outputArg, 0o600);
   } else {
     process.stdout.write(content);
     if (!content.endsWith('\n')) process.stdout.write('\n');
