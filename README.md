@@ -138,6 +138,7 @@ dotfiles-doctor
 - `spare-overnight [claude args]` - Claude Code that waits out the 5-hour usage limit (retry watchdog, capped at 5 h 10 min), for unattended `/spare` or `/ideas` runs
 - `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
 - `discord-openasar-status` - Check OpenAsar LaunchAgent status
+- `filen-fix-sync-retry [--check]` - Patch Filen sync to retry failed tasks after 60 s instead of halting until a manual resume; rerun after Filen updates (see [Functions Reference](docs/functions.md#filen-fix-sync-retry))
 - `agent-skills-sync [name ...]` - Mirror skills from the Claude-synced skill bundle into ~/.agents/skills, which Codex and OMP both read
 
 ### Git & macOS Helpers
