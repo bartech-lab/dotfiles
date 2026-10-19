@@ -15,8 +15,8 @@ mkdir -p "$HOME/Library/LaunchAgents"
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" "$HOME/.config/launchd-heartbeat/heartbeat.sh"
-chmod +x "$HOME/.config/launchd-heartbeat/heartbeat.sh"
+cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" "$HOME/.config/launchd-heartbeat/launchd-heartbeat"
+chmod +x "$HOME/.config/launchd-heartbeat/launchd-heartbeat"
 
 if [[ ! -f "$HOME/.config/launchd-heartbeat/monitored-labels.conf" ]]; then
     cat > "$HOME/.config/launchd-heartbeat/monitored-labels.conf" << 'EOF'
@@ -44,8 +44,7 @@ cat > "$PLIST_PATH" << EOF
     <string>com.user.launchdheartbeat</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>$HOME/.config/launchd-heartbeat/heartbeat.sh</string>
+        <string>$HOME/.config/launchd-heartbeat/launchd-heartbeat</string>
     </array>
     <key>StartInterval</key>
     <integer>3600</integer>
