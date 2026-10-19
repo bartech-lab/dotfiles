@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# filen-fix-sync-retry: make Filen sync retry failed tasks on its own instead
+# of halting the sync pair until "Resume" is clicked in the GUI.
+#
+# Why: @filen/sync keeps taskErrors forever. While any are set, every cycle
+# logs "Not continueing sync cycle" and syncs nothing in that pair. One bad
+# file (e.g. uploaded by the other machine while still being written, which
+# fails the download size check) stops the whole folder until a manual resume.
+# The patch clears the errors 60 s after the first halted cycle, so the next
+# cycle retries and self-heals once the remote copy is fixed.
+#
+# Reapply after every Filen update (pacman or the macOS updater overwrites
+# app.asar). Same-length byte patch: no repacking, safe on a running install;
+# restart Filen to load it.
+#
+# Usage: filen-fix-sync-retry [--check]
+#   --check   exit 0 = patched, 1 = unpatched, 2 = unknown layout / not found
+
+set -euo pipefail
+
+if [[ "$(uname)" == Darwin ]]; then
+    default_asar=/Applications/Filen.app/Contents/Resources/app.asar
+else
+    default_asar=/usr/lib/filen-desktop/app.asar
+fi
+ASAR="${FILEN_ASAR:-$default_asar}"
+
+CHECK=0
+[[ "${1:-}" == "--check" ]] && CHECK=1
+
+if [[ ! -f "$ASAR" ]]; then
+    echo "filen-fix-sync-retry: $ASAR not found (Filen installed?)" >&2
+    exit 2
+fi
+
+if [[ $CHECK -eq 0 && ! -w "$ASAR" && $EUID -ne 0 ]]; then
+    exec sudo "$0" "$@"
+fi
+
+rc=0
+python3 -I - "$ASAR" "$CHECK" <<'PYEOF' || rc=$?
+import sys
+
+asar, check = sys.argv[1], int(sys.argv[2])
+
+old = (
+    b'                this.worker.logger.log("error", "Not continueing sync cycle, '
+    b'got taskErrors or localTreeErrors", this.syncPair.localPath);'
+)
+new_core = (
+    b"                if(!this._ae)this._ae=Date.now();else if(Date.now()-this._ae>6e4)"
+    b"{this._ae=0;this.taskErrors=[];this.localTreeErrors=[]}"
+)
+new = new_core + b" " * (len(old) - len(new_core))
+assert len(new) == len(old)
+
+data = open(asar, "rb").read()
+
+if new in data:
+    print("filen-fix-sync-retry: already patched")
+    sys.exit(0)
+count = data.count(old)
+if count != 1:
+    print(f"filen-fix-sync-retry: expected 1 unpatched block, found {count}. Upstream layout changed? Nothing modified.")
+    sys.exit(2)
+
+if check:
+    print("filen-fix-sync-retry: unpatched")
+    sys.exit(1)
+
+with open(asar, "r+b") as f:
+    f.seek(data.find(old))
+    f.write(new)
+
+print("filen-fix-sync-retry: patched OK (same-length write, offsets intact); restart Filen")
+PYEOF
+
+exit "$rc"

@@ -521,6 +521,20 @@ discord-openasar-status
 
 For the full workflow and file paths, see [discord-openasar.md](discord-openasar.md).
 
+## Filen Utilities
+
+### filen-fix-sync-retry
+
+Patches Filen's `app.asar` so a sync pair with failed tasks retries 60 s after the first halted cycle. Unpatched, one failed file stops the whole pair until "Resume" is clicked in the GUI.
+
+```bash
+filen-fix-sync-retry [--check]
+```
+
+- Targets `/usr/lib/filen-desktop/app.asar` on Linux (uses sudo) and `/Applications/Filen.app/Contents/Resources/app.asar` on macOS; override with `FILEN_ASAR`.
+- `--check` exits 0 when patched, 1 when unpatched, 2 when the code layout is unknown.
+- Restart Filen after patching. Every Filen update overwrites `app.asar`, so rerun it after updates.
+
 ## KDE Plasma Defaults (62-kde.zsh, Linux only)
 
 | Command | Description |
