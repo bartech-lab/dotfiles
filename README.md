@@ -134,8 +134,9 @@ dotfiles-doctor
 - `dotfiles-doctor` - Environment health check
 - `gitlab-stats [options]` - GitLab merge request statistics
 - `pclaude [claude args]` - Claude Code on the private subscription account, same config as `claude` (see [Functions Reference](docs/functions.md#pclaude))
-- `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
-- `discord-openasar-status` - Check OpenAsar LaunchAgent status
+- `discord-openasar-apply [flags]` - Apply OpenAsar and the theme CSS, then smoke-test Discord (opt-in)
+- `discord-openasar-recover [--launch] [backup]` - Restore Discord's stock app.asar from a backup
+- `discord-openasar-status` - Show the current OpenAsar state
 - `filen-fix-sync-retry [--check]` - Patch Filen sync to retry failed tasks after 60 s instead of halting until a manual resume; `filen-patches/setup.sh` reapplies it after Filen updates (see [Functions Reference](docs/functions.md#filen-fix-sync-retry))
 - `agent-skills-sync [name ...]` - Mirror skills from the Claude-synced skill bundle into ~/.agents/skills, which Codex and OMP both read
 

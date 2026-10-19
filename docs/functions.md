@@ -490,22 +490,30 @@ Defaults: `-N 16`, `--fragment-retries infinite`, `--http-chunk-size 10M`, `-4`.
 
 ## Discord Utilities
 
-### discord-openasar-setup
+### discord-openasar-apply
 
-Manual, opt-in setup for persistent OpenAsar on Discord updates.
+Manual, opt-in: downloads the latest OpenAsar nightly, backs up the stock `app.asar`, applies OpenAsar and the theme CSS, then launches Discord for a 6-second smoke test.
 
 ```bash
-discord-openasar-setup [--app <Discord.app path>] [--refresh-openasar] [--no-theme]
+discord-openasar-apply [--yes] [--force] [--skip-smoke]
 ```
 
 **Options:**
-- `--app <path>` - Target app bundle (`/Applications/Discord.app` by default)
-- `--refresh-openasar` - Re-download latest OpenAsar nightly
-- `--no-theme` - Skip syncing custom CSS to OpenAsar settings
+- `--yes`, `-y` - Skip confirmation prompts
+- `--force` - Apply even if Discord appears newer than the OpenAsar nightly
+- `--skip-smoke` - Skip the post-apply smoke test (not recommended)
+
+### discord-openasar-recover
+
+Restores Discord's stock `app.asar` from the latest backup, or from the backup file given.
+
+```bash
+discord-openasar-recover [--launch] [backup-file]
+```
 
 ### discord-openasar-status
 
-Show LaunchAgent state for automatic OpenAsar reapply.
+Show the current OpenAsar state.
 
 ```bash
 discord-openasar-status
