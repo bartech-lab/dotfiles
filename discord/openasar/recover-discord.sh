@@ -121,7 +121,7 @@ log "Done."
 DISCORD_VERSION="$(jq -r '.version // "0.0.0"' "$BUILD_INFO" 2>/dev/null)" || true
 : "${DISCORD_VERSION:=0.0.0}"
 
-MODULES_DIR="$HOME/Library/Application Support/discord/${DISCORD_VERSION}/modules"
+MODULES_DIR="$(dirname "$SETTINGS_JSON")/${DISCORD_VERSION}/modules"
 if [ -d "$MODULES_DIR" ]; then
   echo ""
   log "Nuking modules directory to force fresh download..."

@@ -23,8 +23,6 @@ if [[ "$OS" == macos ]]; then
   DATE_PARSE="date -jf %Y-%m-%dT%H:%M:%SZ"
   DATE_READABLE="date -r"
   PGREP_PATTERN="Discord.app/Contents/MacOS/Discord"
-  SETTINGS_JSON_DIR="$(dirname "$SETTINGS_JSON")"
-  MODULES_DIR="$SETTINGS_JSON_DIR/${DISCORD_VERSION}/modules"
 else
   for d in "/opt/discord" "/usr/lib/discord" "$HOME/.local/share/discord"; do
     [[ -d "$d" ]] && { DISCORD_APP="$d"; break; }
@@ -236,14 +234,14 @@ if [ "$CRASHED" = true ]; then
   cp "$BACKUP_FILE" "$DISCORD_ASAR"
   echo "  Restored: $BACKUP_FILE"
 
-  MODULES_DIR="$HOME/Library/Application Support/discord/${DISCORD_VERSION}/modules"
+  MODULES_DIR="$(dirname "$SETTINGS_JSON")/${DISCORD_VERSION}/modules"
   if [ -d "$MODULES_DIR" ]; then
     rm -rf "$MODULES_DIR"
     echo "  Nuked modules: $MODULES_DIR"
   fi
 
   python3 - "$SETTINGS_JSON" <<'PY'
-import json
+import json, sys
 from pathlib import Path
 settings_path = Path(sys.argv[1])
 if settings_path.exists():
