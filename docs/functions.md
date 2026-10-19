@@ -465,10 +465,13 @@ The private account uses `CLAUDE_CONFIG_DIR=~/.claude-private`, so its login is
 separate: macOS keeps it in a Keychain item keyed by the directory path, Linux
 in `~/.claude-private/.credentials.json`.
 
-Every other entry in `~/.claude` is symlinked in on each launch, including
-settings, hooks, skills, plugins, `projects` (sessions and memory) and
-`history.jsonl`. `--resume` therefore sees sessions from both accounts. Login,
-org policy and daemon state stay per account (see `EXCLUDE` in the script).
+Every directory in `~/.claude` is symlinked in on each launch, including
+hooks, skills, plugins and `projects` (sessions and memory). `--resume`
+therefore sees sessions from both accounts. Login, org policy and daemon state
+stay per account (see `EXCLUDE` in the script). Top-level files are linked only
+when listed in `SHARED_FILES` (settings, `CLAUDE.md`, the status line script and
+`history.jsonl`). Claude Code saves its state files by rename, which replaces a
+symlink, so every other file stays per account.
 
 `~/.claude.json` is not shared, because it holds the account identity. On each
 launch `pclaude` copies user MCP servers, update settings, a few UI choices
@@ -477,7 +480,7 @@ servers, trust and allowed tools from it. MCP changes made inside a `pclaude`
 session are overwritten on the next launch; use `pclaude mcp ...` or `claude
 mcp ...` instead. Connectors added on claude.ai follow the account.
 
-If Claude replaces a link with a real file, the next launch warns and leaves the
+If Claude replaces a shared file's link with a real file, the next launch warns and leaves the
 copy alone. Delete it to share again. Claude Desktop and IDE extensions ignore
 `CLAUDE_CONFIG_DIR`.
 

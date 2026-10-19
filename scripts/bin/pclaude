@@ -6,7 +6,9 @@
 # login is separate: macOS keeps it in a Keychain item keyed by the directory
 # path, Linux in ~/.claude-private/.credentials.json. Everything else is shared
 # with ~/.claude through symlinks refreshed on every launch: settings, hooks,
-# skills, plugins, sessions, history and project memory. User and project MCP
+# skills, plugins, sessions, history and project memory. Directories are shared
+# unless excluded; top-level files only when listed in SHARED_FILES, because
+# Claude Code saves state files by rename, which replaces a symlink. User and project MCP
 # servers, trust and allowed tools are copied from ~/.claude.json on every launch.
 #
 # Usage: pclaude [claude args...]
@@ -39,6 +41,15 @@ EXCLUDE=(
     seed-admin
 )
 
+# Top-level files to share. Any other file is per-account state.
+SHARED_FILES=(
+    settings.json
+    settings.local.json
+    CLAUDE.md
+    statusline-command.sh
+    history.jsonl
+)
+
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
     sed -n '/^# Usage/,/^#   pclaude mcp add/p' "$0" | sed 's/^# \{0,1\}//'
     echo "Run 'claude --help' for claude flags."
@@ -62,15 +73,29 @@ excluded() {
     return 1
 }
 
+shared_file() {
+    local f
+    for f in "${SHARED_FILES[@]}"; do
+        [[ $1 == "$f" ]] && return 0
+    done
+    return 1
+}
+
 for dst in "$profile"/* "$profile"/.[!.]*; do
     # Drop a link whose source was removed.
-    [[ -L $dst && ! -e $dst ]] && rm "$dst"
+    [[ -L $dst ]] || continue
+    if [[ ! -e $dst ]]; then
+        rm "$dst"
+    elif [[ -f $dst && $(readlink "$dst") == "$base/"* ]] && ! shared_file "${dst##*/}"; then
+        rm "$dst"
+    fi
 done
 
 for src in "$base"/* "$base"/.[!.]*; do
     [[ -e $src || -L $src ]] || continue
     name=${src##*/}
     excluded "$name" && continue
+    [[ -f $src ]] && ! shared_file "$name" && continue
     dst="$profile/$name"
     if [[ -L $dst ]]; then
         continue

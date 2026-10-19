@@ -27,6 +27,7 @@ echo '{"work":"token"}' > "$B/.credentials.json"
 echo '{}' > "$B/policy-limits.json"
 echo '{}' > "$B/remote-settings.json"
 echo 'x' > "$B/.last-cleanup"
+echo 'x' > "$B/.last-update-result.json"
 cat > "$HOME/.claude.json" <<'JSON'
 {
   "oauthAccount": {"emailAddress": "work@example.invalid"},
@@ -52,6 +53,7 @@ cat > "$P/.claude.json" <<'JSON'
 JSON
 echo '{"private":"token"}' > "$P/.credentials.json"
 ln -s "$B/gone" "$P/gone"
+ln -s "$B/.last-cleanup" "$P/.last-cleanup"
 
 "$TOOL" -c --model x
 
@@ -59,10 +61,10 @@ call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 [[ ${call[0]} == "$P" ]] || fail "CLAUDE_CONFIG_DIR is ${call[0]}, want $P"
 [[ "${call[*]:1}" == "-c --model x" ]] || fail "args not passed through: ${call[*]:1}"
 
-for e in settings.json skills projects .last-cleanup; do
+for e in settings.json skills projects; do
     [[ -L $P/$e && $(readlink "$P/$e") == "$B/$e" ]] || fail "$e is not linked to $B/$e"
 done
-for e in policy-limits.json remote-settings.json; do
+for e in policy-limits.json remote-settings.json .last-cleanup .last-update-result.json; do
     [[ ! -e $P/$e ]] || fail "$e must not be shared"
 done
 [[ ! -L $P/.credentials.json ]] || fail ".credentials.json is a link"
@@ -81,6 +83,12 @@ assert d["projects"]["/b"] == {"lastCost": 1, "allowedTools": ["Bash"]}, d["proj
 PY
 [[ $(stat -c %a "$P/.claude.json" 2>/dev/null || stat -f %Lp "$P/.claude.json") == 600 ]] \
     || fail ".claude.json is not mode 600"
+
+# A state file Claude Code replaced by rename stays local without a warning.
+echo 'y' > "$P/.last-update-result.json"
+"$TOOL" 2>"$TEST_ROOT/err"
+! grep -q "last-update-result" "$TEST_ROOT/err" || fail "warned about a per-account state file"
+grep -q y "$P/.last-update-result.json" || fail "per-account state file was touched"
 
 # A real file where a link belongs is left alone.
 rm "$P/settings.json"
