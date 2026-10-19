@@ -15,7 +15,7 @@ git-cleanup() {
 }
 
 git-open() {
-  local url host path
+  local url host repo_path
 
   url=$(git remote get-url origin 2>/dev/null) || {
     echo "No origin remote"
@@ -25,8 +25,8 @@ git-open() {
   # --- Azure DevOps SSH special case ---
   if [[ "$url" == git@ssh.dev.azure.com:* ]]; then
     # git@ssh.dev.azure.com:v3/org/project/repo
-    path=${url#git@ssh.dev.azure.com:v3/}
-    local azure_url="https://dev.azure.com/${path//\//\/_git\/}"
+    repo_path=${url#git@ssh.dev.azure.com:v3/}
+    local azure_url="https://dev.azure.com/${repo_path%/*}/_git/${repo_path##*/}"
     echo "Opening Azure DevOps repo…"
     if [[ "$DOTFILES_OS" == macos ]]; then
       open "$azure_url"
@@ -40,8 +40,8 @@ git-open() {
   if [[ "$url" == git@*:* ]]; then
     host=${url%%:*}
     host=${host#git@}
-    path=${url#*:}
-    url="https://${host}/${path}"
+    repo_path=${url#*:}
+    url="https://${host}/${repo_path}"
   fi
 
   # --- Remove trailing .git ---
