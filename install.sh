@@ -48,7 +48,7 @@ fi
 case "$(uname -s)" in
   Darwin) DOTFILES_OS=macos ;;
   Linux)  DOTFILES_OS=linux ;;
-  *)      print -u2 "❌ Unsupported OS: $(uname -s)"; exit 1 ;;
+  *)      echo "❌ Unsupported OS: $(uname -s)" >&2; exit 1 ;;
 esac
 
 echo "==> OS detected: $DOTFILES_OS"
@@ -661,6 +661,15 @@ config_symlinks() {
     local src="$1" dest="$2" label="$3"
     local dest_dir
     dest_dir="$(dirname "$dest")"
+    if [[ -f "$dest" && ! -L "$dest" ]]; then
+        ensure_backup_dir
+        if [[ "$DRY_RUN" == true ]]; then
+            echo "  → Would backup: $dest"
+        else
+            cp "$dest" "$BACKUP_DIR/$(basename "$dest_dir")-$(basename "$dest")"
+            echo "✓ Backed up existing $label"
+        fi
+    fi
     if [[ "$DRY_RUN" == true ]]; then
         if [[ -L "$dest" ]]; then
             echo "  → Would update: $dest → $src"
