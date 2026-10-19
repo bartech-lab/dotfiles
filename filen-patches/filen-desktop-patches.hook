@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = filen-desktop-bin
+
+[Action]
+Description = Reapplying local Filen app.asar patches...
+When = PostTransaction
+Exec = /bin/sh -c '__DOTFILES__/scripts/bin/filen-fix-window; __DOTFILES__/scripts/bin/filen-fix-sync-retry'
