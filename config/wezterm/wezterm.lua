@@ -44,6 +44,12 @@ config.cursor_blink_rate = 0
 config.hide_tab_bar_if_only_one_tab = false
 config.window_close_confirmation = 'NeverPrompt'
 
+-- WezTerm reports one event per wheel notch; Ghostty amplifies them.  Match
+-- Ghostty's scroll distance in Claude Code's fullscreen renderer.
+config.set_environment_variables = {
+  CLAUDE_CODE_SCROLL_SPEED = '3',
+}
+
 -- The unix domain is the default for both `wezterm` and explicit `wezterm
 -- start` launches.  The latter is used by desktop launchers and would bypass
 -- default_gui_startup_args on its own.
