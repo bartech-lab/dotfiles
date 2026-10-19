@@ -83,6 +83,8 @@ if wezterm.target_triple:find('darwin') then
   config.max_fps = 120
 else
   config.front_end = 'OpenGL'
+  -- Match archpc's 240 Hz monitor.
+  config.max_fps = 240
 end
 
 -- Keep routine tab navigation on direct, familiar shortcuts.  The explicit
