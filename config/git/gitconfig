@@ -30,6 +30,6 @@
 [tag]
   sort = version:refname
 [help]
-  autocorrect = 1
+  autocorrect = prompt
 [column]
   ui = auto
