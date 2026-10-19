@@ -62,6 +62,15 @@ while (( i < ${#args[@]} )); do
   esac
 done
 
+if [[ "$subcmd" == "push" ]]; then
+  for a in "${args[@]:i+1}"; do
+    case "$a" in
+      --) break ;;
+      --dry-run|-n|-[!-]*n*) GIT_AUTOSWITCH_OFF=1; break ;;
+    esac
+  done
+fi
+
 if [[ "$subcmd" != "push" || -n "${GIT_AUTOSWITCH_OFF:-}" ]]; then
   exec "$REAL_GIT" "$@"
 fi
