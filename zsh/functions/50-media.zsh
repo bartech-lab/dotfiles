@@ -10,7 +10,7 @@ _notify() {
     fi
 }
 
-optimize-images() {
+optimize-images() (
   local SOURCE_PATH="."
   local INPUT_DIR=""
   local SINGLE_FILE=""
@@ -68,11 +68,11 @@ optimize-images() {
   else
     while IFS= read -r -d '' file; do
       jpeg_files+=("$file")
-    done < <(find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" \) -print0)
+    done < <(find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" \) ! -iname "*-opt.*" ! -iname "*-opt[0-9]*.*" -print0)
 
     while IFS= read -r -d '' file; do
       png_files+=("$file")
-    done < <(find . -maxdepth 1 -type f -iname "*.png" -print0)
+    done < <(find . -maxdepth 1 -type f -iname "*.png" ! -iname "*-opt.*" ! -iname "*-opt[0-9]*.*" -print0)
   fi
   
   # Count files to process
@@ -236,9 +236,9 @@ optimize-images() {
   fi
 
   echo "✅ Done! Optimized $total_count files in current directory"
-}
+)
 
-video-remux() {
+video-remux() (
   local SOURCE_PATH="."
   local INPUT_DIR=""
   local SINGLE_FILE=""
@@ -333,6 +333,7 @@ video-remux() {
       out="${name}.mp4"
     fi
     
+    tmp="$out.part"
     if [[ ! -f "$out" ]]; then
       if [[ "$ext" == "webp" ]]; then
         packets=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$file" 2>/dev/null | tr -d "\r")
@@ -342,25 +343,28 @@ video-remux() {
         fi
 
         if [[ "$packets" =~ ^[0-9]+$ ]] && (( packets > 1 )); then
-          if ffmpeg -hide_banner -loglevel error -i "$file" -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$out" 2>/dev/null; then
+          if ffmpeg -hide_banner -loglevel error -i "$file" -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart -y -f mp4 "$tmp" 2>/dev/null && mv "$tmp" "$out"; then
             touch -r "$file" "$out"
           else
+            rm -f "$tmp"
             echo "FAILED: $base" >> "'$ERROR_LOG'"
           fi
         else
           echo "SKIPPED (not animated): $base" >> "'$SKIP_LOG'"
         fi
       else
-        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart "$out" 2>/dev/null; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v copy -c:a copy -movflags +faststart -y -f mp4 "$tmp" 2>/dev/null && mv "$tmp" "$out"; then
           touch -r "$file" "$out"
         else
           if [[ "$ext" == "webm" ]]; then
-            if ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 192k -movflags +faststart "$out" 2>/dev/null; then
+            if ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 192k -movflags +faststart -y -f mp4 "$tmp" 2>/dev/null && mv "$tmp" "$out"; then
               touch -r "$file" "$out"
             else
+              rm -f "$tmp"
               echo "FAILED: $base" >> "'$ERROR_LOG'"
             fi
           else
+            rm -f "$tmp"
             echo "FAILED: $base" >> "'$ERROR_LOG'"
           fi
         fi
@@ -390,9 +394,9 @@ video-remux() {
   fi
   
   _notify "video-remux" "Video remux complete!"
-}
+)
 
-video-encode-cpu() {
+video-encode-cpu() (
   local SOURCE_DIR="."
   local USE_SUBDIR=0
   
@@ -433,7 +437,7 @@ video-encode-cpu() {
   local files=()
   while IFS= read -r -d '' file; do
     files+=("$file")
-  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" \) -print0)
+  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" \) ! -iname "*-h265.mp4" -print0)
   
   local total_files=${#files[@]}
   
@@ -471,10 +475,12 @@ video-encode-cpu() {
       out="${name}.mp4"
     fi
     
+    tmp="$out.part"
     if [[ ! -f "$out" ]]; then
-      if ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+      if ffmpeg -hide_banner -loglevel error -i "$file" -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -c:a aac -b:a 320k -ac 2 -ar 48000 -y -f mp4 "$tmp" 2>/dev/null && mv "$tmp" "$out"; then
         : # success
       else
+        rm -f "$tmp"
         echo "FAILED: $base" >> "'$ERROR_LOG'"
       fi
     fi
@@ -495,9 +501,9 @@ video-encode-cpu() {
   fi
   
   _notify "video-encode-cpu" "CPU encoding complete!"
-}
+)
 
-video-encode-gpu() {
+video-encode-gpu() (
   local SOURCE_DIR="."
   local USE_SUBDIR=0
   
@@ -538,7 +544,7 @@ video-encode-gpu() {
   local files=()
   while IFS= read -r -d '' file; do
     files+=("$file")
-  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" \) -print0)
+  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" \) ! -iname "*-h265.mp4" -print0)
   
   local total_files=${#files[@]}
   
@@ -583,19 +589,31 @@ video-encode-gpu() {
       out="${name}.mp4"
     fi
     
+    tmp="$out.part"
     if [[ ! -f "$out" ]]; then
-      crop=$(ffmpeg -hide_banner -i "$file" -vf cropdetect=limit=0.1:round=2 -t 8 -f null - 2>&1 | awk -F'"'"'crop='"'"' '"'"'/crop=/{print $2}'"'"' | awk '"'"'{print $1}'"'"' | tail -1)
+      crop=""; best=0
+      dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$file" 2>/dev/null)
+      dur=${dur%.*}
+      case "$dur" in ""|*[!0-9]*) dur=0 ;; esac
+      for pct in 20 50 80; do
+        c=$(ffmpeg -hide_banner -ss $((dur * pct / 100)) -i "$file" -vf cropdetect=limit=0.1:round=2 -t 4 -f null - 2>&1 | grep -o "crop=[0-9]*:[0-9]*:[0-9]*:[0-9]*" | tail -1)
+        c=${c#crop=}
+        w=${c%%:*}; rest=${c#*:}; h=${rest%%:*}
+        if [ -n "$c" ] && [ $((w * h)) -gt "$best" ]; then best=$((w * h)); crop=$c; fi
+      done
       
       if [[ -n "$crop" ]]; then
-        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v "$DOTFILES_ENCODER" $DOTFILES_ENCODER_FLAGS -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -vf "crop=$crop" -c:v "$DOTFILES_ENCODER" $DOTFILES_ENCODER_FLAGS -c:a aac -b:a 320k -ac 2 -ar 48000 -y -f mp4 "$tmp" 2>/dev/null && mv "$tmp" "$out"; then
           : # success
         else
+          rm -f "$tmp"
           echo "FAILED: $base" >> "'"$ERROR_LOG"'"
         fi
       else
-        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v "$DOTFILES_ENCODER" $DOTFILES_ENCODER_FLAGS -c:a aac -b:a 320k -ac 2 -ar 48000 "$out" 2>/dev/null; then
+        if ffmpeg -hide_banner -loglevel error -i "$file" -c:v "$DOTFILES_ENCODER" $DOTFILES_ENCODER_FLAGS -c:a aac -b:a 320k -ac 2 -ar 48000 -y -f mp4 "$tmp" 2>/dev/null && mv "$tmp" "$out"; then
           : # success
         else
+          rm -f "$tmp"
           echo "FAILED: $base" >> "'"$ERROR_LOG"'"
         fi
       fi
@@ -617,9 +635,9 @@ video-encode-gpu() {
   fi
   
   _notify "video-encode-gpu" "GPU encoding complete!"
-}
+)
 
-video-encode-av1() {
+video-encode-av1() (
   local SOURCE_DIR="."
   local USE_SUBDIR=0
 
@@ -663,7 +681,7 @@ video-encode-av1() {
   local files=()
   while IFS= read -r -d '' file; do
     files+=("$file")
-  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" -o -iname "*.mkv" \) -print0)
+  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" -o -iname "*.mkv" \) ! -iname "*-av1.mp4" -print0)
 
   local total_files=${#files[@]}
 
@@ -690,14 +708,16 @@ video-encode-av1() {
       out="${name}.mp4"
     fi
 
+    tmp="$out.part"
     if [[ ! -f "$out" ]]; then
       if ffmpeg -hide_banner -loglevel error -i "$file" \
           -c:v av1_nvenc -preset p7 -tune hq -cq 28 -pix_fmt p010le \
           -multipass qres -b_ref_mode each -spatial-aq 1 -temporal-aq 1 \
           -c:a aac -b:a 192k -ac 2 -ar 48000 \
-          -movflags +faststart "$out" 2>/dev/null; then
+          -movflags +faststart -y -f mp4 "$tmp" 2>/dev/null && mv "$tmp" "$out"; then
         touch -r "$file" "$out"
       else
+        rm -f "$tmp"
         echo "FAILED: $base" >> "'"$ERROR_LOG"'"
       fi
     fi
@@ -717,7 +737,7 @@ video-encode-av1() {
   fi
 
   _notify "video-encode-av1" "AV1 encoding complete!"
-}
+)
 
 # Convert video to GIF (useful for documentation/issues)
 video-to-gif() {
@@ -785,7 +805,7 @@ split[s0][s1];\
 }
 
 # Convert DNG raw files to JPEG via ImageMagick (libraw decode)
-dng-to-jpg() {
+dng-to-jpg() (
     emulate -L zsh
 
     local SOURCE_PATH="${1:-.}"
@@ -876,4 +896,4 @@ dng-to-jpg() {
     fi
 
     echo "✅ Done! Converted $total_count file(s) in $INPUT_DIR"
-}
+)
