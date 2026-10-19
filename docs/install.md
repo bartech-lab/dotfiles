@@ -250,8 +250,11 @@ Two scripts handle machine-to-machine migration:
 ### On Old Machine
 
 ```bash
-~/dotfiles/scripts/migrate-backup.sh
+SSH_ARCHIVE_PASSWORD='<password>' ~/dotfiles/scripts/migrate-backup.sh
 ```
+
+`SSH_ARCHIVE_PASSWORD` encrypts the SSH key zip. Both scripts stop when it is
+unset and there are SSH keys to back up or restore.
 
 Creates `~/migration-backup.tar.gz` containing:
 - **npm global packages** - List of globally installed npm packages
@@ -274,7 +277,7 @@ Creates `~/migration-backup.tar.gz` containing:
 git clone https://github.com/bartech-lab/dotfiles.git ~/dotfiles
 
 # Run restore with the archive
-~/dotfiles/scripts/migrate-restore.sh ~/migration-backup.tar.gz
+SSH_ARCHIVE_PASSWORD='<password>' ~/dotfiles/scripts/migrate-restore.sh ~/migration-backup.tar.gz
 ```
 
 The restore script:

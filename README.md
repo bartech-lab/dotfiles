@@ -179,10 +179,10 @@ Moving to a new Mac? Use the migration scripts:
 
 ```bash
 # On old machine - backs up SSH keys, npm packages, Ghostty config, and ALL macOS defaults
-~/dotfiles/scripts/migrate-backup.sh
+SSH_ARCHIVE_PASSWORD='<password>' ~/dotfiles/scripts/migrate-backup.sh
 
 # On new machine - restores everything including comprehensive macOS system preferences
-~/dotfiles/scripts/migrate-restore.sh ~/migration-backup.tar.gz
+SSH_ARCHIVE_PASSWORD='<password>' ~/dotfiles/scripts/migrate-restore.sh ~/migration-backup.tar.gz
 ```
 
 **What gets backed up:**
