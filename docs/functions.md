@@ -533,7 +533,8 @@ filen-fix-sync-retry [--check]
 
 - Targets `/usr/lib/filen-desktop/app.asar` on Linux (uses sudo) and `/Applications/Filen.app/Contents/Resources/app.asar` on macOS; override with `FILEN_ASAR`.
 - `--check` exits 0 when patched, 1 when unpatched, 2 when the code layout is unknown.
-- Restart Filen after patching. Every Filen update overwrites `app.asar`, so rerun it after updates.
+- Restart Filen after patching. Every Filen update overwrites `app.asar`.
+- To reapply automatically, run `~/dotfiles/filen-patches/setup.sh` once per machine (opt-in). Linux: a pacman hook reruns `filen-fix-window` and `filen-fix-sync-retry` after each `filen-desktop-bin` install or upgrade. macOS: a LaunchAgent (`com.bartech.filen-fix-sync-retry`) reruns the patch when `app.asar` changes and at login; Filen may run unpatched until its next restart after an update. Log: `~/Library/Logs/filen-fix-sync-retry.log`.
 
 ## KDE Plasma Defaults (62-kde.zsh, Linux only)
 
