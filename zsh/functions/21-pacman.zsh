@@ -3,11 +3,11 @@
 
 pacup() {
     echo "🔄 Updating system packages..."
-    sudo pacman -Syu
+    sudo pacman -Syu || return
     if command -v yay &>/dev/null; then
         echo ""
         echo "🔄 Updating AUR packages..."
-        yay -Sua --noconfirm
+        yay -Sua --noconfirm || return
     fi
     echo ""
     echo "✓ System updated"
@@ -16,9 +16,10 @@ pacup() {
 pacclean() {
     echo "🧹 Cleaning package cache..."
     if command -v paccache &>/dev/null; then
-        sudo paccache -rk2
+        sudo paccache -rk2 || return
     else
         echo "Install pacman-contrib for paccache: sudo pacman -S pacman-contrib"
+        return 1
     fi
     echo "✓ Cache cleaned"
 }
