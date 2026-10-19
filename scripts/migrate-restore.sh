@@ -30,6 +30,11 @@ trap 'rm -rf "$EXTRACT_DIR"' EXIT
 echo "→ Extracting archive..."
 tar -xzf "$ARCHIVE" -C "$EXTRACT_DIR" --strip-components=1
 
+if [[ -f "$EXTRACT_DIR/ssh-keys.zip" && -z "${SSH_ARCHIVE_PASSWORD:-}" ]]; then
+    echo "❌ Set SSH_ARCHIVE_PASSWORD to the password used for the backup." >&2
+    exit 1
+fi
+
 if [[ $(uname -m) == "arm64" ]]; then
     echo "→ Installing Rosetta (Apple Silicon)..."
     softwareupdate --install-rosetta --agree-to-license 2>/dev/null || true
@@ -58,7 +63,7 @@ echo "→ Restoring SSH keys..."
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 if [[ -f "$EXTRACT_DIR/ssh-keys.zip" ]]; then
-    unzip -o -P "${SSH_ARCHIVE_PASSWORD:-changeme}" "$EXTRACT_DIR/ssh-keys.zip" -d ~/.ssh/ 2>/dev/null || true
+    unzip -o -P "$SSH_ARCHIVE_PASSWORD" "$EXTRACT_DIR/ssh-keys.zip" -d ~/.ssh/
     chmod 600 ~/.ssh/id_ed25519 2>/dev/null || true
     chmod 644 ~/.ssh/id_ed25519.pub 2>/dev/null || true
     chmod 644 ~/.ssh/known_hosts 2>/dev/null || true
@@ -75,7 +80,7 @@ brew doctor 2>/dev/null || echo "  ⚠️  brew doctor reported issues (may be s
 
 echo "→ Installing npm global packages..."
 if [[ -f "$EXTRACT_DIR/npm-global.txt" ]] && [[ -s "$EXTRACT_DIR/npm-global.txt" ]]; then
-    xargs -a "$EXTRACT_DIR/npm-global.txt" npm install -g 2>/dev/null || true
+    xargs npm install -g < "$EXTRACT_DIR/npm-global.txt" || echo "  ⚠️  some npm packages failed to install"
 fi
 
 echo "→ Restoring Ghostty config..."

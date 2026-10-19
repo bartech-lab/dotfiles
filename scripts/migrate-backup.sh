@@ -3,6 +3,11 @@ set -euo pipefail
 
 [[ "$(uname -s)" != Darwin ]] && { echo "macOS only"; exit 1; }
 
+if [[ -d ~/.ssh && -z "${SSH_ARCHIVE_PASSWORD:-}" ]]; then
+    echo "❌ Set SSH_ARCHIVE_PASSWORD to encrypt the SSH key archive." >&2
+    exit 1
+fi
+
 BACKUP_DIR="$HOME/migration-backup"
 ARCHIVE="$HOME/migration-backup.tar.gz"
 
@@ -16,13 +21,20 @@ mkdir -p "$BACKUP_DIR"
 cd "$BACKUP_DIR"
 
 echo "→ Collecting npm global packages..."
-npm list -g --depth=0 --parseable 2>/dev/null | tail -n +2 | xargs -n1 basename > npm-global.txt 2>/dev/null || touch npm-global.txt
+npm list -g --depth=0 --parseable 2>/dev/null | tail -n +2 | sed 's#.*/node_modules/##' > npm-global.txt 2>/dev/null || touch npm-global.txt
 
 echo "→ Backing up SSH keys..."
 if [[ -d ~/.ssh ]]; then
     cd ~/.ssh
-    zip -P "${SSH_ARCHIVE_PASSWORD:-changeme}" -r "$BACKUP_DIR/ssh-keys.zip" \
-        id_ed25519 id_ed25519.pub known_hosts config 2>/dev/null || true
+    ssh_files=()
+    for f in id_ed25519 id_ed25519.pub known_hosts config; do
+        [[ -e "$f" ]] && ssh_files+=("$f")
+    done
+    if (( ${#ssh_files} )); then
+        zip -q -P "$SSH_ARCHIVE_PASSWORD" "$BACKUP_DIR/ssh-keys.zip" "${ssh_files[@]}"
+    else
+        echo "  (no SSH key files found)"
+    fi
     cd "$BACKUP_DIR"
 else
     echo "  (no ~/.ssh directory found)"
@@ -100,7 +112,7 @@ SCRIPT_EOF
 
 # Export Screenshot settings
 echo "# Screenshots: location, format, and appearance" >> macos-defaults.sh
-defaults read com.apple.screencapture location 2>/dev/null && echo "defaults write com.apple.screencapture location -string '$(defaults read com.apple.screencapture location)'" >> macos-defaults.sh || echo "defaults write com.apple.screencapture location -string '\${HOME}/Downloads'" >> macos-defaults.sh
+defaults read com.apple.screencapture location 2>/dev/null && echo "defaults write com.apple.screencapture location -string '$(defaults read com.apple.screencapture location)'" >> macos-defaults.sh || echo "defaults write com.apple.screencapture location -string \"\${HOME}/Downloads\"" >> macos-defaults.sh
 defaults read com.apple.screencapture disable-shadow 2>/dev/null && echo "defaults write com.apple.screencapture disable-shadow -bool $(defaults read com.apple.screencapture disable-shadow)" >> macos-defaults.sh || echo "defaults write com.apple.screencapture disable-shadow -bool true" >> macos-defaults.sh
 defaults read com.apple.screencapture type 2>/dev/null && echo "defaults write com.apple.screencapture type -string '$(defaults read com.apple.screencapture type)'" >> macos-defaults.sh || echo "defaults write com.apple.screencapture type -string 'png'" >> macos-defaults.sh
 

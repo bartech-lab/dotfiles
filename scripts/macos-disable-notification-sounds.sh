@@ -392,7 +392,7 @@ do {
     let counts = try process(entries: entries)
     try? ensureOverview()
     printSummary(counts)
-    exit(0)
+    exit(counts.failed > 0 ? 1 : 0)
 } catch {
     fputs("\(error.localizedDescription)\n", stderr)
     exit(1)
