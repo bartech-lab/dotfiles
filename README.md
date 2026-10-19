@@ -135,7 +135,6 @@ dotfiles-doctor
 - `dotfiles-doctor` - Environment health check
 - `gitlab-stats [options]` - GitLab merge request statistics
 - `pclaude [claude args]` - Claude Code on the private subscription account, same config as `claude` (see [Functions Reference](docs/functions.md#pclaude))
-- `spare-overnight [claude args]` - Claude Code that waits out the 5-hour usage limit (retry watchdog, capped at 5 h 10 min), for unattended `/spare` or `/ideas` runs, on the private account (`pclaude`)
 - `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
 - `discord-openasar-status` - Check OpenAsar LaunchAgent status
 - `filen-fix-sync-retry [--check]` - Patch Filen sync to retry failed tasks after 60 s instead of halting until a manual resume; `filen-patches/setup.sh` reapplies it after Filen updates (see [Functions Reference](docs/functions.md#filen-fix-sync-retry))
