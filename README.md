@@ -128,7 +128,6 @@ dotfiles-doctor
 
 ### Development Utilities
 
-- `tfg` - Research one nonprofit with Codex and Tokens for Good; review before submission ([setup](docs/dev.md#tfg))
 - `extract <archive>` - Universal archive extractor
 - `archive [name] [--dry-run] [-gzip]` - Create reproducible archives
 - `repo-check` - Pre-archive sanity checker
