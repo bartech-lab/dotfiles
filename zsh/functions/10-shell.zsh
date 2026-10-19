@@ -2,15 +2,16 @@
 # Requires: brew install eza dust bottom duf
 
 # File listing (eza)
-alias ls='eza --icons --group-directories-first'
 alias ll='eza -la --icons --group-directories-first'
 alias lt='eza --tree --level=2 --icons'
 
 # System monitoring (btm)
 alias top='btm'
 
-# Agent shells (Claude Code, Codex) keep the standard du and df output.
+# Agent shells (Claude Code, Codex) keep the standard ls, du and df output.
 if [[ -z "$CLAUDECODE" && -z "$CODEX_SANDBOX" && -z "$CODEX_THREAD_ID" ]]; then
+alias ls='eza --icons --group-directories-first'
+
 # Disk usage (dust)
 alias du='dust'
 
