@@ -49,7 +49,6 @@ stat_throughput() {
 
     # Build dynamic table columns
     local header="Author"
-    local jq_month_exprs=""
     while IFS= read -r m; do
       header+="|${m}"
     done <<< "$months"
