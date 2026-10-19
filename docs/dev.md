@@ -2,15 +2,6 @@
 
 Archive handling, environment diagnostics, and development helpers.
 
-## tfg
-
-Run `tfg` from an interactive zsh terminal to start one Tokens for Good research task in Codex.
-The first run asks for your TFG key with hidden input, then saves it in `~/.zshenv` with mode `600`.
-Your existing Codex login supplies model access; the TFG key authenticates only the nonprofit research service.
-Review the report before approving submission. No recurring task is created.
-The working directory is `~/logbook/Projects/tokens-for-good/`.
-Use `tfg --help` for usage.
-
 ## extract
 
 Universal archive extractor with smart directory handling.

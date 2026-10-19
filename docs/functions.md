@@ -379,14 +379,6 @@ pacorphans           # Find packages to remove
 
 ## Development Utilities
 
-### tfg
-
-Run `tfg` to research one nonprofit through Tokens for Good using your existing Codex login.
-The first run prompts privately for your Tokens for Good key and saves it in `~/.zshenv` with mode `600`.
-Later runs reuse the key. Each run requests your review before submission and does not schedule recurring work.
-Research files belong in `~/logbook/Projects/tokens-for-good/`.
-Run `tfg --help` for usage.
-
 ### extract
 
 Universal archive extractor.
@@ -611,7 +603,6 @@ See [dev.md](dev.md) for full documentation.
 | Git | `30-git.zsh` | Git helpers |
 | Dev | `40-dev.zsh` | Development utilities |
 | omp | `41-omp.zsh` | omp wrapper with a trimmed tool list |
-| Tokens for Good | `42-tfg.zsh` | One nonprofit research task in Codex |
 | Media | `50-media.zsh` | Image/video processing |
 | Download | `51-download.zsh` | yt-dlp video downloading |
 | macOS | `60-macos.zsh` | System functions (macOS only) |
