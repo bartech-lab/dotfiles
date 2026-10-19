@@ -108,11 +108,11 @@ optimize-images() (
       tmp=".optimize_tmp_${$}_${RANDOM}_${name}.jpg"
 
       # Prefer cjpegli (jpeg-xl): ~30% smaller than mozjpeg at q85+, standard JPEG output.
-      # Fall back to cjpeg (mozjpeg) where jpeg-xl is not installed (e.g. Linux).
+      # Fall back to djpeg | cjpeg where jpeg-xl is not installed (e.g. Linux): libjpeg-turbo cjpeg cannot read JPEG input.
       if command -v cjpegli >/dev/null 2>&1; then
         ok=0; cjpegli "$file" "$tmp" -q 85 2>/dev/null && ok=1
       else
-        ok=0; cjpeg -quality 85 -optimize -progressive "$file" > "$tmp" 2>/dev/null && ok=1
+        ok=0; djpeg "$file" 2>/dev/null | cjpeg -quality 85 -optimize -progressive > "$tmp" 2>/dev/null && ok=1
       fi
 
       if [[ $ok -eq 1 ]]; then
