@@ -36,6 +36,12 @@ assert_not_contains() {
 
 mkdir -p "$MOCK_BIN" "$LOG_DIR"
 
+cat > "$MOCK_BIN/uname" <<'EOF'
+#!/bin/sh
+echo Linux
+EOF
+chmod +x "$MOCK_BIN/uname"
+
 cat > "$MOCK_BIN/systemctl" <<'EOF'
 #!/bin/bash
 
