@@ -108,7 +108,7 @@ if [ ! -f "$RESTORE_FILE" ]; then
   fatal "Backup file missing: $RESTORE_FILE"
 fi
 
-BACKUP_SIZE=$(stat -f%z "$RESTORE_FILE" 2>/dev/null || echo 0)
+BACKUP_SIZE=$(wc -c < "$RESTORE_FILE" 2>/dev/null | tr -d " " || echo 0)
 if [ "$BACKUP_SIZE" -lt 10000 ]; then
   fatal "Backup file is too small ($BACKUP_SIZE bytes). It may be an OpenAsar file, not stock Discord."
 fi
