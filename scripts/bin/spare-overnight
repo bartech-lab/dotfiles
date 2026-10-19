@@ -9,11 +9,11 @@
 #
 # Usage: spare-overnight [claude args...]
 #   spare-overnight                        then type /spare 5
-#   SPARE_OVERNIGHT_CLAUDE=pclaude spare-overnight   private account
+#   SPARE_OVERNIGHT_CLAUDE=claude spare-overnight    work account instead of the private one
 
 set -euo pipefail
 
 export CLAUDE_CODE_RETRY_WATCHDOG=1
 export CLAUDE_CODE_RETRY_WATCHDOG_MAX_USAGE_LIMIT_WAIT_MS="${CLAUDE_CODE_RETRY_WATCHDOG_MAX_USAGE_LIMIT_WAIT_MS:-18600000}"
 
-exec "${SPARE_OVERNIGHT_CLAUDE:-claude}" "$@"
+exec "${SPARE_OVERNIGHT_CLAUDE:-pclaude}" "$@"
