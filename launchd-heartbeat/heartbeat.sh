@@ -51,7 +51,17 @@ log_error() {
 # Platform-aware service check
 if [[ "$(uname -s)" == Darwin ]]; then
     check_service() {
-        launchctl print "gui/$(id -u)/$1" >/dev/null 2>&1 && echo "loaded" || echo "missing"
+        local info exit_code
+        if ! info=$(launchctl print "gui/$(id -u)/$1" 2>/dev/null); then
+            echo "missing"
+            return
+        fi
+        exit_code=$(sed -n 's/^[[:space:]]*last exit code = //p' <<< "$info" | head -n 1)
+        if [[ -n "$exit_code" && "$exit_code" != "0" && "$exit_code" != "(never exited)" ]]; then
+            echo "failed"
+            return
+        fi
+        echo "loaded"
     }
     notify() {
         osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true
@@ -59,14 +69,15 @@ if [[ "$(uname -s)" == Darwin ]]; then
     get_service_details() {
         local info
         info=$(launchctl print "gui/$(id -u)/$1" 2>/dev/null)
-        local state="unknown" runs="unknown"
+        local state="unknown" runs="unknown" last_exit="unknown"
         while IFS= read -r line; do
             case "$line" in
-                *"state = "*) state="${line##*state = }" ;;
+                *"last exit code = "*) last_exit="${line##*last exit code = }" ;;
+                *"state = "*) [[ $state == unknown ]] && state="${line##*state = }" ;;
                 *"runs = "*)  runs="${line##*runs = }" ;;
             esac
         done <<< "$info"
-        echo "state=$state runs=$runs"
+        echo "state=$state runs=$runs last_exit=$last_exit"
     }
 else
     check_service() {
@@ -158,6 +169,11 @@ done < "$LABELS_FILE"
 log_info "Run finished monitored=$monitored loaded=$loaded"
 
 # A log file nobody reads is not a monitor. Surface unloaded services.
-if [[ -n "$problem_labels" ]]; then
-    notify "launchd heartbeat" "Failed or missing: $problem_labels"
+NOTIFIED_FILE="$CONFIG_DIR/last-notified"
+previous_problems=$(cat "$NOTIFIED_FILE" 2>/dev/null || true)
+if [[ "$problem_labels" != "$previous_problems" ]]; then
+    if [[ -n "$problem_labels" ]]; then
+        notify "launchd heartbeat" "Failed or missing: $problem_labels"
+    fi
+    printf '%s' "$problem_labels" > "$NOTIFIED_FILE"
 fi
