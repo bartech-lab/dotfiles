@@ -135,6 +135,7 @@ dotfiles-doctor
 - `dotfiles-doctor` - Environment health check
 - `gitlab-stats [options]` - GitLab merge request statistics
 - `pclaude [claude args]` - Claude Code on the private subscription account, same config as `claude` (see [Functions Reference](docs/functions.md#pclaude))
+- `spare-overnight [claude args]` - Claude Code that waits out the 5-hour usage limit (retry watchdog, capped at 5 h 10 min), for unattended `/spare` or `/ideas` runs
 - `discord-openasar-setup [flags]` - Manual OpenAsar persistence setup (opt-in)
 - `discord-openasar-status` - Check OpenAsar LaunchAgent status
 - `agent-skills-sync [name ...]` - Mirror skills from the Claude-synced skill bundle into ~/.agents/skills, which Codex and OMP both read

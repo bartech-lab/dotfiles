@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Run Claude Code for an unattended /spare or /ideas run that waits out the
+# 5-hour usage limit instead of stopping at it. Opt in per run: the variables
+# are set for this process only, never globally.
+#
+# CLAUDE_CODE_RETRY_WATCHDOG=1 (Claude Code 2.1.301+) waits at a usage limit
+# until it resets. The wait is capped at 5 h 10 min, so a weekly-limit stop
+# still ends the request instead of hanging.
+#
+# Usage: spare-overnight [claude args...]
+#   spare-overnight                        then type /spare 5
+#   SPARE_OVERNIGHT_CLAUDE=pclaude spare-overnight   private account
+
+set -euo pipefail
+
+export CLAUDE_CODE_RETRY_WATCHDOG=1
+export CLAUDE_CODE_RETRY_WATCHDOG_MAX_USAGE_LIMIT_WAIT_MS="${CLAUDE_CODE_RETRY_WATCHDOG_MAX_USAGE_LIMIT_WAIT_MS:-18600000}"
+
+exec "${SPARE_OVERNIGHT_CLAUDE:-claude}" "$@"
