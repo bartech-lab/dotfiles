@@ -27,6 +27,10 @@ else
   for d in "/opt/discord" "/usr/lib/discord" "$HOME/.local/share/discord"; do
     [[ -d "$d" ]] && { DISCORD_APP="$d"; break; }
   done
+  if [[ -z "${DISCORD_APP:-}" ]]; then
+    app_dirs=("${XDG_CONFIG_HOME:-$HOME/.config}"/discord/app-*(N/nOn))
+    (( ${#app_dirs} )) && DISCORD_APP="${app_dirs[1]}"
+  fi
   DISCORD_ASAR="$DISCORD_APP/resources/app.asar"
   BUILD_INFO="$DISCORD_APP/resources/build_info.json"
   SETTINGS_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/discord/settings.json"
@@ -161,9 +165,18 @@ echo ""
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_FILE="$BACKUP_DIR/discord-stock-${DISCORD_VERSION}-${TIMESTAMP}.asar.backup"
 
-echo "Backing up current app.asar..."
-cp "$DISCORD_ASAR" "$BACKUP_FILE"
-echo "  Saved: $BACKUP_FILE"
+if LC_ALL=C grep -aq "OpenAsar" "$DISCORD_ASAR"; then
+  echo "Current app.asar is already OpenAsar; not backing it up as stock."
+  BACKUP_FILE=""
+  for f in "$BACKUP_DIR"/discord-stock-*.asar.backup(N.om); do
+    LC_ALL=C grep -aq "OpenAsar" "$f" || { BACKUP_FILE="$f"; break; }
+  done
+  [ -n "$BACKUP_FILE" ] && echo "  Crash recovery will use: $BACKUP_FILE"
+else
+  echo "Backing up current app.asar..."
+  cp "$DISCORD_ASAR" "$BACKUP_FILE"
+  echo "  Saved: $BACKUP_FILE"
+fi
 
 echo ""
 echo "Applying OpenAsar..."
@@ -231,6 +244,9 @@ if [ "$CRASHED" = true ]; then
   echo ""
   echo "  Auto-recovering previous state..."
 
+  if [ -z "$BACKUP_FILE" ]; then
+    fatal "No stock backup to restore. Reinstall Discord or let it update to get a stock app.asar."
+  fi
   cp "$BACKUP_FILE" "$DISCORD_ASAR"
   echo "  Restored: $BACKUP_FILE"
 

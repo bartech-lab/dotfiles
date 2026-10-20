@@ -38,7 +38,7 @@ The script will:
 1. Compare Discord version date with OpenAsar nightly build date
 2. Warn if Discord is newer (use `--force` to proceed anyway)
 3. Download latest nightly
-4. Back up current stock asar to `~/Library/OpenAsarPersist/backups/`
+4. Back up current stock asar to `~/Library/OpenAsarPersist/backups/` (on Linux `~/.local/share/OpenAsarPersist/backups/`); an asar that already holds OpenAsar is not backed up
 5. Apply OpenAsar + theme CSS + settings
 6. Launch Discord for 6 seconds as a smoke test
 7. If Discord crashes, automatically restore the backup, nuke modules, and launch stock Discord
@@ -49,7 +49,7 @@ The script will:
 discord-openasar-recover --launch
 ```
 
-Picks the latest backup, restores it, removes OpenAsar config, and launches Discord to re-download modules.
+Picks the latest backup that does not hold OpenAsar, restores it, removes OpenAsar config, and launches Discord to re-download modules.
 
 ### After a Discord update
 
@@ -75,3 +75,5 @@ If the new Discord version broke OpenAsar nightly, the smoke test catches it and
 ## Theme
 
 The CSS applies a compact layout and hides annoying elements (nitro shop, gift/sticker/gif buttons, activity panel, profile effects). Edit `aggressive-minimal.css` to tweak.
+
+On Linux the scripts look for Discord in `/opt/discord`, `/usr/lib/discord`, `~/.local/share/discord`, then the newest `~/.config/discord/app-*` directory, where the Arch `discord` launcher installs it. Discord replaces that directory on each update, which removes OpenAsar.

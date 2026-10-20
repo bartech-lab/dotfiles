@@ -22,6 +22,10 @@ else
   for d in "/opt/discord" "/usr/lib/discord" "$HOME/.local/share/discord"; do
     [[ -d "$d" ]] && { DISCORD_APP="$d"; break; }
   done
+  if [[ -z "${DISCORD_APP:-}" ]]; then
+    app_dirs=("${XDG_CONFIG_HOME:-$HOME/.config}"/discord/app-*(N/nOn))
+    (( ${#app_dirs} )) && DISCORD_APP="${app_dirs[1]}"
+  fi
   DISCORD_ASAR="$DISCORD_APP/resources/app.asar"
   BUILD_INFO="$DISCORD_APP/resources/build_info.json"
   SETTINGS_JSON="${XDG_CONFIG_HOME:-$HOME/.config}/discord/settings.json"
@@ -97,9 +101,12 @@ else
   done
   echo ""
 
-  RESTORE_FILE="$(ls -t "$BACKUP_DIR"/*.asar.backup 2>/dev/null | head -1)"
+  RESTORE_FILE=""
+  for f in "$BACKUP_DIR"/*.asar.backup(N.om); do
+    LC_ALL=C grep -aq "OpenAsar" "$f" || { RESTORE_FILE="$f"; break; }
+  done
   if [ -z "$RESTORE_FILE" ]; then
-    fatal "No .asar.backup files found in $BACKUP_DIR"
+    fatal "No stock .asar.backup files found in $BACKUP_DIR (backups holding OpenAsar are skipped)"
   fi
   log "Using latest backup: $(basename "$RESTORE_FILE")"
 fi
