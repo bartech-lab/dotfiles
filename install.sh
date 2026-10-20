@@ -778,7 +778,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
 
     # Desktop overrides (Wayland for Electron apps)
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code-oss.desktop" "$HOME/.local/share/applications/code-oss.desktop" "Code - OSS desktop"
-    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standardnotes-desktop.desktop" "$HOME/.local/share/applications/standardnotes-desktop.desktop" "Standard Notes desktop"
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standard-notes.desktop" "$HOME/.local/share/applications/standard-notes.desktop" "Standard Notes desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/filen-desktop.desktop" "$HOME/.local/share/applications/filen-desktop.desktop" "Filen Desktop desktop"
 
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/org.wezfurlong.wezterm.desktop" "$HOME/.local/share/applications/org.wezfurlong.wezterm.desktop" "WezTerm reconnect launcher"
