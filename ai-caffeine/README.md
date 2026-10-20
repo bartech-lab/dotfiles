@@ -50,7 +50,7 @@ rm ~/Library/LaunchAgents/com.bartech.ai-caffeine.plist ~/.local/bin/ai-caffeine
 |----------|---------|---------|
 | `AI_CAFFEINE_PROCESSES` | `claude codex omp` | Space-separated exact process names to watch |
 | `AI_CAFFEINE_INTERVAL` | `15` | Seconds between checks |
-| `AI_CAFFEINE_LOCKFILE` | `/tmp/ai-caffeine.lock` | Single-instance lock file (`flock`) |
+| `AI_CAFFEINE_LOCKFILE` | `${TMPDIR:-/tmp}/ai-caffeine.lock` | Single-instance lock file (`flock`) |
 
 ## Troubleshooting
 

@@ -327,8 +327,6 @@ video-remux() (
     # Determine output filename
     if [[ "'$USE_SUBDIR'" == "1" ]]; then
       out="'${OUTDIR}'/${name}.mp4"
-    elif [[ "$ext" == "mp4" ]]; then
-      out="${name}-remuxed.mp4"
     else
       out="${name}.mp4"
     fi

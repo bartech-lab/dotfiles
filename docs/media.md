@@ -81,15 +81,13 @@ video-remux [path] [--subdir]
 - Animated WEBP: converts frames to MP4 (cannot be losslessly remuxed)
 
 **File naming:**
-- Source files with non-MP4 extension → same basename with `.mp4`
-- Source files with `.mp4` extension → basename with `-remuxed.mp4` suffix
+- Same basename with `.mp4`; `.mp4` sources are not remuxed
 
 **Examples:**
 ```bash
 video-remux                   # Remux all videos in current dir
 video-remux ./recordings      # Remux specific directory
 video-remux video.mov         # Remux single file (outputs video.mp4)
-video-remux clip.mp4          # Remux MP4 (outputs clip-remuxed.mp4)
 video-remux --subdir          # Use mp4/ subdirectory
 ```
 
@@ -107,7 +105,7 @@ video-encode-cpu [path] [--subdir]
 ```
 
 **Arguments:**
-- `path` - Directory or file to encode (defaults to current directory)
+- `path` - Directory to encode (defaults to current directory)
 - `--subdir` - Create `encoded/` subdirectory (legacy behavior)
 
 **Codec:** libx265 (H.265/HEVC)
@@ -127,8 +125,6 @@ video-encode-cpu [path] [--subdir]
 ```bash
 video-encode-cpu              # Encode all videos in current dir
 video-encode-cpu ./videos     # Encode specific directory
-video-encode-cpu input.mov    # Encode single file (outputs input.mp4)
-video-encode-cpu clip.mp4     # Encode MP4 (outputs clip-h265.mp4)
 video-encode-cpu --subdir     # Use encoded/ subdirectory
 ```
 
@@ -146,7 +142,7 @@ video-encode-gpu [path] [--subdir]
 ```
 
 **Arguments:**
-- `path` - Directory or file to encode (defaults to current directory)
+- `path` - Directory to encode (defaults to current directory)
 - `--subdir` - Create `encoded/` subdirectory (legacy behavior)
 
 **Codec:** hevc_videotoolbox (hardware accelerated)
@@ -166,8 +162,6 @@ video-encode-gpu [path] [--subdir]
 ```bash
 video-encode-gpu              # Encode all videos in current dir
 video-encode-gpu ./recordings # Encode specific directory
-video-encode-gpu screencast.mov  # Encode single file (outputs screencast.mp4)
-video-encode-gpu clip.mp4     # Encode MP4 (outputs clip-h265.mp4)
 video-encode-gpu --subdir     # Use encoded/ subdirectory
 ```
 
@@ -245,17 +239,14 @@ video-to-gif demo.mp4 output.gif 15 720  # 15fps, 720px width
 
 ## Batch Processing
 
-All media functions support batch processing:
+Each media function processes a whole directory. They are zsh functions, so `find -exec` cannot call them; loop in the shell instead:
 
 ```bash
 # Process entire directory
 optimize-images ./assets
 
-# Process with find
-find . -name "*.mov" -exec video-remux {} \;
-
-# Process specific files
-video-encode-cpu video1.mov video2.mov video3.mov
+# Process several directories
+for d in ./day1 ./day2; do video-encode-cpu "$d"; done
 ```
 
 ## Output Directories

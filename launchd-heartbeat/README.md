@@ -39,7 +39,7 @@ Format — one service per line.
 **macOS** (LaunchAgent labels):
 ```
 com.user.gitautopull
-com.github.domt4.homebrew-autoupdate
+com.user.brewautoupdate
 ```
 
 **Linux** (systemd unit names):
