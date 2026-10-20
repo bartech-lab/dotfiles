@@ -777,14 +777,13 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/brave-flags.conf" "$HOME/.config/brave-flags.conf" "Brave flags"
 
     # Desktop overrides (Wayland for Electron apps)
-    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code.desktop" "$HOME/.local/share/applications/code.desktop" "VS Code desktop"
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code-oss.desktop" "$HOME/.local/share/applications/code-oss.desktop" "Code - OSS desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standardnotes-desktop.desktop" "$HOME/.local/share/applications/standardnotes-desktop.desktop" "Standard Notes desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/filen-desktop.desktop" "$HOME/.local/share/applications/filen-desktop.desktop" "Filen Desktop desktop"
 
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/org.wezfurlong.wezterm.desktop" "$HOME/.local/share/applications/org.wezfurlong.wezterm.desktop" "WezTerm reconnect launcher"
 
     # Plasma desktop session config
-    config_symlinks "$DOTFILES_DIR/linux/plasma/plasmashellrc" "$HOME/.config/plasmashellrc" "Plasma shell config"
 fi
 
 # p10k prompt theme
