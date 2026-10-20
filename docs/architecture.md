@@ -12,6 +12,7 @@ dotfiles/
 │   ├── functions.md          # Function reference
 │   ├── media.md              # Media functions
 │   ├── dev.md                # Development utilities
+│   ├── wezterm.md            # WezTerm multiplexing between the machines
 │   └── discord-openasar.md   # Optional Discord OpenAsar setup
 ├── discord/
 │   └── openasar/
@@ -59,6 +60,7 @@ dotfiles/
 │       ├── 21-pacman.zsh     # Pacman/yay helpers (Linux)
 │       ├── 30-git.zsh        # Git helpers
 │       ├── 40-dev.zsh        # Development utilities
+│       ├── 41-omp.zsh        # omp wrapper
 │       ├── 50-media.zsh      # Media processing
 │       ├── 51-download.zsh   # yt-dlp download helpers
 │       ├── 60-macos.zsh      # macOS system functions
@@ -78,12 +80,12 @@ Functions load in a specific sequence controlled by filenames:
 10-*.zsh         → Second (shell)
 20-*.zsh         → Third (homebrew/pacman helpers)
 30-*.zsh         → Fourth (git)
-40-*.zsh         → Fifth (dev)
+40-*.zsh         → Fifth (dev, omp)
 50-*.zsh         → Sixth (media/download)
 60-*.zsh         → Seventh (macos/system + discord/kde)
 ```
 
-Linux-only files (`21-pacman.zsh`, `51-download.zsh`, `62-kde.zsh`) are interspersed by their number slot and guarded by platform checks in the loader.
+Linux-only files (`21-pacman.zsh`, `62-kde.zsh`) are interspersed by their number slot and return early on macOS. The loader itself skips only `60-macos.zsh` on Linux.
 
 The numbered prefix ensures consistent loading regardless of filesystem order.
 
@@ -204,6 +206,7 @@ This is used throughout the codebase to:
             ├─ source 21-pacman.zsh              ← SKIPS on macOS
             ├─ source 30-git.zsh                 ← cross-platform
             ├─ source 40-dev.zsh                 ← cross-platform (guarded checks)
+            ├─ source 41-omp.zsh                 ← cross-platform
             ├─ source 50-media.zsh               ← platform encoder
             ├─ source 51-download.zsh            ← cross-platform
             ├─ SKIP 60-macos.zsh on Linux

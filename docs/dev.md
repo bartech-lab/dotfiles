@@ -37,7 +37,7 @@ extract data.tar.gz              # Creates data-3/
 
 **Requirements:**
 - `zstd` - For .tar.zst files
-- `unar` - For zip, rar, 7z (auto-installs if missing)
+- `unar` - For zip, rar, 7z (prints the install command if missing)
 
 ## archive
 
@@ -53,7 +53,7 @@ archive [name] [--dry-run|-n] [-gzip]
 - `-gzip` - Use gzip -6 instead of zstd (creates .tar.gz)
 
 **Default behavior:**
-- Uses zstd with level 19 compression
+- Uses zstd with level 12 compression
 - Creates `.tar.zst` archives
 - Deterministic output (same content = same archive)
 - Excludes development artifacts
@@ -136,7 +136,7 @@ repo-check --strict     # Treat warnings as errors
 ### Accidental Inclusions
 - ❌ `node_modules/` tracked in git
 - ❌ `vendor/` directories tracked
-- ❌ Build output committed
+- ❌ `.venv/`, `venv/`, `__pycache__/`, or `.sisyphus/` tracked
 - ❌ `.DS_Store` files
 
 **Output:**
@@ -160,7 +160,6 @@ Accidental Inclusions:
 
 Summary: 3 errors, 2 warnings
 
-Archive anyway? [y/N]:
 ```
 
 **Usage with archive:**
@@ -215,7 +214,6 @@ dotfiles-doctor --fix   # Auto-fix common issues
 - ✅ Git installed
 - ✅ User name set
 - ✅ User email set
-- ✅ Default branch configured
 
 **Output:**
 ```
@@ -266,7 +264,7 @@ dotfiles-doctor --fix   # Attempt to fix common issues
 
 Fixes include:
 - Re-linking loader if broken
-- Fixing PATH order
+- Adding the loader `source` line to `~/.zshrc`
 - Installing missing tools via Homebrew
 - Suggesting font installation
 
@@ -304,7 +302,7 @@ Symlinks:
   → ~/.config/zsh-dotfiles-loader.zsh → ~/dotfiles/zsh/functions.zsh
 
 Backup location:
-  → ~/.dotfiles-backup-20240222-143000/
+  → ~/.dotfiles-backups/20240222-143000/
 
 Critical dependencies:
   ✅ zstd (will be installed)
@@ -438,12 +436,7 @@ Automatic background syncing for git repositories. Keeps local repos in sync wit
 
 ### Setup
 
-One-time setup for new machines:
-
-```bash
-cd ~/dotfiles/git-auto-pull
-bash setup.sh
-```
+`./install.sh` sets it up on both platforms (a LaunchAgent on macOS, a systemd timer on Linux). On macOS, `bash ~/dotfiles/git-auto-pull/setup.sh` reinstalls the agent alone.
 
 This creates:
 - `~/.config/git-auto-pull/repos.conf` - Config file for repositories
