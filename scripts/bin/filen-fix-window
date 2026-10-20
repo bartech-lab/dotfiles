@@ -30,12 +30,12 @@ if ! command -v rclone >/dev/null; then
     echo "filen-fix-window: WARNING: rclone missing - drive features will not work (pacman -S rclone)" >&2
 fi
 
-if [[ $EUID -ne 0 && $CHECK -eq 0 ]]; then
+if [[ $CHECK -eq 0 && ! -w "$ASAR" && $EUID -ne 0 ]]; then
     exec sudo "$0" "$@"
 fi
 
 rc=0
-python3 - "$ASAR" "$CHECK" <<'PYEOF' || rc=$?
+python3 -I - "$ASAR" "$CHECK" <<'PYEOF' || rc=$?
 import sys
 
 asar, check = sys.argv[1], int(sys.argv[2])
