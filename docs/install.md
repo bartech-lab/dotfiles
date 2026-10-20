@@ -250,12 +250,15 @@ Two scripts handle machine-to-machine migration:
 SSH_ARCHIVE_PASSWORD='<password>' ~/dotfiles/scripts/migrate-backup.sh
 ```
 
-`SSH_ARCHIVE_PASSWORD` encrypts the SSH key zip. Both scripts stop when it is
-unset and there are SSH keys to back up or restore.
+`SSH_ARCHIVE_PASSWORD` encrypts the SSH key archive (AES-256 with PBKDF2, through
+`/usr/bin/openssl`, which reads it from the environment, not the command line).
+Both scripts stop when it is unset and there are SSH keys to back up or restore.
+Restore never overwrites an existing `~/.ssh` file that differs from the backup;
+it names each one it kept. It still reads older `ssh-keys.zip` backups.
 
 Creates `~/migration-backup.tar.gz` containing:
 - **npm global packages** - List of globally installed npm packages
-- **SSH keys (encrypted)** - Password-protected zip of your SSH keys
+- **SSH keys (encrypted)** - `ssh-keys.tar.enc`, encrypted with `SSH_ARCHIVE_PASSWORD`
 - **Ghostty terminal config** - Terminal emulator settings
 - **Comprehensive macOS defaults script** - Complete backup of 30+ system preferences including:
   - Dock behavior (auto-hide, animation speed, recent apps)

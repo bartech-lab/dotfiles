@@ -30,7 +30,7 @@ trap 'rm -rf "$EXTRACT_DIR"' EXIT
 echo "→ Extracting archive..."
 tar -xzf "$ARCHIVE" -C "$EXTRACT_DIR" --strip-components=1
 
-if [[ -f "$EXTRACT_DIR/ssh-keys.zip" && -z "${SSH_ARCHIVE_PASSWORD:-}" ]]; then
+if [[ ( -f "$EXTRACT_DIR/ssh-keys.tar.enc" || -f "$EXTRACT_DIR/ssh-keys.zip" ) && -z "${SSH_ARCHIVE_PASSWORD:-}" ]]; then
     echo "❌ Set SSH_ARCHIVE_PASSWORD to the password used for the backup." >&2
     exit 1
 fi
@@ -62,8 +62,24 @@ fi
 echo "→ Restoring SSH keys..."
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-if [[ -f "$EXTRACT_DIR/ssh-keys.zip" ]]; then
-    unzip -o -P "$SSH_ARCHIVE_PASSWORD" "$EXTRACT_DIR/ssh-keys.zip" -d ~/.ssh/
+SSH_STAGE="$EXTRACT_DIR/ssh-stage"
+mkdir -p "$SSH_STAGE"
+if [[ -f "$EXTRACT_DIR/ssh-keys.tar.enc" ]]; then
+    /usr/bin/openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:SSH_ARCHIVE_PASSWORD \
+        -in "$EXTRACT_DIR/ssh-keys.tar.enc" | tar -xf - -C "$SSH_STAGE"
+elif [[ -f "$EXTRACT_DIR/ssh-keys.zip" ]]; then
+    echo "  (older backup: the zip password is visible to other local users while unzip runs)"
+    unzip -q -P "$SSH_ARCHIVE_PASSWORD" "$EXTRACT_DIR/ssh-keys.zip" -d "$SSH_STAGE"
+fi
+for staged in "$SSH_STAGE"/*(N); do
+    target=~/.ssh/${staged:t}
+    if [[ -e "$target" ]] && ! cmp -s "$staged" "$target"; then
+        echo "  ⚠️  kept existing ~/.ssh/${staged:t}; the backup copy differs and was not restored"
+    else
+        cp -p "$staged" "$target"
+    fi
+done
+if [[ -n "$(ls -A "$SSH_STAGE")" ]]; then
     chmod 600 ~/.ssh/id_ed25519 2>/dev/null || true
     chmod 644 ~/.ssh/id_ed25519.pub 2>/dev/null || true
     chmod 644 ~/.ssh/known_hosts 2>/dev/null || true

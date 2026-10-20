@@ -187,7 +187,7 @@ SSH_ARCHIVE_PASSWORD='<password>' ~/dotfiles/scripts/migrate-restore.sh ~/migrat
 ```
 
 **What gets backed up:**
-- SSH keys (password-protected zip)
+- SSH keys (encrypted with `SSH_ARCHIVE_PASSWORD`)
 - Global npm packages list
 - Ghostty terminal configuration
 - **Comprehensive macOS system preferences** (Dock, Finder, Screenshots, Keyboard, Trackpad, UI settings)

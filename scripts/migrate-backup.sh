@@ -31,7 +31,8 @@ if [[ -d ~/.ssh ]]; then
         [[ -e "$f" ]] && ssh_files+=("$f")
     done
     if (( ${#ssh_files} )); then
-        zip -q -P "$SSH_ARCHIVE_PASSWORD" "$BACKUP_DIR/ssh-keys.zip" "${ssh_files[@]}"
+        tar -cf - "${ssh_files[@]}" | /usr/bin/openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
+            -pass env:SSH_ARCHIVE_PASSWORD -out "$BACKUP_DIR/ssh-keys.tar.enc"
     else
         echo "  (no SSH key files found)"
     fi
