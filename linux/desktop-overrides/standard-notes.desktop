@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Standard Notes
-Exec=env DESKTOPINTEGRATION=false /usr/bin/standard-notes --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-gpu-rasterization --enable-zero-copy %U
+Exec=env DESKTOPINTEGRATION=false ELECTRON_ENABLE_STACK_DUMPING=false /usr/bin/standard-notes --enable-features=UseOzonePlatform --ozone-platform=wayland --disable-gpu --js-flags=--max-old-space-size=256 --process-per-site --disable-extensions --disable-background-networking --enable-low-end-device-mode %U
 Terminal=false
 Type=Application
 Icon=standard-notes
