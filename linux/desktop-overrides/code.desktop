@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Visual Studio Code (Wayland)
-GenericName=Code Editor
-Exec=code --enable-features=UseOzonePlatform --ozone-platform=wayland %F
-Categories=Development
