@@ -11,7 +11,7 @@ Run the command on the machine you are using:
 | Connection | Command |
 | --- | --- |
 | Mac to Linux | `wezterm connect SSHMUX:linux` |
-| Linux to Mac | `wezterm connect SSHMUX:mac` |
+| Linux to Mac | `wezterm connect mac` |
 | Reconnect to local terminals | `wezterm connect unix` |
 
 Both machines need compatible WezTerm versions and working SSH aliases. See [Remote access](#remote-access) for prerequisites.

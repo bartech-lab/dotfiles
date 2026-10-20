@@ -280,7 +280,7 @@ HEARTBEATCONF
 fi
 
 ensure_launchagent_plist "com.user.gitautopull" "$HOME/.config/git-auto-pull/git-auto-pull" 3600
-ensure_launchagent_plist "com.user.launchdheartbeat" "$HOME/.config/launchd-heartbeat/launchd-heartbeat" 300
+ensure_launchagent_plist "com.user.launchdheartbeat" "$HOME/.config/launchd-heartbeat/launchd-heartbeat" 3600
 
 # ai-caffeine service (keep awake while AI agent sessions run; KeepAlive daemon)
 if [[ "$DRY_RUN" == true ]]; then

@@ -106,8 +106,10 @@ Current defaults include:
 - OS files: `.DS_Store`, `._*`, `Thumbs.db`
 - Editor temp files: `*~`, `*.swp`, `*.swo`
 - Python bytecode: `__pycache__/`, `*.pyc`
-- Local AI/tool directories: `.claude/`, `.codex/`, `.sisyphus/`, `.opencode/`, `.commandcode/`, `.llm/`, `.playwright-mcp/`, plus `.mcp.json` and `.skill-lock.json`
-- Agent instruction files: `agents.md`, `AGENTS.md`
+- Local AI/tool directories: `.agent-browser/`, `.llm/`, `.opencode/`, `.playwright-mcp/`, plus `.skill-lock.json`
+- Local-only files: `*.local.md`, `*.local.json`, `.env.local`, and the `.gitconfig-*` identity files
+
+`.claude/`, `.mcp.json`, `AGENTS.md`, and `CLAUDE.md` are deliberately not ignored globally, because repositories track them.
 
 This is handled automatically by `./install.sh`. To set it manually:
 
@@ -119,7 +121,7 @@ git config --global core.excludesfile ~/.gitignore_global
 
 ### Shell Replacements
 
-Your commands are automatically upgraded:
+`./install.sh` installs these tools. Only `ls`, `ll`, `lt`, `top`, `du`, and `df` are aliased; call the others by name:
 
 | Command | What You Get | Why It's Better |
 |---------|--------------|-----------------|
@@ -162,14 +164,9 @@ Ready-to-use video/image processing:
 
 See [functions.md](functions.md) for full command reference.
 
-## Optional: Git Auto-Pull Setup
+## Git Auto-Pull
 
-After installing dotfiles, you can optionally set up automatic git repository syncing:
-
-```bash
-cd ~/dotfiles/git-auto-pull
-bash setup.sh
-```
+`./install.sh` sets up automatic git repository syncing on both platforms. On macOS, `bash ~/dotfiles/git-auto-pull/setup.sh` reinstalls the agent alone.
 
 This sets up a background service that:
 - Fast-forwards configured branches in repos every hour
@@ -197,8 +194,8 @@ See [LaunchAgent Heartbeat README](../launchd-heartbeat/README.md) for details.
 
 ## AI Agent Keep-Awake (ai-caffeine)
 
-Installed automatically by `./install.sh` on both platforms. While `claude`
-or `codex` processes run, it prevents system sleep (and screen lock on
+Installed automatically by `./install.sh` on both platforms. While `claude`,
+`codex`, or `omp` processes run, it prevents system sleep (and screen lock on
 Linux/KDE); when the last agent exits, normal sleep behavior returns.
 
 Manual install or reinstall after pulling changes:

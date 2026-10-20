@@ -586,7 +586,7 @@ test('a bolded tick sign-off is filtered, a bolded finding is not', () => {
 test('a bare decision to not act is filtered, one carrying a reason is not', () => {
     assert.ok(processOnlyReason("won't do"));
     assert.ok(processOnlyReason('nevermind'));
-    assert.equal(processOnlyReason("won't do, the hook already guards this path", null), null);
+    assert.equal(processOnlyReason("won't do, the hook already guards this path"), null);
 });
 
 test('any bot asked to re-review is filtered, a mention with a question is not', () => {
