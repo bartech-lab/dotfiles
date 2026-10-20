@@ -38,7 +38,7 @@ else
   STAT_MTIME="stat -c %Y"
   DATE_PARSE="date -d"
   DATE_READABLE="date -d @"
-  PGREP_PATTERN="discord"
+  PGREP_PATTERN="/Discord( |$)"
 fi
 
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"

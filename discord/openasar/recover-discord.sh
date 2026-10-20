@@ -28,7 +28,7 @@ else
   PERSIST_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/OpenAsarPersist"
   BACKUP_DIR="$PERSIST_DIR/backups"
   DISCORD_BIN="$(command -v discord 2>/dev/null || echo "/usr/bin/discord")"
-  PGREP_PATTERN="discord"
+  PGREP_PATTERN="/Discord( |$)"
 fi
 
 LAUNCH=false
