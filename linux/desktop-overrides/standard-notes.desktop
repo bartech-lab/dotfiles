@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Standard Notes
+Exec=env DESKTOPINTEGRATION=false /usr/bin/standard-notes --enable-features=UseOzonePlatform --ozone-platform=wayland --enable-gpu-rasterization --enable-zero-copy %U
+Terminal=false
+Type=Application
+Icon=standard-notes
+StartupWMClass=standard notes
+Comment=An end-to-end encrypted notes app for digitalists and professionals.
+MimeType=x-scheme-handler/standardnotes;
+Categories=Office;
