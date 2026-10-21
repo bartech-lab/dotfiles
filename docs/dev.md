@@ -5,7 +5,7 @@ Archive handling, environment diagnostics, and development helpers.
 ## tfg
 
 Run `tfg` from an interactive zsh terminal to start Tokens for Good research cycles in `~/volunteer/tokens-for-good/`.
-Each cycle runs in a fresh headless session in the same terminal. Without a count it runs until the 5h or weekly usage reaches 90%, then stops after the current cycle. `tfg 3` runs at most 3 cycles. `tfg --codex 3` uses Codex instead of Claude.
+Each cycle runs in a fresh headless session in the same terminal. Without a count it runs until the 5h usage reaches 90% or the weekly usage reaches 95%, then stops after the current cycle. Extra (paid) usage stops it at once. `tfg 3` runs at most 3 cycles. `tfg --codex 3` uses Codex instead of Claude.
 The first run asks for your TFG key with hidden input, then saves it in `~/.zshenv` with mode `600`.
 The folder's settings allow only the research MCP tools and web access, and block key-management and scheduling tools.
 No recurring task is created. Use `tfg --help` for usage.
