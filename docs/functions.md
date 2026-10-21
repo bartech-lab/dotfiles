@@ -381,7 +381,7 @@ pacorphans           # Find packages to remove
 
 ### tfg
 
-Run `tfg [cycles]` to run Tokens for Good research cycles in Claude, or `tfg --codex [cycles]` for Codex.
+Run `tfg [cycles]` to run Tokens for Good research cycles in Claude, or `tfg --codex [cycles]` for Codex. Without a count it runs until a usage limit or Ctrl-C.
 The first run prompts privately for your Tokens for Good key and saves it in `~/.zshenv` with mode `600`.
 Each run works in `~/volunteer/tokens-for-good/` and does not schedule recurring work.
 Run `tfg --help` for usage.
