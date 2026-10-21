@@ -379,6 +379,13 @@ pacorphans           # Find packages to remove
 
 ## Development Utilities
 
+### tfg
+
+Run `tfg [cycles]` to run Tokens for Good research cycles in Claude, or `tfg --codex [cycles]` for Codex.
+The first run prompts privately for your Tokens for Good key and saves it in `~/.zshenv` with mode `600`.
+Each run works in `~/volunteer/tokens-for-good/` and does not schedule recurring work.
+Run `tfg --help` for usage.
+
 ### extract
 
 Universal archive extractor.
@@ -611,6 +618,7 @@ See [dev.md](dev.md) for full documentation.
 | Git | `30-git.zsh` | Git helpers |
 | Dev | `40-dev.zsh` | Development utilities |
 | omp | `41-omp.zsh` | omp wrapper with a trimmed tool list |
+| Tokens for Good | `42-tfg.zsh` | Tokens for Good research cycles in Claude or Codex |
 | Media | `50-media.zsh` | Image/video processing |
 | Download | `51-download.zsh` | yt-dlp video downloading |
 | macOS | `60-macos.zsh` | System functions (macOS only) |
