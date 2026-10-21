@@ -63,6 +63,20 @@ for flag in --dry-run -n; do
 done
 
 /usr/bin/git -C "$WORKTREE" switch develop >/dev/null
+/usr/bin/git -C "$WORKTREE" switch -c feature/subdir >/dev/null
+mkdir -p "$WORKTREE/sub/dir"
+/usr/bin/git -C "$WORKTREE" commit --allow-empty -m "Subdir commit" >/dev/null
+
+# A push from a subdirectory of the main worktree still switches back.
+PATH="$TEST_HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin" \
+    /bin/bash -c 'cd "$1/sub/dir" && git push origin feature/subdir' _ "$WORKTREE" >/dev/null 2>&1
+
+branch=$(/usr/bin/git -C "$WORKTREE" branch --show-current)
+if [[ "$branch" != "develop" ]]; then
+    echo "Expected develop after push from a subdirectory, got: $branch" >&2
+    exit 1
+fi
+
 LINKED="$TEST_ROOT/linked"
 /usr/bin/git -C "$WORKTREE" worktree add -b feature/linked "$LINKED" >/dev/null 2>&1
 /usr/bin/git -C "$LINKED" commit --allow-empty -m "Linked worktree commit" >/dev/null
