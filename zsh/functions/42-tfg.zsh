@@ -2,11 +2,11 @@ tfg() {
   emulate -L zsh
   unsetopt XTRACE VERBOSE
 
-  local agent=claude cycles count
+  local agent=claude cycles
   if [[ ${1:-} == --help || ${1:-} == -h ]]; then
     print -r -- 'Usage: tfg [--codex] [cycles]'
     print -r -- 'Run Tokens for Good cycles in ~/volunteer/tokens-for-good (Claude by default).'
-    print -r -- 'Without a count it keeps going until a usage limit or Ctrl-C.'
+    print -r -- 'Each cycle is a fresh headless session. Without a count it runs until 90% usage or Ctrl-C.'
     print -r -- 'First run saves your Tokens for Good key in ~/.zshenv (mode 600).'
     return 0
   fi
@@ -19,14 +19,9 @@ tfg() {
     return 2
   fi
   cycles=${1:-}
-  if [[ -n $cycles ]]; then
-    count="Run $cycles Tokens for Good cycles"
-  else
-    count='Run Tokens for Good cycles continuously until a usage limit is hit or I interrupt'
-  fi
 
   local work_dir="$HOME/volunteer/tokens-for-good"
-  if [[ ! -f $work_dir/app/src/mcp-server.js ]]; then
+  if [[ ! -f $work_dir/app/src/mcp-server.js || ! -x $HOME/volunteer/bin/tfg-run ]]; then
     print -u2 -- "tfg: $work_dir is not set up."
     return 1
   fi
@@ -52,14 +47,8 @@ tfg() {
   fi
   export TFG_API_KEY
 
-  if [[ $agent == claude ]]; then
-    ( cd "$work_dir" && command claude "/tfg${cycles:+ $cycles}" )
-  else
-    command codex --no-daemon --search --cd "$work_dir" \
-      -c "mcp_servers.tfg.command=\"node\"" \
-      -c "mcp_servers.tfg.args=[\"$work_dir/app/src/mcp-server.js\"]" \
-      -c 'mcp_servers.tfg.env_vars=["TFG_API_KEY"]' \
-      -c 'mcp_servers.tfg.disabled_tools=["list_agents","create_agent","rotate_agent_key","revoke_agent","setup_automation","setup_guide","mark_setup_complete","snooze","set_role_preference"]' \
-      "$count, following .claude/commands/tfg.md in this folder."
-  fi
+  local -a run_args=()
+  [[ $agent == codex ]] && run_args+=(--codex)
+  [[ -n $cycles ]] && run_args+=($cycles)
+  command "$HOME/volunteer/bin/tfg-run" "${run_args[@]}"
 }
