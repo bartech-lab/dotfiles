@@ -62,4 +62,23 @@ for flag in --dry-run -n; do
     fi
 done
 
+/usr/bin/git -C "$WORKTREE" switch develop >/dev/null
+LINKED="$TEST_ROOT/linked"
+/usr/bin/git -C "$WORKTREE" worktree add -b feature/linked "$LINKED" >/dev/null 2>&1
+/usr/bin/git -C "$LINKED" commit --allow-empty -m "Linked worktree commit" >/dev/null
+
+# develop is checked out in the main worktree, so a linked worktree must stay
+# on its branch and the push must still exit 0.
+if ! PATH="$TEST_HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin" \
+    /bin/bash -c 'cd "$1" && git push origin feature/linked' _ "$LINKED" >/dev/null 2>&1; then
+    echo "Expected exit 0 after push from a linked worktree" >&2
+    exit 1
+fi
+
+branch=$(/usr/bin/git -C "$LINKED" branch --show-current)
+if [[ "$branch" != "feature/linked" ]]; then
+    echo "Expected feature/linked after push from a linked worktree, got: $branch" >&2
+    exit 1
+fi
+
 echo "git-autoswitch test passed"

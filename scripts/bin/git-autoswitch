@@ -90,6 +90,13 @@ fi
 # Detached HEAD or bare repository: nothing to switch.
 branch=$("$REAL_GIT" symbolic-ref --short -q HEAD) || exit 0
 
+# A linked worktree exists to hold its branch, and git refuses to switch it to
+# a branch checked out in another worktree.
+if [[ "$("$REAL_GIT" rev-parse --git-dir)" != "$("$REAL_GIT" rev-parse --git-common-dir)" ]]; then
+  note "stayed on '$branch': linked worktree"
+  exit 0
+fi
+
 # Default branch: the remote's own HEAD, else develop -> master -> main.
 default_branch=$("$REAL_GIT" symbolic-ref --short -q refs/remotes/origin/HEAD 2>/dev/null || true)
 default_branch=${default_branch#origin/}
