@@ -6,7 +6,7 @@ tfg() {
   if [[ ${1:-} == --help || ${1:-} == -h ]]; then
     print -r -- 'Usage: tfg [--codex] [cycles]'
     print -r -- 'Run Tokens for Good cycles in ~/volunteer/tokens-for-good (Claude by default).'
-    print -r -- 'Each cycle is a fresh headless session. Without a count it runs until 90% usage or Ctrl-C.'
+    print -r -- 'Each cycle is a fresh headless session. Without a count it runs until 90% 5h or 95% weekly usage, or Ctrl-C.'
     print -r -- 'First run saves your Tokens for Good key in ~/.zshenv (mode 600).'
     return 0
   fi
