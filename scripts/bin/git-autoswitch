@@ -92,7 +92,7 @@ branch=$("$REAL_GIT" symbolic-ref --short -q HEAD) || exit 0
 
 # A linked worktree exists to hold its branch, and git refuses to switch it to
 # a branch checked out in another worktree.
-if [[ "$("$REAL_GIT" rev-parse --git-dir)" != "$("$REAL_GIT" rev-parse --git-common-dir)" ]]; then
+if [[ "$("$REAL_GIT" rev-parse --path-format=absolute --git-dir)" != "$("$REAL_GIT" rev-parse --path-format=absolute --git-common-dir)" ]]; then
   note "stayed on '$branch': linked worktree"
   exit 0
 fi
