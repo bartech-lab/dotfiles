@@ -206,8 +206,11 @@ process_repo() {
             fi
         else
             local merge_base_status=$?
-            if (( merge_base_status == 1 )); then
+            if (( merge_base_status == 1 )) && git merge-base --is-ancestor "$REMOTE" "$LOCAL"; then
+                log_info "Skipped $repo_path ($branch_name): $(git rev-list --count "$REMOTE..$LOCAL") unpushed local commit(s)"
+            elif (( merge_base_status == 1 )); then
                 log_error "Skipped diverged branch for $repo_path ($branch_name)"
+                return 1
             else
                 log_error "Unable to compare branches for $repo_path ($branch_name)"
                 return 1

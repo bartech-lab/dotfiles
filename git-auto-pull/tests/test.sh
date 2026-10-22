@@ -140,16 +140,28 @@ assert_contains "$LOG_FILE" "Updated $EXTERNAL_REPO (develop)" \
 DIVERGED_REPO="$TEST_HOME/Projects/diverged-repo"
 git clone --quiet "$REMOTE" "$DIVERGED_REPO"
 commit_file "$DIVERGED_REPO" local-only.txt local-only local-only
+commit_file "$DIVERGED_REPO" local-only-2.txt local-only-2 local-only-2
+
+run_pull
+
+assert_contains "$LOG_FILE" "Skipped $DIVERGED_REPO (main): 2 unpushed local commit(s)" \
+    'a default branch that is only ahead was not reported as unpushed'
+assert_not_contains "$ERROR_LOG" "Skipped diverged branch for $DIVERGED_REPO (main)" \
+    'a default branch that is only ahead was reported as diverged'
+
 git -C "$SEED" checkout main >/dev/null 2>&1
 commit_file "$SEED" remote-only.txt remote-only remote-only
 git -C "$SEED" push origin main >/dev/null 2>&1
 
-run_pull
+if run_pull; then
+    fail 'auto-pull returned success with a diverged default branch'
+fi
 
 assert_not_contains "$LOG_FILE" "Updated $DIVERGED_REPO (main)" \
     'diverged default branch was reported as updated'
 assert_contains "$ERROR_LOG" "Skipped diverged branch for $DIVERGED_REPO (main)" \
     'diverged default branch was not skipped'
+rm -rf "$DIVERGED_REPO"
 
 FETCH_BROKEN_REPO="$TEST_HOME/fetch-broken-repo"
 git clone --quiet "$REMOTE" "$FETCH_BROKEN_REPO"
