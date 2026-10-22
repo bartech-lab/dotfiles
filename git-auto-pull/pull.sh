@@ -37,6 +37,23 @@ fi
 
 export GIT_TERMINAL_PROMPT=0
 
+notify_divergence() {
+    local repo_path="$1" branch_name="$2" local_sha="$3" remote_sha="$4"
+    local key="$repo_path $branch_name $local_sha $remote_sha" ops_bin="${OPS_BIN:-$HOME/.agents/ops/bin/ops}"
+    local seen="$CONFIG_DIR/diverged-notified"
+    grep -qxF "$key" "$seen" 2>/dev/null && return 0
+    [[ -x "$ops_bin" ]] || return 0
+    local ahead behind
+    ahead=$(git rev-list --count "$remote_sha..$local_sha")
+    behind=$(git rev-list --count "$local_sha..$remote_sha")
+    if "$ops_bin" notify "git-auto-pull: ${repo_path##*/} diverged" \
+        "$branch_name: $ahead local, $behind remote commit(s). Rebase by hand: git -C $repo_path pull --rebase" >/dev/null 2>&1; then
+        grep -v "^$repo_path $branch_name " "$seen" 2>/dev/null > "$seen.tmp"
+        printf '%s\n' "$key" >> "$seen.tmp"
+        mv "$seen.tmp" "$seen"
+    fi
+}
+
 timestamp() {
     date '+%Y-%m-%d %H:%M:%S'
 }
@@ -210,6 +227,7 @@ process_repo() {
                 log_info "Skipped $repo_path ($branch_name): $(git rev-list --count "$REMOTE..$LOCAL") unpushed local commit(s)"
             elif (( merge_base_status == 1 )); then
                 log_error "Skipped diverged branch for $repo_path ($branch_name)"
+                notify_divergence "$repo_path" "$branch_name" "$LOCAL" "$REMOTE"
                 return 1
             else
                 log_error "Unable to compare branches for $repo_path ($branch_name)"

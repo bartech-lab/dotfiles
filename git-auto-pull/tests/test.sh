@@ -153,9 +153,21 @@ git -C "$SEED" checkout main >/dev/null 2>&1
 commit_file "$SEED" remote-only.txt remote-only remote-only
 git -C "$SEED" push origin main >/dev/null 2>&1
 
+ALERTS="$TEST_ROOT/alerts.log"
+cat > "$TEST_ROOT/fake-ops" <<EOF
+#!/bin/bash
+printf '%s|%s\n' "\$2" "\$3" >> "$ALERTS"
+EOF
+chmod +x "$TEST_ROOT/fake-ops"
+export OPS_BIN="$TEST_ROOT/fake-ops"
+
 if run_pull; then
     fail 'auto-pull returned success with a diverged default branch'
 fi
+run_pull || true
+assert_eq 1 "$(grep -c 'diverged-repo diverged' "$ALERTS")" 'a divergence must alert exactly once across runs'
+assert_contains "$ALERTS" 'main: 2 local, 1 remote commit(s)' 'the alert must give ahead and behind counts'
+unset OPS_BIN
 
 assert_not_contains "$LOG_FILE" "Updated $DIVERGED_REPO (main)" \
     'diverged default branch was reported as updated'
