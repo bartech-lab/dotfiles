@@ -295,7 +295,8 @@ NOTIFIED_FILE="$CONFIG_DIR/last-notified"
 previous_problems=$(cat "$NOTIFIED_FILE" 2>/dev/null || true)
 if [[ "$problem_labels" != "$previous_problems" ]]; then
     if [[ -n "$problem_labels" ]]; then
-        notify "launchd heartbeat" "Failed or missing: $problem_labels"
+        "${OPS_BIN:-$HOME/.agents/ops/bin/ops}" notify "heartbeat" "Failed or missing: $problem_labels" --priority 4 >/dev/null 2>&1 \
+            || notify "launchd heartbeat" "Failed or missing: $problem_labels"
     fi
     printf '%s' "$problem_labels" > "$NOTIFIED_FILE"
 fi
