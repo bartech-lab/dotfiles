@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+dir=${XDG_CONFIG_HOME:-$HOME/.config}/discord
+cache=${XDG_DATA_HOME:-$HOME/.local/share}/OpenAsarPersist/openasar.app.asar
+url=https://github.com/GooseMod/OpenAsar/releases/download/nightly/app.asar
+
+refresh=0
+[ "${1:-}" = --refresh ] && refresh=1
+
+if [ "$refresh" = 1 ] || [ ! -s "$cache" ]; then
+    mkdir -p "${cache%/*}"
+    curl -fsSL --retry 3 -o "$cache.new" "$url"
+    grep -aqi openasar "$cache.new" || { rm -f "$cache.new"; echo "download is not OpenAsar" >&2; exit 1; }
+    mv -f "$cache.new" "$cache"
+    echo "cached $cache"
+fi
+
+for asar in "$dir"/app-*/resources/app.asar; do
+    [ -s "$asar" ] || continue
+    if grep -aqi openasar "$asar"; then
+        [ "$refresh" = 1 ] || continue
+        cmp -s "$asar" "$cache" && continue
+    fi
+
+    cp "$cache" "$asar.new"
+    mv -f "$asar.new" "$asar"
+    echo "patched $asar"
+done
