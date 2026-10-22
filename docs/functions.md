@@ -386,6 +386,12 @@ The first run prompts privately for your Tokens for Good key and saves it in `~/
 Each run works in `~/volunteer/tokens-for-good/` and does not schedule recurring work.
 Run `tfg --help` for usage.
 
+### gaming
+
+Linux only. Run `gaming` (or press Meta+Shift+G) before a game: it stops Bonsai, Docker, heavy timers and monitor apps. Run it again afterwards to restart exactly what it stopped.
+`gaming status` shows what is stopped; `gaming run -- %command%` as a Steam launch option does both around one game.
+Installed by `gaming-mode/setup.sh`; see [gaming-mode README](../gaming-mode/README.md).
+
 ### extract
 
 Universal archive extractor.

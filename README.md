@@ -129,6 +129,7 @@ dotfiles-doctor
 ### Development Utilities
 
 - `tfg [--codex] [cycles]` - Run Tokens for Good research cycles until 90% usage, Claude by default ([setup](docs/dev.md#tfg))
+- `gaming [on|off|status]` - Free the GPU for a game and restore after, Linux only, Meta+Shift+G ([gaming-mode](gaming-mode/README.md))
 - `extract <archive>` - Universal archive extractor
 - `archive [name] [--dry-run] [-gzip]` - Create reproducible archives
 - `repo-check` - Pre-archive sanity checker

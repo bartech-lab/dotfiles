@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Toggle Game Mode
+Comment=Stop Bonsai, Docker and heavy background work for a game, or restore it
+Exec=__HOME__/.local/bin/gaming
+Icon=applications-games
+NoDisplay=true
+StartupNotify=false
+X-KDE-GlobalAccel-CommandShortcut=true
+X-KDE-Shortcuts=Meta+Shift+G

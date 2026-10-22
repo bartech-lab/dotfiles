@@ -40,6 +40,7 @@ LOG_FILE="$CONFIG_DIR/heartbeat.log"
 ERROR_LOG="$CONFIG_DIR/error.log"
 PROBE_TIMEOUT="${HEARTBEAT_PROBE_TIMEOUT:-20}"
 MAX_LOG_BYTES="${HEARTBEAT_MAX_LOG_BYTES:-1048576}"
+PAUSE_FILE="${HEARTBEAT_PAUSE_FILE:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/heartbeat-pause}"
 
 if ! mkdir -p "$CONFIG_DIR"; then
     printf 'Error: unable to create log directory: %s\n' "$CONFIG_DIR" >&2
@@ -118,6 +119,33 @@ check_job_record() {
 
 problem_labels=""
 problem_count=0
+
+# A pause file (written by `gaming on`) names checks to skip while their
+# service is stopped on purpose. A pause older than max_age_hours is a problem.
+paused_names=" "
+pause_since=""
+pause_owner="unknown"
+pause_max_age=""
+if [[ -f "$PAUSE_FILE" ]]; then
+    while IFS='=' read -r key value; do
+        case "$key" in
+            since) pause_since="$value" ;;
+            owner) pause_owner="$value" ;;
+            max_age_hours) pause_max_age="$value" ;;
+            pause) paused_names+="$value " ;;
+        esac
+    done < "$PAUSE_FILE"
+fi
+
+is_paused() {
+    [[ "$paused_names" == *" $1 "* ]]
+}
+
+record_paused() {
+    log_info "Label=$1 status=paused owner=$pause_owner"
+    (( STATUS_MODE )) && printf 'paused %s owner=%s\n' "$1" "$pause_owner"
+    return 0
+}
 
 record_ok() {
     local name="$1" detail="$2"
@@ -239,6 +267,10 @@ while IFS= read -r label; do
     [[ -z "$label" ]] && continue
     [[ "$label" =~ ^[[:space:]]*# ]] && continue
 
+    if is_paused "$label"; then
+        record_paused "$label"
+        continue
+    fi
     monitored=$((monitored + 1))
     status=$(check_service "$label")
     details=$(get_service_details "$label")
@@ -255,6 +287,10 @@ done < "$LABELS_FILE"
 if [[ -f "$PROBES_FILE" ]]; then
     while read -r name command; do
         [[ -z "$name" || "$name" == \#* ]] && continue
+        if is_paused "$name"; then
+            record_paused "$name"
+            continue
+        fi
         monitored=$((monitored + 1))
         if run_probe "$command"; then
             loaded=$((loaded + 1))
@@ -281,6 +317,17 @@ if [[ -d "$JOBS_DIR" ]]; then
                 ;;
         esac
     done
+fi
+
+if [[ -f "$PAUSE_FILE" ]]; then
+    monitored=$((monitored + 1))
+    if [[ "$pause_since" =~ ^[0-9]+$ && "$pause_max_age" =~ ^[0-9]+$ ]] \
+        && (( $(date +%s) - pause_since > pause_max_age * 3600 )); then
+        record_problem "pause-$pause_owner" "stale" "paused_hours=$(( ($(date +%s) - pause_since) / 3600 )) max_age_hours=$pause_max_age (run: $pause_owner off)"
+    else
+        loaded=$((loaded + 1))
+        record_ok "pause-$pause_owner" "since=${pause_since:-unknown}"
+    fi
 fi
 
 log_info "Run finished monitored=$monitored loaded=$loaded"

@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# gaming — stop costly background work before a game, restore it after.
+# Records only what it stopped, so `off` never starts something that was
+# already down before `on`.
+
+set -u
+
+usage() {
+    cat <<'EOF'
+Usage: gaming [on|off|status|run -- COMMAND...]
+
+  (none)   toggle
+  on       stop Bonsai, Docker, heavy monitors and heavy timers
+  off      restart exactly what `on` stopped
+  status   show what is stopped and how much VRAM is free
+  run      `on`, run COMMAND, then `off` (Steam: gaming run -- %command%)
+EOF
+}
+
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+STATE_DIR="${GAMING_STATE_DIR:-$RUNTIME_DIR/gaming}"
+STATE_FILE="$STATE_DIR/state"
+PAUSE_FILE="${HEARTBEAT_PAUSE_FILE:-$RUNTIME_DIR/heartbeat-pause}"
+APPS_FILE="${GAMING_APPS_FILE:-$HOME/.config/gaming/apps.conf}"
+HEALTH_URL="${GAMING_HEALTH_URL:-http://127.0.0.1:8080/health}"
+HEALTH_WAIT="${GAMING_HEALTH_WAIT:-360}"
+MAX_AGE_HOURS="${GAMING_MAX_AGE_HOURS:-12}"
+
+# Stop order. `off` restarts in reverse.
+USER_SERVICES=(bonsai-cc-proxy.service bonsai.service)
+SYSTEM_UNITS=(docker.socket docker.service)
+USER_TIMERS=(system-update.timer toolsmith.timer logbook-sync.timer)
+# Heartbeat names that go quiet while Bonsai is stopped.
+PAUSED_PROBES=(bonsai-http bonsai-cc-proxy)
+DEFAULT_APPS=('app-io.missioncenter.MissionCenter@*.service' 'app-org.kde.plasma\x2dsystemmonitor@*.service' 'app-psensor@*.service')
+
+say() {
+    printf '%s\n' "$*"
+    notify-send -a gaming -i applications-games "Game mode" "$*" >/dev/null 2>&1 || true
+}
+
+vram_free_gb() {
+    local mib
+    mib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d ' ')
+    [[ "$mib" =~ ^[0-9]+$ ]] || { echo "?"; return; }
+    awk -v m="$mib" 'BEGIN { printf "%.1f", m / 1024 }'
+}
+
+app_patterns() {
+    if [[ -f "$APPS_FILE" ]]; then
+        grep -v -e '^[[:space:]]*#' -e '^[[:space:]]*$' "$APPS_FILE"
+    else
+        printf '%s\n' "${DEFAULT_APPS[@]}"
+    fi
+}
+
+cmd_status() {
+    if [[ ! -f "$STATE_FILE" ]]; then
+        echo "Game mode off. VRAM free: $(vram_free_gb) GB"
+        return 0
+    fi
+    local since
+    since=$(sed -n 's/^since=//p' "$STATE_FILE")
+    echo "Game mode on since $(date -d "@${since:-0}" '+%Y-%m-%d %H:%M'). VRAM free: $(vram_free_gb) GB"
+    sed -n 's/^stopped=/  stopped: /p' "$STATE_FILE"
+}
+
+cmd_on() {
+    if [[ -f "$STATE_FILE" ]]; then
+        cmd_status
+        return 0
+    fi
+    mkdir -p "$STATE_DIR"
+
+    local unit scope stopped=() failed=() kept=() pause_names=()
+    for unit in "${USER_SERVICES[@]}"; do
+        systemctl --user is-active --quiet "$unit" && stopped+=("user:$unit")
+    done
+    for unit in "${SYSTEM_UNITS[@]}"; do
+        systemctl is-active --quiet "$unit" && stopped+=("system:$unit")
+    done
+    for unit in "${USER_TIMERS[@]}"; do
+        systemctl --user is-active --quiet "$unit" && stopped+=("timer:$unit")
+    done
+
+    # Write state and the heartbeat pause before stopping anything, so the
+    # watchdog never sees a half-stopped Bonsai as a crash.
+    {
+        echo "since=$(date +%s)"
+        if (( ${#stopped[@]} )); then printf 'stopped=%s\n' "${stopped[@]}"; fi
+    } > "$STATE_FILE.tmp" && mv -f "$STATE_FILE.tmp" "$STATE_FILE"
+
+    pause_names=("${USER_SERVICES[@]}" "${PAUSED_PROBES[@]}")
+    for unit in "${USER_TIMERS[@]}"; do
+        pause_names+=("${unit%.timer}.service")
+    done
+    {
+        echo "since=$(date +%s)"
+        echo "owner=gaming"
+        echo "max_age_hours=$MAX_AGE_HOURS"
+        printf 'pause=%s\n' "${pause_names[@]}"
+    } > "$PAUSE_FILE.tmp" && mv -f "$PAUSE_FILE.tmp" "$PAUSE_FILE"
+
+    for entry in "${stopped[@]}"; do
+        scope="${entry%%:*}" unit="${entry#*:}"
+        case "$scope" in
+            user|timer) systemctl --user stop "$unit" >/dev/null 2>&1 || failed+=("$unit") ;;
+            system) sudo -n /usr/bin/systemctl stop "$unit" >/dev/null 2>&1 || failed+=("$unit") ;;
+        esac
+    done
+    for unit in "${USER_TIMERS[@]}"; do
+        systemctl --user is-active --quiet "${unit%.timer}.service" && kept+=("${unit%.timer}.service (running now, left alone)")
+    done
+
+    local pattern
+    while IFS= read -r pattern; do
+        systemctl --user stop "$pattern" >/dev/null 2>&1 || true
+    done < <(app_patterns)
+
+    local msg
+    msg="Game mode on. VRAM free: $(vram_free_gb) GB."
+    (( ${#failed[@]} )) && msg+=" Not stopped: ${failed[*]}."
+    (( ${#kept[@]} )) && msg+=" ${kept[*]}."
+    say "$msg"
+    (( ${#failed[@]} == 0 ))
+}
+
+wait_for_bonsai() {
+    local deadline=$(( $(date +%s) + HEALTH_WAIT ))
+    while (( $(date +%s) < deadline )); do
+        if curl -sf -m 5 "$HEALTH_URL" >/dev/null 2>&1; then
+            say "Bonsai is back."
+            return 0
+        fi
+        sleep 5
+    done
+    say "Bonsai did not answer $HEALTH_URL within ${HEALTH_WAIT}s. Check: journalctl --user -u bonsai.service"
+    return 1
+}
+
+cmd_off() {
+    if [[ ! -f "$STATE_FILE" ]]; then
+        echo "Game mode is already off."
+        return 0
+    fi
+    local entries=() entry scope unit failed=() bonsai=0 i
+    mapfile -t entries < <(sed -n 's/^stopped=//p' "$STATE_FILE")
+    for (( i = ${#entries[@]} - 1; i >= 0; i-- )); do
+        entry="${entries[i]}"
+        scope="${entry%%:*}" unit="${entry#*:}"
+        case "$scope" in
+            user|timer) systemctl --user start "$unit" >/dev/null 2>&1 || failed+=("$unit") ;;
+            system) sudo -n /usr/bin/systemctl start "$unit" >/dev/null 2>&1 || failed+=("$unit") ;;
+        esac
+        [[ "$unit" == bonsai.service ]] && bonsai=1
+    done
+    rm -f "$STATE_FILE" "$PAUSE_FILE"
+
+    local msg="Game mode off."
+    (( ${#failed[@]} )) && msg+=" Not started: ${failed[*]}."
+    (( bonsai )) && msg+=" Bonsai is loading (up to ${HEALTH_WAIT}s)."
+    say "$msg"
+    if (( bonsai )) && [[ "${GAMING_NO_WAIT:-0}" != 1 ]]; then
+        setsid "$0" _wait-bonsai >/dev/null 2>&1 < /dev/null &
+    fi
+    (( ${#failed[@]} == 0 ))
+}
+
+cmd_run() {
+    [[ "${1:-}" == -- ]] && shift
+    (( $# )) || { usage >&2; return 2; }
+    local rc=0
+    # Game mode switched on by hand stays on after the game exits.
+    if [[ ! -f "$STATE_FILE" ]]; then
+        with_lock cmd_on || true
+        exec 9>&-
+        trap 'with_lock cmd_off' EXIT
+    fi
+    "$@" || rc=$?
+    return "$rc"
+}
+
+with_lock() {
+    mkdir -p "$STATE_DIR"
+    exec 9> "$STATE_DIR/lock"
+    flock -w 120 9 || { echo "gaming: another gaming command is still running" >&2; exit 1; }
+    "$@"
+}
+
+case "${1:-toggle}" in
+    toggle)
+        if [[ -f "$STATE_FILE" ]]; then with_lock cmd_off; else with_lock cmd_on; fi ;;
+    on) with_lock cmd_on ;;
+    off) with_lock cmd_off ;;
+    status) cmd_status ;;
+    run) shift; cmd_run "$@" ;;
+    _wait-bonsai) wait_for_bonsai ;;
+    -h|--help) usage ;;
+    *) usage >&2; exit 2 ;;
+esac
