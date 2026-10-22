@@ -328,6 +328,12 @@ test_check_symlink_good() {
     run_prog discord-check
     assert_lacks "$OUT" 'half-finished update' "relative good link"
     assert_eq "$(count_ok)" "$((base + 1))" "relative link adds one ok line"
+    rm "$DISCORD/Discord"
+    : > "$DISCORD/app-1.0.10/Discord"
+    ln -s app-1.0.10/Discord "$DISCORD/Discord"
+    run_prog discord-check
+    assert_lacks "$OUT" 'half-finished update' "link to the binary inside the newest install"
+    assert_eq "$(count_ok)" "$((base + 1))" "inside link adds one ok line"
 }
 
 test_check_symlink_stale() {
@@ -386,13 +392,11 @@ tests=(
     test_check_core_missing_in_newest
     test_check_openasar_not_applied
     test_check_openasar_case_insensitive
+    test_check_symlink_good
     test_check_symlink_stale
     test_check_no_symlink_no_link_line
     test_check_exit_matches_fail_lines
 )
-# discord-check flags a correct link as a half-finished update (it compares the resolved
-# path with the bare name app-<version>). Enable the spec case with OPENASAR_STRICT_LINK=1.
-if [[ "${OPENASAR_STRICT_LINK:-0}" == 1 ]]; then tests+=(test_check_symlink_good); fi
 for t in "${tests[@]}"; do
     "$t"
     echo "ok: $t"

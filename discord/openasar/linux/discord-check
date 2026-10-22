@@ -17,7 +17,7 @@ ok "newest install: ${newest##*/}"
 if [ -L "$dir/Discord" ]; then
     target=$(readlink -f "$dir/Discord")
     case $target in
-        "$newest"/*) ok "Discord link points at ${newest##*/}" ;;
+        "$newest" | "$newest"/*) ok "Discord link points at ${newest##*/}" ;;
         *) bad "Discord link points at $target, not ${newest##*/} (half-finished update)" ;;
     esac
 fi
