@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Daily Arch update with a news gate and post-update checks.
+
+    system-update-guard          check news, run the update, check the result
+    system-update-guard --ack    accept every current news item, so the next run updates
+
+Before updating it reads the Arch news feed. An item newer than the last acknowledgement
+that asks for manual intervention stops the run (exit 3) and notifies with its link,
+until `--ack`. Any other new item is announced and the update proceeds. An unreachable
+feed is announced as "unchecked" and the update proceeds.
+
+After a successful update each finding is its own notification and never changes the exit
+code: failed units, new .pacnew files, a running kernel whose modules are gone, a loaded
+nvidia module older than the installed package.
+"""
+import email.utils
+import glob
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+import time
+import urllib.request
+import xml.etree.ElementTree as ET
+
+FEED = "https://archlinux.org/feeds/news/"
+STATE_DIR = os.environ.get("SU_STATE_DIR", os.path.expanduser("~/.local/state/system-update"))
+ACK_FILE = os.path.join(STATE_DIR, "news-ack")
+OPS = os.environ.get("OPS_BIN", os.path.expanduser("~/.agents/ops/bin/ops"))
+UPDATE_CMD = shlex.split(os.environ.get("SU_UPDATE_CMD", "/usr/bin/yay -Syu --noconfirm"))
+INTERVENTION = re.compile(r"manual(ly)? intervention|intervention (is |may be )?required|requires? manual", re.I)
+
+
+def notify(title, message, priority=3):
+    try:
+        subprocess.run([OPS, "notify", title, message, "--priority", str(priority)], timeout=30,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    print(f"{title}: {message}")
+
+
+def fetch_feed():
+    path = os.environ.get("SU_FEED_FILE")
+    if path:
+        with open(path, "rb") as handle:
+            return handle.read()
+    with urllib.request.urlopen(FEED, timeout=20) as response:
+        return response.read()
+
+
+def parse_items(xml_bytes):
+    items = []
+    for item in ET.fromstring(xml_bytes).iter("item"):
+        published = email.utils.parsedate_to_datetime(item.findtext("pubDate")).timestamp()
+        text = f"{item.findtext('title') or ''} {item.findtext('description') or ''}"
+        items.append({
+            "title": (item.findtext("title") or "").strip(),
+            "link": (item.findtext("link") or "").strip(),
+            "published": published,
+            "intervention": bool(INTERVENTION.search(text)),
+        })
+    return items
+
+
+def read_ack():
+    try:
+        with open(ACK_FILE) as handle:
+            return float(handle.read().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def write_ack(value):
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(ACK_FILE + ".tmp", "w") as handle:
+        handle.write(f"{value}\n")
+    os.replace(ACK_FILE + ".tmp", ACK_FILE)
+
+
+def gate(items, ack):
+    """(blocking items, informational items) newer than the acknowledgement."""
+    fresh = [item for item in items if ack is None or item["published"] > ack]
+    return [i for i in fresh if i["intervention"]], [i for i in fresh if not i["intervention"]]
+
+
+def run(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=120).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def post_checks(started):
+    findings = []
+    failed = [line.split()[0] for scope in ([], ["--user"])
+              for line in run(["systemctl", *scope, "--failed", "--no-legend", "--plain"]).splitlines() if line.strip()]
+    if failed:
+        findings.append(("failed units after update", ", ".join(failed)))
+    pacnew = [p for p in glob.glob("/etc/**/*.pacnew", recursive=True) if os.path.getmtime(p) >= started]
+    if pacnew:
+        findings.append(("new .pacnew files", ", ".join(sorted(pacnew))))
+    running = os.uname().release
+    if not os.path.isdir(f"/usr/lib/modules/{running}"):
+        findings.append(("reboot needed", f"running kernel {running} has no modules installed any more"))
+    try:
+        with open("/sys/module/nvidia/version") as handle:
+            loaded = handle.read().strip()
+    except OSError:
+        loaded = None
+    installed = re.search(r"^nvidia-utils (\S+?)-\d+$", run(["pacman", "-Q", "nvidia-utils"]), re.M)
+    if loaded and installed and loaded != installed.group(1):
+        findings.append(("reboot needed", f"nvidia module {loaded} loaded, {installed.group(1)} installed"))
+    return findings
+
+
+def main(argv):
+    if argv[:1] in (["-h"], ["--help"]):
+        print(__doc__.strip())
+        return 0
+    if argv not in ([], ["--ack"]):
+        print(f"unknown arguments: {' '.join(argv)}\n\n{__doc__.strip()}", file=sys.stderr)
+        return 2
+    if argv[:1] == ["--ack"]:
+        items = parse_items(fetch_feed())
+        newest = max((i["published"] for i in items), default=time.time())
+        write_ack(newest)
+        print(f"acknowledged news up to {time.strftime('%Y-%m-%d %H:%M', time.localtime(newest))}")
+        return 0
+
+    try:
+        items = parse_items(fetch_feed())
+    except Exception as error:  # noqa: BLE001 - any feed failure means "unchecked", never a skipped update
+        notify("Arch news unchecked", f"feed unreachable ({type(error).__name__}); updating anyway")
+        items = None
+
+    if items is not None:
+        ack = read_ack()
+        if ack is None:
+            write_ack(max((i["published"] for i in items), default=time.time()))
+            blocking, info = [], []
+        else:
+            blocking, info = gate(items, ack)
+        for item in info:
+            notify("Arch news", f"{item['title']} {item['link']}")
+        if blocking:
+            for item in blocking:
+                notify("Arch update held", f"manual intervention: {item['title']} {item['link']}", priority=4)
+            print("update held; read the news, then run: system-update-guard --ack", file=sys.stderr)
+            return 3
+        if info:
+            write_ack(max(i["published"] for i in info))
+
+    started = time.time()
+    code = subprocess.run(UPDATE_CMD).returncode
+    if code != 0:
+        print(f"update failed: {' '.join(UPDATE_CMD)} exited {code}", file=sys.stderr)
+        return code
+    for title, message in post_checks(started):
+        notify(title, message, priority=4)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
