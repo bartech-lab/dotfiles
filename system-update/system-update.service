@@ -1,8 +1,8 @@
 [Unit]
-Description=Daily system update via yay
+Description=Daily system update via yay, gated on Arch news, with post-update checks
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/yay -Syu --noconfirm
+ExecStart=%h/.local/bin/jobrun system-update --max-age 30 -- %h/dotfiles/system-update/system-update-guard
 StandardOutput=journal
 StandardError=journal
