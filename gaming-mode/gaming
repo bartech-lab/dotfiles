@@ -161,7 +161,7 @@ cmd_off() {
     (( bonsai )) && msg+=" Bonsai is loading (up to ${HEALTH_WAIT}s)."
     say "$msg"
     if (( bonsai )) && [[ "${GAMING_NO_WAIT:-0}" != 1 ]]; then
-        setsid "$0" _wait-bonsai >/dev/null 2>&1 < /dev/null &
+        setsid "$0" _wait-bonsai >/dev/null 2>&1 < /dev/null 9>&- &
     fi
     (( ${#failed[@]} == 0 ))
 }

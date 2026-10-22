@@ -81,6 +81,7 @@ STUB
 cat > "$MOCK_BIN/setsid" <<'STUB'
 #!/bin/bash
 echo "$*" >> "$SETSID_LOG"
+if { : >&9; } 2>/dev/null; then echo "fd9-open" >> "$SETSID_LOG"; fi
 STUB
 chmod +x "$MOCK_BIN"/*
 
@@ -334,5 +335,12 @@ assert_nonzero "$rc" 'health wait succeeded while /health never answered'
 assert_has "$out" 'Bonsai did not answer' 'health wait did not report the failure'
 assert_file_has "$NOTIFY_LOG" 'Bonsai did not answer' 'failure was not sent as a notification'
 rm -f "$MOCK_BIN/curl" "$MOCK_BIN/sleep"
+
+echo "== the background Bonsai wait does not hold the command lock"
+reset; : > "$SETSID_LOG"
+run_gaming on
+GAMING_NO_WAIT=0 run_gaming off
+assert_file_has "$SETSID_LOG" '_wait-bonsai' 'off did not start the Bonsai wait'
+assert_file_lacks "$SETSID_LOG" 'fd9-open' 'the Bonsai wait inherited the lock on fd 9, so the next gaming on blocks for up to the health wait'
 
 echo 'PASS: gaming on/off/status/toggle/run, failures, pause file and app patterns'
