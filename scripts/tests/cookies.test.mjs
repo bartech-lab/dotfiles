@@ -147,7 +147,7 @@ test('netscape output has header and exact fields per cookie in host_key,name or
   ]);
 });
 
-test('netscape include-subdomains flag follows the leading dot', { todo: 'cookies prints TRUE for host-only cookies' }, () => {
+test('netscape include-subdomains flag follows the leading dot', () => {
   const env = mkEnv();
   makeDb(env, [
     { host: '.dotted.com', name: 'a', value: 'v1', expires: FAR },

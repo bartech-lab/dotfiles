@@ -254,7 +254,8 @@ function formatOutput(cookies, format, key, verbose, includeExpired) {
     for (const c of filtered) {
       const expiry = c.has_expires ? webkitToUnix(c.expires_utc) : 0;
       const secure = c.is_secure ? 'TRUE' : 'FALSE';
-      lines.push(`${c.host_key}\tTRUE\t${c.path}\t${secure}\t${expiry}\t${c.name}\t${c.value}`);
+      const subdomains = c.host_key.startsWith('.') ? 'TRUE' : 'FALSE';
+      lines.push(`${c.host_key}\t${subdomains}\t${c.path}\t${secure}\t${expiry}\t${c.name}\t${c.value}`);
     }
     return lines.join('\n') + '\n';
   }
