@@ -7,14 +7,20 @@ set -u
 
 usage() {
     cat <<'EOF'
-Usage: heartbeat.sh [--help]
+Usage: heartbeat.sh [--help] [--status]
 
-Check configured background services and log their current status.
+Check configured background services, probes and job records, and log their
+current status. A changed set of problems raises one desktop notification.
+
+  --status  print one line per check and exit 2 when any check has a problem;
+            never notifies
 EOF
 }
 
+STATUS_MODE=0
 case "${1:-}" in
     '') ;;
+    --status) STATUS_MODE=1 ;;
     -h|--help)
         usage
         exit 0
@@ -28,8 +34,12 @@ esac
 
 CONFIG_DIR="$HOME/.config/launchd-heartbeat"
 LABELS_FILE="$CONFIG_DIR/monitored-labels.conf"
+PROBES_FILE="$CONFIG_DIR/probes.conf"
+JOBS_DIR="${JOB_STATUS_DIR:-$HOME/.local/state/jobs}"
 LOG_FILE="$CONFIG_DIR/heartbeat.log"
 ERROR_LOG="$CONFIG_DIR/error.log"
+PROBE_TIMEOUT="${HEARTBEAT_PROBE_TIMEOUT:-20}"
+MAX_LOG_BYTES="${HEARTBEAT_MAX_LOG_BYTES:-1048576}"
 
 if ! mkdir -p "$CONFIG_DIR"; then
     printf 'Error: unable to create log directory: %s\n' "$CONFIG_DIR" >&2
@@ -46,6 +56,83 @@ log_info() {
 
 log_error() {
     echo "$(timestamp): $1" >> "$ERROR_LOG"
+}
+
+rotate_log() {
+    local file="$1" size
+    [[ -f "$file" ]] || return 0
+    size=$(wc -c < "$file" 2>/dev/null | tr -d ' ')
+    [[ -n "$size" ]] || return 0
+    if (( size > MAX_LOG_BYTES )); then
+        mv -f "$file" "$file.1"
+    fi
+}
+
+run_probe() {
+    local command="$1" pid watcher rc
+    bash -c "$command" >/dev/null 2>&1 </dev/null &
+    pid=$!
+    ( sleep "$PROBE_TIMEOUT"; pkill -9 -P "$pid"; kill -9 "$pid" ) >/dev/null 2>&1 &
+    watcher=$!
+    wait "$pid" 2>/dev/null
+    rc=$?
+    pkill -P "$watcher" >/dev/null 2>&1
+    kill "$watcher" >/dev/null 2>&1
+    wait "$watcher" 2>/dev/null
+    return "$rc"
+}
+
+# Prints "failed <reason>", "stale <age>" or "ok" for one job record.
+check_job_record() {
+    local file="$1" key value now
+    local last_success='' last_failure='' reason='' max_age_hours=''
+    while IFS='=' read -r key value; do
+        case "$key" in
+            last_success) last_success="$value" ;;
+            last_failure) last_failure="$value" ;;
+            reason) reason="$value" ;;
+            max_age_hours) max_age_hours="$value" ;;
+        esac
+    done < "$file"
+    [[ "$last_success" =~ ^[0-9]+$ ]] || last_success=''
+    [[ "$last_failure" =~ ^[0-9]+$ ]] || last_failure=''
+    [[ "$max_age_hours" =~ ^[0-9]+$ ]] || max_age_hours=''
+
+    if [[ -n "$last_failure" ]] && { [[ -z "$last_success" ]] || (( last_failure > last_success )); }; then
+        echo "failed reason=${reason:-unknown}"
+        return
+    fi
+    if [[ -n "$max_age_hours" ]]; then
+        now=$(date +%s)
+        if [[ -z "$last_success" ]]; then
+            echo "stale never succeeded, max_age_hours=$max_age_hours"
+            return
+        fi
+        if (( now - last_success > max_age_hours * 3600 )); then
+            echo "stale last_success_age_hours=$(( (now - last_success) / 3600 )) max_age_hours=$max_age_hours"
+            return
+        fi
+    fi
+    echo "ok last_success=${last_success:-none}"
+}
+
+problem_labels=""
+problem_count=0
+
+record_ok() {
+    local name="$1" detail="$2"
+    log_info "Label=$name status=ok $detail"
+    (( STATUS_MODE )) && printf 'ok %s %s\n' "$name" "$detail"
+    return 0
+}
+
+record_problem() {
+    local name="$1" status="$2" detail="$3"
+    log_error "Label=$name status=$status $detail"
+    (( STATUS_MODE )) && printf 'FAIL %s %s %s\n' "$name" "$status" "$detail"
+    problem_labels="${problem_labels}${problem_labels:+, }$name ($status)"
+    problem_count=$((problem_count + 1))
+    return 0
 }
 
 # Platform-aware service check
@@ -140,9 +227,11 @@ if [[ ! -f "$LABELS_FILE" ]]; then
     exit 1
 fi
 
+rotate_log "$LOG_FILE"
+rotate_log "$ERROR_LOG"
+
 monitored=0
 loaded=0
-problem_labels=""
 
 log_info "Run started"
 
@@ -152,23 +241,56 @@ while IFS= read -r label; do
 
     monitored=$((monitored + 1))
     status=$(check_service "$label")
-    
+    details=$(get_service_details "$label")
+
     if [[ "$status" == "loaded" || "$status" == "active" ]]; then
         loaded=$((loaded + 1))
-        details=$(get_service_details "$label")
         log_info "Label=$label status=$status $details"
+        (( STATUS_MODE )) && printf 'ok %s %s %s\n' "$label" "$status" "$details"
     else
-        details=$(get_service_details "$label")
-        log_error "Label=$label status=$status $details"
-        if [[ "$status" == "failed" || "$status" == "missing" ]]; then
-            problem_labels="${problem_labels}${problem_labels:+, }$label ($status)"
-        fi
+        record_problem "$label" "$status" "$details"
     fi
 done < "$LABELS_FILE"
 
+if [[ -f "$PROBES_FILE" ]]; then
+    while read -r name command; do
+        [[ -z "$name" || "$name" == \#* ]] && continue
+        monitored=$((monitored + 1))
+        if run_probe "$command"; then
+            loaded=$((loaded + 1))
+            record_ok "$name" "probe"
+        else
+            record_problem "$name" "failed" "probe exit=$?"
+        fi
+    done < "$PROBES_FILE"
+fi
+
+if [[ -d "$JOBS_DIR" ]]; then
+    for record in "$JOBS_DIR"/*.status; do
+        [[ -f "$record" ]] || continue
+        job=$(basename "$record" .status)
+        monitored=$((monitored + 1))
+        result=$(check_job_record "$record")
+        case "$result" in
+            ok*)
+                loaded=$((loaded + 1))
+                record_ok "$job" "job ${result#ok }"
+                ;;
+            *)
+                record_problem "$job" "${result%% *}" "job ${result#* }"
+                ;;
+        esac
+    done
+fi
+
 log_info "Run finished monitored=$monitored loaded=$loaded"
 
-# A log file nobody reads is not a monitor. Surface unloaded services.
+if (( STATUS_MODE )); then
+    (( problem_count > 0 )) && exit 2
+    exit 0
+fi
+
+# A log file nobody reads is not a monitor. Surface every problem once.
 NOTIFIED_FILE="$CONFIG_DIR/last-notified"
 previous_problems=$(cat "$NOTIFIED_FILE" 2>/dev/null || true)
 if [[ "$problem_labels" != "$previous_problems" ]]; then

@@ -10,8 +10,11 @@ Supports **macOS** (LaunchAgents) and **Linux** (systemd user units). Detects pl
 - Checks a configurable list of service labels/units
 - Logs active, failed, or missing status on Linux, including the service result.
 - An active timer does not hide a failed service.
-- Sends a desktop notification for failed or missing services.
-- Writes errors to a separate log file
+- Runs the probes in `probes.conf`. A probe is a shell command that must exit 0 within `HEARTBEAT_PROBE_TIMEOUT` seconds (default 20).
+- Reads job health records in `~/.local/state/jobs/*.status`, written by `job-status`. A job is failed when its last failure is newer than its last success, and stale when its last success is older than its `max_age_hours`.
+- Sends one desktop notification when the set of problems changes. It does not repeat while the set stays the same.
+- Writes errors to a separate log file. Each log moves to `.1` above 1 MB.
+- `launchd-heartbeat --status` prints one line per check and exits 2 when any check has a problem. It never notifies.
 
 ## Setup
 
@@ -47,6 +50,33 @@ com.user.brewautoupdate
 git-auto-pull.service
 launchd-heartbeat.service
 system-update.service
+```
+
+### Probes
+
+`~/.config/launchd-heartbeat/probes.conf`, one probe per line: a name, then the command.
+
+```
+bonsai-http curl -sf -m 5 http://127.0.0.1:8080/health
+disk-root   test "$(df -P / | awk 'NR==2 {print int($5)}')" -lt 90
+```
+
+### Job records
+
+A scheduled job reports its own result, so the heartbeat can tell "loaded" from "succeeded recently":
+
+```bash
+job-status ok coderabbit --max-age 192       # success; stale after 8 days without another
+job-status fail coderabbit "GitLab unreachable, VPN off?"
+```
+
+`job-status` is installed to `~/.local/bin/job-status`. Call it by absolute path from launchd or systemd jobs, which do not have `~/.local/bin` in `PATH`.
+
+## Tests
+
+```bash
+bash launchd-heartbeat/tests/test.sh
+bash launchd-heartbeat/tests/test-health.sh
 ```
 
 ## Logs
