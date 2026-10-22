@@ -256,6 +256,8 @@ if [[ "$DRY_RUN" == false ]]; then
     mkdir -p ~/.config/launchd-heartbeat
     cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/launchd-heartbeat
     chmod +x ~/.config/launchd-heartbeat/launchd-heartbeat
+    mkdir -p ~/.local/bin
+    install -m 755 "$DOTFILES_DIR/launchd-heartbeat/job-status.sh" ~/.local/bin/job-status
 
     if [[ ! -f ~/.config/git-auto-pull/repos.conf ]]; then
         cat > ~/.config/git-auto-pull/repos.conf << 'GITCONF'
@@ -397,6 +399,8 @@ GITCONF
     if [[ "$DRY_RUN" == false ]]; then
         cp "$DOTFILES_DIR/launchd-heartbeat/heartbeat.sh" ~/.config/launchd-heartbeat/launchd-heartbeat
         chmod +x ~/.config/launchd-heartbeat/launchd-heartbeat
+        mkdir -p ~/.local/bin
+        install -m 755 "$DOTFILES_DIR/launchd-heartbeat/job-status.sh" ~/.local/bin/job-status
     fi
 
     if [[ ! -f ~/.config/launchd-heartbeat/monitored-labels.conf ]]; then
