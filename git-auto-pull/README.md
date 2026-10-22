@@ -147,7 +147,8 @@ systemctl --user disable git-auto-pull.timer
 - Very low resource usage (~0.1% CPU for 1-2 seconds per repo)
 - Runs as background process (won't interrupt your work)
 - Only works when you're online; a default-branch lookup or fetch failure is logged in `error.log`
-- Diverged branches are skipped and logged in `error.log` (no automatic merge)
+- A default branch that is only ahead of the remote is skipped and logged in `pull.log` with its unpushed commit count.
+- A diverged default branch is skipped, logged in `error.log`, and fails the run, so the heartbeat reports it. Nothing is merged automatically.
 
 ## Uninstallation
 
