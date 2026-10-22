@@ -18,7 +18,8 @@ dotfiles/
 │   └── openasar/
 │       ├── aggressive-minimal.css          # Optional OpenAsar custom CSS
 │       ├── apply-openasar.sh              # Apply script for updates
-│       └── recover-discord.sh             # Recovery script
+│       ├── recover-discord.sh             # Recovery script
+│       └── linux/                         # Opt-in auto-reapply watcher and discord-check (Linux)
 ├── config/                   # One directory per application config
 │   ├── aria2/aria2.conf
 │   ├── bottom/bottom.toml

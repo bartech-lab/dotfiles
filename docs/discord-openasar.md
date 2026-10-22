@@ -1,6 +1,6 @@
 # Discord OpenAsar (Manual)
 
-Opt-in manual OpenAsar application for Discord on macOS. No automation — you run it when you want it.
+Opt-in OpenAsar for Discord. On macOS you apply it by hand. On Linux an optional watcher reapplies it after each update (see "Linux: automatic reapply").
 
 Intentionally **not** part of `install.sh`.
 
@@ -10,7 +10,7 @@ Intentionally **not** part of `install.sh`.
 - **`recover-discord.sh`** — Restores stock Discord from a timestamped backup, removes OpenAsar config, nukes modules to trigger fresh downloads.
 - **`aggressive-minimal.css`** — Compact sidebar/guildbar, hidden nitro/shop noise, tighter message spacing.
 
-No launchd agent. No automatic reapply. No WatchPaths. You control when OpenAsar gets applied.
+On macOS there is no launchd agent and no automatic reapply. You control when OpenAsar gets applied.
 
 ## Commands
 
@@ -77,3 +77,23 @@ If the new Discord version broke OpenAsar nightly, the smoke test catches it and
 The CSS applies a compact layout and hides annoying elements (nitro shop, gift/sticker/gif buttons, activity panel, profile effects). Edit `aggressive-minimal.css` to tweak.
 
 On Linux the scripts look for Discord in `/opt/discord`, `/usr/lib/discord`, `~/.local/share/discord`, then the newest `~/.config/discord/app-*` directory, where the Arch `discord` launcher installs it. Discord replaces that directory on each update, which removes OpenAsar.
+
+## Linux: automatic reapply
+
+On Linux an opt-in systemd watcher reapplies OpenAsar after every Discord update. Install it once:
+
+```bash
+~/dotfiles/discord/openasar/linux/setup.sh
+```
+
+- `openasar-patch.path` watches `~/.config/discord/installer.db` and runs `openasar-patch` when it changes.
+- `openasar-patch` patches every `app-*/resources/app.asar` that is not OpenAsar yet, from the cached `~/.local/share/OpenAsarPersist/openasar.app.asar`. It downloads only when the cache is missing.
+- `openasar-patch --refresh` downloads the latest nightly into the cache and repatches.
+- The theme CSS stays in `settings.json` under `openasar.css`; the watcher does not touch it.
+
+When Discord does not start, run `discord-check`. It prints one `ok` or `FAIL` line per check and exits non-zero on any failure:
+
+- the `~/.config/discord/Discord` link points at the newest `app-*` directory (a stale link means a half-finished update);
+- `discord_desktop_core` exists for that version;
+- OpenAsar is applied;
+- a monitor is connected. Without one, every Electron app hangs at startup on Wayland, stock Discord included.

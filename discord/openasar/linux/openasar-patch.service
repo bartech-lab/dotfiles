@@ -1,0 +1,10 @@
+[Unit]
+StartLimitIntervalSec=0
+Description=Reapply OpenAsar to the current Discord install
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/openasar-patch
+
+[Install]
+WantedBy=default.target

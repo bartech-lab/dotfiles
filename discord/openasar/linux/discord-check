@@ -1,0 +1,43 @@
+#!/bin/sh
+set -u
+
+dir=${XDG_CONFIG_HOME:-$HOME/.config}/discord
+fail=0
+
+bad() { echo "FAIL $*"; fail=1; }
+ok() { echo "ok   $*"; }
+
+newest=$(ls -d "$dir"/app-* 2>/dev/null | sort -V | tail -1)
+if [ -z "$newest" ]; then
+    bad "no Discord install in $dir (run discord once to bootstrap)"
+    exit 1
+fi
+ok "newest install: ${newest##*/}"
+
+if [ -L "$dir/Discord" ]; then
+    target=$(readlink -f "$dir/Discord")
+    case $target in
+        "$newest"/*) ok "Discord link points at ${newest##*/}" ;;
+        *) bad "Discord link points at $target, not ${newest##*/} (half-finished update)" ;;
+    esac
+fi
+
+if ls -d "$newest"/modules/discord_desktop_core-*/discord_desktop_core >/dev/null 2>&1; then
+    ok "discord_desktop_core present"
+else
+    bad "discord_desktop_core missing in ${newest##*/}/modules"
+fi
+
+if grep -aqi openasar "$newest/resources/app.asar" 2>/dev/null; then
+    ok "OpenAsar applied"
+else
+    bad "OpenAsar not applied (run openasar-patch)"
+fi
+
+if grep -qx connected /sys/class/drm/card*-*/status 2>/dev/null; then
+    ok "monitor connected"
+else
+    bad "no monitor connected; Electron apps hang at startup on Wayland without one"
+fi
+
+exit "$fail"

@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for Discord updates and reapply OpenAsar
+
+[Path]
+PathChanged=%h/.config/discord/installer.db
+Unit=openasar-patch.service
+
+[Install]
+WantedBy=default.target
