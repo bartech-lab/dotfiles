@@ -36,7 +36,7 @@ esac
 
 target="$DEST_DIR/ntfy"
 if [[ -x "$target" ]]; then
-    installed=$("$target" --version 2>/dev/null | sed -n 's/^ntfy version \([0-9.]*\).*/\1/p' | head -n 1)
+    installed=$("$target" --version 2>/dev/null | sed -n 's/^ntfy version \([0-9.]*\).*/\1/p' | head -n 1) || installed=""
     if [[ "$installed" == "$NTFY_VERSION" ]]; then
         echo "✓ ntfy $NTFY_VERSION already installed at $target"
         exit 0
