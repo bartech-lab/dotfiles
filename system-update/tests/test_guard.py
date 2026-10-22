@@ -91,5 +91,17 @@ class GuardTest(unittest.TestCase):
         self.assertEqual(self.guard(env=env).returncode, 7)
 
 
+    def test_pacnew_from_this_update_is_reported_even_with_an_old_package_mtime(self):
+        self.feed.write_text(feed(OLD))
+        etc = self.dir / "etc"
+        (etc / "old").mkdir(parents=True)
+        (etc / "old" / "before.conf.pacnew").write_text("x")
+        fresh = etc / "sub" / "fresh.conf.pacnew"
+        env = dict(self.env, SU_ETC_DIR=str(etc),
+                   SU_UPDATE_CMD=f"sh -c 'mkdir -p {fresh.parent} && touch {fresh} && touch -t 200101010000 {fresh}'")
+        self.assertEqual(self.guard(env=env).returncode, 0)
+        self.assertIn("fresh.conf.pacnew", self.alerts_text())
+        self.assertNotIn("before.conf.pacnew", self.alerts_text())
+
 if __name__ == "__main__":
     unittest.main()
