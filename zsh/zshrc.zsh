@@ -131,6 +131,9 @@ if command -v fnm &>/dev/null; then
 fi
 _zst_mark fnm
 
+# Unread ops alerts: one line when something is waiting, nothing otherwise (cached 60 s).
+[[ -x ~/.agents/bin/ops-inbox ]] && ~/.agents/bin/ops-inbox --greeting
+
 # Clean up PATH - remove unwanted paths inherited from parent environment
 path=(${path:#${HOME}/.rvm/bin})
 export PATH
