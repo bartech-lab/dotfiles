@@ -41,6 +41,10 @@ dotfiles/
 │   ├── pull.sh               # Main syncing script
 │   ├── setup.sh              # One-time setup for new machines
 │   └── README.md             # Component documentation
+├── gaming-mode/              # Linux: `gaming` frees the GPU for a game, restores after
+│   ├── gaming                # on/off/status/run command
+│   ├── setup.sh              # Installs command, app list, Meta+Shift+G shortcut
+│   └── README.md             # Component documentation
 ├── launchd-heartbeat/        # LaunchAgent health heartbeat
 │   ├── heartbeat.sh          # Main heartbeat script
 │   ├── setup.sh              # One-time setup for new machines

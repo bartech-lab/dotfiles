@@ -1,0 +1,3 @@
+# Lets `gaming` stop and start Docker without a password prompt.
+# Install: sudo install -m 440 sudoers.example /etc/sudoers.d/gaming-docker && sudo visudo -c
+bartech ALL=(root) NOPASSWD: /usr/bin/systemctl stop docker.socket, /usr/bin/systemctl stop docker.service, /usr/bin/systemctl start docker.socket, /usr/bin/systemctl start docker.service

@@ -61,6 +61,21 @@ bonsai-http curl -sf -m 5 http://127.0.0.1:8080/health
 disk-root   test "$(df -P / | awk 'NR==2 {print int($5)}')" -lt 90
 ```
 
+### Pause file
+
+A deliberate stop (for example `gaming on`) writes `$XDG_RUNTIME_DIR/heartbeat-pause`
+(override with `HEARTBEAT_PAUSE_FILE`). Every label or probe named in a `pause=` line is
+reported as `paused` instead of checked. A pause older than `max_age_hours` is itself a
+problem, `pause-<owner>` with status `stale`.
+
+```
+since=1761130000
+owner=gaming
+max_age_hours=12
+pause=bonsai.service
+pause=bonsai-http
+```
+
 ### Job records
 
 A scheduled job reports its own result, so the heartbeat can tell "loaded" from "succeeded recently":

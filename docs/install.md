@@ -207,6 +207,17 @@ bash setup.sh
 
 See [ai-caffeine README](../ai-caffeine/README.md) for mechanisms and tuning.
 
+## Optional: Game Mode (gaming-mode, Linux only)
+
+Not installed by `./install.sh`. `gaming` (or Meta+Shift+G) stops Bonsai, Docker, heavy
+timers and monitor apps before a game; running it again restores what it stopped.
+
+```bash
+bash ~/dotfiles/gaming-mode/setup.sh
+```
+
+See [gaming-mode README](../gaming-mode/README.md).
+
 ## Fresh macOS Setup
 
 On a completely fresh macOS machine:

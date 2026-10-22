@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HEARTBEAT_SCRIPT="${HEARTBEAT_SCRIPT:-$SCRIPT_DIR/heartbeat.sh}"
+HEARTBEAT_SCRIPT="${HEARTBEAT_BIN:-${HEARTBEAT_SCRIPT:-$SCRIPT_DIR/heartbeat.sh}}"
 JOB_STATUS_SCRIPT="${JOB_STATUS_SCRIPT:-$SCRIPT_DIR/job-status.sh}"
 TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/launchd-heartbeat-health.XXXXXX")
 TEST_HOME="$TEST_ROOT/home"
@@ -99,6 +99,8 @@ export HOME="$TEST_HOME"
 export PATH="$MOCK_BIN:$PATH"
 export HEARTBEAT_MAX_LOG_BYTES=1048576
 unset HEARTBEAT_PROBE_TIMEOUT
+PAUSE_FILE="$TEST_ROOT/pause"
+export HEARTBEAT_PAUSE_FILE="$TEST_ROOT/no-such-pause-file"
 
 help_output=$(heartbeat --help)
 [[ "$help_output" == *'Usage: heartbeat.sh'* ]] || fail '--help did not print usage'
@@ -283,4 +285,74 @@ heartbeat
 assert_eq "$(notify_count)" 1 'recovery sent a notification'
 [[ ! -s "$LAST_NOTIFIED" ]] || fail 'last-notified not emptied after job recovery'
 
-echo 'PASS: launchd-heartbeat probes, job records, status and rotation'
+echo "== pause file"
+write_pause() {
+    local since="$1" maxage="$2" owner="$3"
+    shift 3
+    { printf 'since=%s\nowner=%s\nmax_age_hours=%s\n' "$since" "$owner" "$maxage"
+      local n; for n in "$@"; do printf 'pause=%s\n' "$n"; done; } > "$PAUSE_FILE"
+}
+now=$(date +%s)
+hb() { HEARTBEAT_PAUSE_FILE="$PAUSE_FILE" heartbeat "$@"; }
+
+reset
+rm -f "$PAUSE_FILE"
+printf 'down.service\n' > "$CONF_DIR/monitored-labels.conf"
+printf 'p-paused false\np-live false\np-fine true\n' > "$PROBES"
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'no pause file: failing checks must exit 2'
+assert_no_line "$out" 'pause-' 'no pause file but a pause- line was printed'
+assert_line "$out" '^FAIL .*p-paused' 'no pause file: p-paused must FAIL'
+assert_line "$out" '^FAIL .*down\.service' 'no pause file: unavailable label must FAIL (harness sanity)'
+
+write_pause "$((now - 60))" 12 gaming p-paused down.service
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'unpaused probe p-live must still make --status exit 2'
+assert_line "$out" '^paused p-paused owner=gaming' 'paused probe lacks paused line'
+assert_line "$out" '^paused down\.service owner=gaming' 'paused label lacks paused line'
+assert_no_line "$out" '^(ok|FAIL) .*p-paused' 'paused probe still reported ok/FAIL'
+assert_no_line "$out" '^(ok|FAIL) .*down\.service' 'paused label still reported ok/FAIL'
+assert_line "$out" '^FAIL .*p-live' 'probe not in pause= must still FAIL'
+assert_line "$out" '^ok .*p-fine' 'unpaused healthy probe must be ok'
+assert_line "$out" '^ok .*pause-gaming' 'fresh pause must report ok pause-gaming'
+assert_no_line "$out" 'stale' 'fresh pause reported stale'
+
+printf 'p-live false\n' > "$PROBES"
+write_pause "$((now - 60))" 12 gaming p-paused down.service p-live
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 0 'everything paused and fresh must exit 0'
+assert_line "$out" '^paused p-live owner=gaming' 'second pause= entry not honoured'
+assert_no_line "$out" '^FAIL' 'paused-only run printed FAIL'
+rm -f "$ERROR_LOG" "$LOG_FILE"
+hb
+assert_eq "$(notify_count)" 0 'paused checks must not notify'
+assert_not_contains "$ERROR_LOG" 'p-live' 'paused probe was run and logged as failing'
+assert_not_contains "$ERROR_LOG" 'down.service' 'paused label was checked and logged as a problem'
+
+echo "== stale pause"
+reset
+printf 'p-paused false\n' > "$PROBES"
+write_pause "$((now - 13 * 3600))" 12 gaming p-paused
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'stale pause must make --status exit 2'
+assert_line "$out" '^FAIL .*pause-gaming.*stale' 'stale pause must print FAIL pause-gaming stale'
+assert_line "$out" '^paused p-paused owner=gaming' 'stale pause must still pause its checks'
+hb
+assert_contains "$NOTIFY_LOG" 'pause-gaming (stale)' 'stale pause not in notification'
+assert_eq "$(notify_count)" 1 'stale pause must notify once'
+write_pause "$((now - 11 * 3600))" 12 gaming p-paused
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 0 'pause younger than max_age_hours must be healthy'
+assert_line "$out" '^ok .*pause-gaming' 'pause 11h old with 12h limit must be ok'
+write_pause "$((now - 3 * 3600))" 2 other p-paused
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'pause uses its own max_age_hours'
+assert_line "$out" '^FAIL .*pause-other.*stale' 'owner name must appear in pause-<owner>'
+
+echo 'PASS: launchd-heartbeat probes, job records, status, rotation and pause'
