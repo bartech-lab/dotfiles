@@ -79,6 +79,7 @@ zsh -n path/to/changed-zsh-file.zsh
 bash ~/dotfiles/scripts/tests/test-git-autoswitch.sh
 bash ~/dotfiles/scripts/tests/test-git-local-patch.sh
 bash ~/dotfiles/scripts/tests/test-pclaude.sh
+bash ~/dotfiles/scripts/tests/test-install-ntfy.sh
 bash ~/dotfiles/git-auto-pull/tests/test.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
 ```
