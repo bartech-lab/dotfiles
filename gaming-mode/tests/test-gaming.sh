@@ -316,4 +316,23 @@ assert_eq "$(calls stop | grep -c . || true)" 0 'run while on stopped units agai
 run_gaming off
 assert_eq "$(calls start | sorted)" "$(printf '%s\n' "${ALL_UNITS[@]}" | sorted)" 'off after run-while-on lost the snapshot'
 
+echo "== off: Bonsai health wait reports success and failure"
+cat > "$MOCK_BIN/curl" <<'STUB'
+#!/bin/bash
+[[ ! -f "$CURL_FAIL" ]]
+STUB
+printf '#!/bin/bash\n' > "$MOCK_BIN/sleep"
+chmod +x "$MOCK_BIN/curl" "$MOCK_BIN/sleep"
+export CURL_FAIL="$T/curl-fail"
+reset; : > "$NOTIFY_LOG"
+run_gaming _wait-bonsai
+assert_eq "$rc" 0 'health wait failed while /health answered'
+assert_has "$out" 'Bonsai is back' 'health wait did not report Bonsai back'
+touch "$CURL_FAIL"
+GAMING_HEALTH_WAIT=1 run_gaming _wait-bonsai
+assert_nonzero "$rc" 'health wait succeeded while /health never answered'
+assert_has "$out" 'Bonsai did not answer' 'health wait did not report the failure'
+assert_file_has "$NOTIFY_LOG" 'Bonsai did not answer' 'failure was not sent as a notification'
+rm -f "$MOCK_BIN/curl" "$MOCK_BIN/sleep"
+
 echo 'PASS: gaming on/off/status/toggle/run, failures, pause file and app patterns'
