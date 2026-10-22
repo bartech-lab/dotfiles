@@ -29,6 +29,18 @@ fi
 
 exec >> "$LOG" 2>&1
 
+JOB_STATUS="$HOME/.local/bin/job-status"
+record() {
+    rc=$?
+    [ -x "$JOB_STATUS" ] || return 0
+    if [ "$rc" -eq 0 ]; then
+        "$JOB_STATUS" ok brew-autoupdate --max-age 60
+    else
+        "$JOB_STATUS" fail brew-autoupdate "exit $rc, see $LOG" --max-age 60
+    fi
+}
+trap record EXIT
+
 echo "=== $(date) ==="
 "$BREW" update
 "$BREW" upgrade --formula
