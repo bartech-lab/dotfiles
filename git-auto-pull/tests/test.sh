@@ -167,6 +167,27 @@ fi
 run_pull || true
 assert_eq 1 "$(grep -c 'diverged-repo diverged' "$ALERTS")" 'a divergence must alert exactly once across runs'
 assert_contains "$ALERTS" 'main: 2 local, 1 remote commit(s)' 'the alert must give ahead and behind counts'
+RACE_REMOTE="$TEST_ROOT/race-remote.git"
+git clone --quiet --bare "$REMOTE" "$RACE_REMOTE"
+for n in 1 2 3 4 5 6 7 8; do
+    git clone --quiet "$RACE_REMOTE" "$TEST_HOME/Projects/race-repo-$n"
+    commit_file "$TEST_HOME/Projects/race-repo-$n" "race-$n.txt" "race-$n" "race-$n"
+done
+git clone --quiet --branch main "$RACE_REMOTE" "$TEST_ROOT/race-seed"
+commit_file "$TEST_ROOT/race-seed" remote-only-2.txt remote-only-2 remote-only-2
+git -C "$TEST_ROOT/race-seed" push --quiet origin main
+cat > "$TEST_ROOT/fake-ops" <<EOF
+#!/bin/bash
+sleep 0.3
+printf '%s|%s\n' "\$2" "\$3" >> "$ALERTS"
+EOF
+: > "$ALERTS"
+run_pull || true
+run_pull || true
+for n in 1 2 3 4 5 6 7 8; do
+    assert_eq 1 "$(grep -c "race-repo-$n diverged" "$ALERTS")" "race-repo-$n must alert exactly once when several repos diverge in the same run"
+done
+rm -rf "$TEST_HOME"/Projects/race-repo-*
 unset OPS_BIN
 
 assert_not_contains "$LOG_FILE" "Updated $DIVERGED_REPO (main)" \

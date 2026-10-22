@@ -40,7 +40,8 @@ export GIT_TERMINAL_PROMPT=0
 notify_divergence() {
     local repo_path="$1" branch_name="$2" local_sha="$3" remote_sha="$4"
     local key="$repo_path $branch_name $local_sha $remote_sha" ops_bin="${OPS_BIN:-$HOME/.agents/ops/bin/ops}"
-    local seen="$CONFIG_DIR/diverged-notified"
+    local seen_dir="$CONFIG_DIR/diverged-notified.d" seen tmp
+    seen="$seen_dir/$(printf '%s %s' "$repo_path" "$branch_name" | cksum | cut -d' ' -f1)"
     grep -qxF "$key" "$seen" 2>/dev/null && return 0
     [[ -x "$ops_bin" ]] || return 0
     local ahead behind
@@ -48,9 +49,10 @@ notify_divergence() {
     behind=$(git rev-list --count "$local_sha..$remote_sha")
     if "$ops_bin" notify "git-auto-pull: ${repo_path##*/} diverged" \
         "$branch_name: $ahead local, $behind remote commit(s). Rebase by hand: git -C $repo_path pull --rebase" >/dev/null 2>&1; then
-        grep -v "^$repo_path $branch_name " "$seen" 2>/dev/null > "$seen.tmp"
-        printf '%s\n' "$key" >> "$seen.tmp"
-        mv "$seen.tmp" "$seen"
+        mkdir -p "$seen_dir"
+        tmp=$(mktemp "$seen_dir/.seen.XXXXXX") || return 0
+        printf '%s\n' "$key" > "$tmp"
+        mv "$tmp" "$seen"
     fi
 }
 
