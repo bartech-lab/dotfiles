@@ -97,6 +97,7 @@ config.keys = {
   { key = 'w', mods = 'CTRL|SHIFT', action = act.CloseCurrentTab { confirm = false } },
   { key = 'w', mods = 'SUPER', action = act.CloseCurrentTab { confirm = false } },
   { key = 'Enter', mods = 'SHIFT', action = act.SendString '\x1b[13;2u' },
+  { key = 'Enter', mods = 'ALT', action = act.DisableDefaultAssignment },
   { key = '[', mods = 'SUPER|SHIFT', action = act.ActivateTabRelative(-1) },
   { key = ']', mods = 'SUPER|SHIFT', action = act.ActivateTabRelative(1) },
   { key = 'PageUp', mods = 'CTRL', action = act.ActivateTabRelative(-1) },
