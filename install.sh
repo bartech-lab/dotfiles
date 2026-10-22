@@ -485,6 +485,15 @@ HEARTBEATCONF
 
 fi  # End Linux package install
 
+# --- ntfy binary (alert server on archpc, subscriber on both; units live in the private agents repo) ---
+if [[ "$DRY_RUN" == true ]]; then
+    echo ""
+    echo "Binary to install:"
+    bash "$DOTFILES_DIR/scripts/install-ntfy.sh" --dry-run
+else
+    bash "$DOTFILES_DIR/scripts/install-ntfy.sh"
+fi
+
 # Create ~/.config if needed
 if [[ ! -d ~/.config ]]; then
     if [[ "$DRY_RUN" == true ]]; then

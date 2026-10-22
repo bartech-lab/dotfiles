@@ -55,6 +55,7 @@ dotfiles/
 │   ├── system-update.timer   # Daily timer at 10:00
 │   └── tests/                # python3 -m unittest discover -s system-update/tests
 ├── scripts/
+│   ├── install-ntfy.sh       # Pinned, checksum-verified ntfy binary into ~/.local/bin (run by install.sh)
 │   └── bin/                  # Executable scripts (in PATH)
 │       └── cookies           # Browser cookie extraction
 ├── zsh/
