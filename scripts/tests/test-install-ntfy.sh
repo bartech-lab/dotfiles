@@ -42,5 +42,9 @@ make_release 9.9.9 "# fine"
 out=$(run --dry-run)
 [[ "$out" == *"Would install"* && ! -e "$ROOT/bin/ntfy" ]] || fail "--dry-run changed something"
 
+mkdir -p "$ROOT/bin" && printf '#!/bin/sh\nexit 1\n' > "$ROOT/bin/ntfy" && chmod +x "$ROOT/bin/ntfy"
+run >/dev/null 2>&1 || fail "an installed binary whose --version fails stopped the reinstall"
+"$ROOT/bin/ntfy" --version | grep -q "ntfy version 9.9.9" || fail "a broken installed binary was not replaced"
+
 run --bogus >/dev/null 2>&1 && fail "an unknown option was accepted"
-echo "PASS: install-ntfy installs a verified release, skips a current one, refuses a bad checksum"
+echo "PASS: install-ntfy installs a verified release, skips a current one, refuses a bad checksum, replaces a broken one"
