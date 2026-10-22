@@ -491,7 +491,10 @@ if [[ "$DRY_RUN" == true ]]; then
     echo "Binary to install:"
     bash "$DOTFILES_DIR/scripts/install-ntfy.sh" --dry-run
 else
-    bash "$DOTFILES_DIR/scripts/install-ntfy.sh"
+    if ! bash "$DOTFILES_DIR/scripts/install-ntfy.sh"; then
+        NTFY_FAILED=true
+        echo "⚠️  ntfy was not installed; rerun: bash $DOTFILES_DIR/scripts/install-ntfy.sh" >&2
+    fi
 fi
 
 # Create ~/.config if needed
@@ -899,4 +902,9 @@ else
         echo "Run: kde-defaults to apply KDE Plasma 6 preferences"
         echo "Run: kde-audit-effects to verify disabled effects"
     fi
+fi
+
+if [[ "${NTFY_FAILED:-false}" == true ]]; then
+    echo ""
+    echo "⚠️  ntfy was not installed; rerun: bash $DOTFILES_DIR/scripts/install-ntfy.sh" >&2
 fi
