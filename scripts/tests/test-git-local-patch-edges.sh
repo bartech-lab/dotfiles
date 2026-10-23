@@ -123,4 +123,24 @@ out=$(tool add 2>&1) || status=$?
 [[ $status -ne 0 ]] || fail "10: add without files succeeded"
 grep -q 'no files given' <<<"$out" || fail "10: message missing: $out"
 
+new_repo
+[[ "$(printf 'abc\n' | tool filter smudge)" == abc ]] || fail "11: filter with a missing path did not pass input through"
+[[ "$(printf 'abc\n' | tool filter smudge doc.md extra)" == abc ]] || fail "11: filter with an extra argument did not pass input through"
+
+new_repo
+edit_two
+tool add doc.md >/dev/null
+LOG="$R/.git/info/local-patches.log"
+: > "$LOG"
+[[ "$(printf 'unrelated\n' | tool filter clean doc.md)" == unrelated ]] || fail "12: clean changed input its patch does not fit"
+[[ "$(wc -l < "$LOG")" -eq 0 ]] || fail "12: a clean that cannot reverse the patch wrote to the log"
+
+new_repo
+rm "$R/doc.md"
+status=0
+out=$(tool add doc.md 2>&1) || status=$?
+[[ $status -ne 0 ]] || fail "13: add accepted a file deleted from the work tree"
+grep -q 'missing or not a regular file in the work tree' <<<"$out" || fail "13: message missing: $out"
+[[ ! -e "$R/.git/info/local-patches/doc.md.patch" ]] || fail "13: patch created"
+
 echo "PASS: git-local-patch edge tests"
