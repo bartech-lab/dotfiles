@@ -70,13 +70,25 @@ tar -cf - -C "$src" a.txt sub | gzip -c > sub/nested.tar.gz
 extract sub/nested.tar.gz >/dev/null
 check_tree sub/nested "archive in a subdirectory extracts beside it"
 
+print -r -- notes > notes.txt
+out=$(extract notes.txt 2>&1) && fail "extract of an unknown format succeeded"
+[[ $out == *"Unknown archive format: notes.txt"* && $out != *mkdir* && $out != *Extracting* ]] || fail "unknown format message: $out"
+[[ -f notes.txt ]] || fail "unknown format replaced the file"
+
+print -r -- kept > kept
+gzip -k kept
+extract kept.gz >/dev/null || fail "extract beside its own uncompressed file failed"
+[[ $(<kept) == kept && $(<kept-2/kept) == kept ]] || fail "a file named like the archive moves extraction to -2"
+
 BIN="$TEST_ROOT/bin"
 mkdir -p "$BIN"
 for t in gzip tar mkdir basename; do ln -sf "$(command -v $t)" "$BIN/$t"; done
 out=$(path=("$BIN"); extract t.tar.zst 2>&1) && fail "extract .tar.zst without zstd succeeded"
 [[ $out == *"zstd not found"* ]] || fail "missing zstd message: $out"
+[[ ! -e t-2 ]] || fail "missing zstd left an empty directory"
 out=$(path=("$BIN"); extract z.zip 2>&1) && fail "extract .zip without unar succeeded"
 [[ $out == *"unar not found"* ]] || fail "missing unar message: $out"
+[[ ! -e z-2 ]] || fail "missing unar left an empty directory"
 
 proj="$TEST_ROOT/proj"
 mkdir -p "$proj"
