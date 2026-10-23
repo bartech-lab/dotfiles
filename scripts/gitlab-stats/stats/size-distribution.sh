@@ -5,7 +5,6 @@ stat_size_distribution() {
   local labels=("S" "M" "L" "XL")
 
   local jq_buckets=""
-  local header_buckets="Name|Total"
   IFS=',' read -ra THRE <<< "$thresholds_csv"
   for ((i=0; i<${#THRE[@]}-1; i++)); do
     local lo="${THRE[$i]}"
@@ -18,13 +17,10 @@ stat_size_distribution() {
     fi
     if [[ "$lo" == "0" ]]; then
       jq_buckets+="\"${label}\": map(select(.total_changes < ${hi})) | length"
-      header_buckets+="|${label} (<${hi})"
     elif [[ "${hi}" -ge 999999 ]]; then
       jq_buckets+="\"${label}\": map(select(.total_changes >= ${lo})) | length"
-      header_buckets+="|${label} (${lo}+)"
     else
       jq_buckets+="\"${label}\": map(select(.total_changes >= ${lo} and .total_changes < ${hi})) | length"
-      header_buckets+="|${label} (${lo}-${hi})"
     fi
   done
 
