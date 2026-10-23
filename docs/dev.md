@@ -354,6 +354,7 @@ Keep the relevant integration tests, including:
 ```bash
 bash ~/dotfiles/git-auto-pull/tests/test.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
+bash ~/dotfiles/scripts/gitlab-stats/tests/test-lib.sh
 ```
 
 ShellCheck is a static analyzer, not a formatter; `shfmt` remains optional and
