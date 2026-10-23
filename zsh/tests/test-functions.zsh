@@ -71,6 +71,7 @@ for agent in claude codex; do
   print -rl -- '#!/bin/sh' > "$BIN/$agent"
   chmod +x "$BIN/$agent"
 done
+rehash
 
 out=$(unset TFG_API_KEY; tfg </dev/null 2>&1) && fail "tfg without a key and a terminal succeeded"
 [[ $out == *"Run in a terminal"* ]] || fail "no terminal message: $out"
