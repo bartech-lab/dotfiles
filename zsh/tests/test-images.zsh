@@ -83,7 +83,12 @@ got=$(cd "$W" && print -l -- alpha*(N) | grep -v '^alpha\.png$')
 [[ -n $got ]] || fail "no output for alpha.png rc=$rc out=$out"
 got=$(cd "$W" && print -l -- opaque*(N) | grep -v '^opaque\.png$')
 [[ -n $got ]] || fail "no output for opaque.png rc=$rc out=$out"
-[[ $(vcodec "$W/alpha.jpg") == mjpeg ]] || fail "docs: a transparent PNG becomes name.jpg in default mode: $(ls "$W")"
+[[ $(vcodec "$W/alpha-opt.png") == png && ! -e $W/alpha.jpg ]] || fail "docs: a transparent PNG stays PNG as name-opt.png: $(ls "$W")"
+ff -i "$W/alpha.png" -f rawvideo -pix_fmt rgba "$TEST_ROOT/alpha-src.raw" && ff -i "$W/alpha-opt.png" -f rawvideo -pix_fmt rgba "$TEST_ROOT/alpha-out.raw" || fail "alpha decode"
+python3 -c '
+import sys
+a, b = open(sys.argv[1], "rb").read(), open(sys.argv[2], "rb").read()
+sys.exit(0 if len(a) == len(b) and a[3::4] == b[3::4] and 0 in a[3::4] else 1)' "$TEST_ROOT/alpha-src.raw" "$TEST_ROOT/alpha-out.raw" || fail "default mode kept the alpha channel of alpha.png"
 [[ $(vcodec "$W/opaque-opt.png") == png && ! -e $W/opaque.jpg ]] || fail "docs: an opaque PNG becomes name-opt.png: $(ls "$W")"
 
 W="$TEST_ROOT/w6"

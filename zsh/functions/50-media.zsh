@@ -156,56 +156,35 @@ optimize-images() (
           file="$1"
           base=$(basename "$file")
           name="${base%.*}"
-          tmp_jpg=".optimize_tmp_${$}_${RANDOM}_${name}.jpg"
           tmp_png=".optimize_tmp_${$}_${RANDOM}_${name}.png"
 
-          if file "$file" 2>/dev/null | grep -q "RGBA\|alpha"; then
-            out="${name}.jpg"
-            if [[ -e "$out" ]]; then
-              out="${name}-opt.jpg"
-              n=2
-              while [[ -e "$out" ]]; do
-                out="${name}-opt${n}.jpg"
-                n=$((n + 1))
-              done
-            fi
+          prefix="${name}-opt"
+          out="${prefix}.png"
+          n=2
 
-            if ffmpeg -hide_banner -loglevel error -i "$file" -q:v 2 "$tmp_jpg" 2>/dev/null; then
-              mv "$tmp_jpg" "$out"
+          while [[ -e "$out" ]]; do
+            out="${prefix}${n}.png"
+            n=$((n + 1))
+          done
+
+          tmp_quant=".optimize_quant_tmp_${$}_${RANDOM}_${base}"
+          pngquant --quality=80-90 --speed 1 --output "$tmp_quant" -- "$file" 2>/dev/null
+
+          if [[ -f "$tmp_quant" ]]; then
+            if oxipng -q -o 4 --strip safe -a -i 0 --out "$tmp_png" "$tmp_quant" 2>/dev/null; then
+              mv "$tmp_png" "$out"
               touch -r "$file" "$out"
             else
-              rm -f "$tmp_jpg" 2>/dev/null
               echo "FAILED: $base" >> "'$ERROR_LOG'"
             fi
+            rm -f "$tmp_quant" "$tmp_png" 2>/dev/null
           else
-            prefix="${name}-opt"
-            out="${prefix}.png"
-            n=2
-
-            while [[ -e "$out" ]]; do
-              out="${prefix}${n}.png"
-              n=$((n + 1))
-            done
-
-            tmp_quant=".optimize_quant_tmp_${$}_${RANDOM}_${base}"
-            pngquant --quality=80-90 --speed 1 --output "$tmp_quant" -- "$file" 2>/dev/null
-
-            if [[ -f "$tmp_quant" ]]; then
-              if oxipng -q -o 4 --strip safe -a -i 0 --out "$tmp_png" "$tmp_quant" 2>/dev/null; then
-                mv "$tmp_png" "$out"
-                touch -r "$file" "$out"
-              else
-                echo "FAILED: $base" >> "'$ERROR_LOG'"
-              fi
-              rm -f "$tmp_quant" "$tmp_png" 2>/dev/null
+            if oxipng -q -o 4 --strip safe -a -i 0 --out "$tmp_png" "$file" 2>/dev/null; then
+              mv "$tmp_png" "$out"
+              touch -r "$file" "$out"
             else
-              if oxipng -q -o 4 --strip safe -a -i 0 --out "$tmp_png" "$file" 2>/dev/null; then
-                mv "$tmp_png" "$out"
-                touch -r "$file" "$out"
-              else
-                rm -f "$tmp_png" 2>/dev/null
-                echo "FAILED: $base" >> "'$ERROR_LOG'"
-              fi
+              rm -f "$tmp_png" 2>/dev/null
+              echo "FAILED: $base" >> "'$ERROR_LOG'"
             fi
           fi
         ' _ {}
