@@ -126,6 +126,7 @@ dotfiles-doctor
 - `video-to-gif <input>` - Convert videos to GIF
 - `video-remux [path] [--subdir]` - Lossless container conversion
 - `video-encode-cpu/gpu [path] [--subdir]` - H.265 encoding
+- `video-encode-av1 [path] [--subdir]` - AV1 encoding (NVIDIA NVENC)
 
 ### Development Utilities
 
