@@ -47,4 +47,30 @@ run >/dev/null 2>&1 || fail "an installed binary whose --version fails stopped t
 "$ROOT/bin/ntfy" --version | grep -q "ntfy version 9.9.9" || fail "a broken installed binary was not replaced"
 
 run --bogus >/dev/null 2>&1 && fail "an unknown option was accepted"
+rm -f "$ROOT/bin/ntfy"
+make_release 9.9.9 "# star"
+sed -i.orig 's/  / */' "$ROOT/release/v9.9.9/checksums.txt"
+grep -q ' \*ntfy_' "$ROOT/release/v9.9.9/checksums.txt" || fail "fixture: binary-mode checksum line"
+run >/dev/null 2>&1 || fail "a binary-mode (*name) checksums.txt entry was not accepted"
+[[ -x "$ROOT/bin/ntfy" ]] || fail "a binary-mode checksum entry installed nothing"
+
+rm -f "$ROOT/bin/ntfy"
+make_release 9.9.9 "# unlisted"
+printf '%s  other.tar.gz\n' 0000000000000000000000000000000000000000000000000000000000000000 > "$ROOT/release/v9.9.9/checksums.txt"
+err=$(run 2>&1 >/dev/null) && fail "an asset missing from checksums.txt was installed"
+[[ $err == *"not listed in checksums.txt"* && ! -e "$ROOT/bin/ntfy" ]] || fail "an unlisted asset must install nothing: $err"
+
+mkdir -p "$ROOT/fakeuname"
+for p in "Linux x86_64 ntfy_9.9.9_linux_amd64" "Linux aarch64 ntfy_9.9.9_linux_arm64" "Darwin arm64 ntfy_9.9.9_darwin_all"; do
+    read -r os arch want <<<"$p"
+    printf '#!/bin/sh\ncase "$1" in -s) echo %s ;; -m) echo %s ;; esac\n' "$os" "$arch" > "$ROOT/fakeuname/uname"
+    chmod +x "$ROOT/fakeuname/uname"
+    out=$(PATH="$ROOT/fakeuname:$PATH" run --dry-run)
+    [[ $out == *"($want)"* ]] || fail "$os/$arch picks $want: $out"
+done
+printf '#!/bin/sh\ncase "$1" in -s) echo FreeBSD ;; -m) echo amd64 ;; esac\n' > "$ROOT/fakeuname/uname"
+rc=0
+PATH="$ROOT/fakeuname:$PATH" run --dry-run >/dev/null 2>&1 || rc=$?
+[[ $rc -eq 1 ]] || fail "an unsupported platform exits 1, got $rc"
+
 echo "PASS: install-ntfy installs a verified release, skips a current one, refuses a bad checksum, replaces a broken one"
