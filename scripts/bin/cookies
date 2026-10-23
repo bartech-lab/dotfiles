@@ -62,7 +62,7 @@ function decryptCookieValueCbc(key, encryptedValue, hashPrefix) {
     const pt = Buffer.concat([d.update(ct), d.final()]);
     const unpadded = unpadPKCS7(pt);
     // Strip 32-byte SHA-256 hash prefix if present
-    if (hashPrefix && unpadded.length > 32) return unpadded.subarray(32).toString('utf-8');
+    if (hashPrefix && unpadded.length >= 32) return unpadded.subarray(32).toString('utf-8');
     return unpadded.toString('utf-8');
   } catch {
     return null;
