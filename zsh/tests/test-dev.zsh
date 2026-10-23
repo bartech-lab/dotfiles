@@ -159,7 +159,7 @@ out=$(archive 2>&1) && fail "archive succeeded when tar could not read a file"
 [[ -z $(print -l -- *.tar.*(N)) ]] || fail "a failed tar left a partial archive"
 rm -f locked.txt
 
-print -rl -- '#!/bin/sh' 'cat > /dev/null; exit 1' > "$BIN/zstd"
+print -rl -- '#!/bin/sh' 'exit 1' > "$BIN/zstd"
 chmod +x "$BIN/zstd"
 for t in date ls awk stat uname rm head wc grep; do ln -sf "$(command -v $t)" "$BIN/$t"; done
 command -v gtar >/dev/null && ln -sf "$(command -v gtar)" "$BIN/gtar"
