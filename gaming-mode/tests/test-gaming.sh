@@ -343,4 +343,21 @@ GAMING_NO_WAIT=0 run_gaming off
 assert_file_has "$SETSID_LOG" '_wait-bonsai' 'off did not start the Bonsai wait'
 assert_file_lacks "$SETSID_LOG" 'fd9-open' 'the Bonsai wait inherited the lock on fd 9, so the next gaming on blocks for up to the health wait'
 
+echo "== an inactive user service is neither recorded nor restarted"
+reset
+grep -vxF bonsai-cc-proxy.service "$ACTIVE" > "$ACTIVE.new"; mv "$ACTIVE.new" "$ACTIVE"
+run_gaming on
+assert_file_lacks "$STATE_DIR/state" 'bonsai-cc-proxy' 'an inactive user service was recorded as stopped'
+clear_events
+run_gaming off
+assert_lacks "$(calls start)" 'bonsai-cc-proxy.service' 'off started a user service that was not running before on'
+
+echo "== usage errors"
+reset
+run_gaming run
+assert_eq "$rc" 2 'run without a command must exit 2'
+assert_lacks "$(calls stop)" 'bonsai.service' 'run without a command must not stop anything'
+run_gaming bogus
+assert_eq "$rc" 2 'an unknown subcommand must exit 2'
+
 echo 'PASS: gaming on/off/status/toggle/run, failures, pause file and app patterns'
