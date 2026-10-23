@@ -309,7 +309,7 @@ repo-check() {
     if [[ "$in_git_repo" == true ]]; then
         while IFS= read -r file; do
             [[ -n "$file" ]] && env_files+=("$file")
-        done < <(git ls-files 2>/dev/null | grep -E '^\.env($|\.)' | grep -vE '\.(example|sample|template)$' | head -5)
+        done < <(git ls-files 2>/dev/null | grep -E '(^|/)\.env($|\.)' | grep -vE '\.(example|sample|template)$' | head -5)
     fi
 
     # Also check for .env files not in .gitignore
@@ -347,7 +347,7 @@ repo-check() {
     if [[ "$in_git_repo" == true ]]; then
         while IFS= read -r file; do
             [[ -n "$file" ]] && secret_files+=("$file")
-        done < <(git ls-files 2>/dev/null | grep -E '\.(pem|key|p12|pfx|jks|keystore)$' | head -5)
+        done < <(git ls-files 2>/dev/null | grep -E '\.(pem|key|p12|pfx|jks|keystore)$|(^|/)id_(rsa|dsa|ecdsa|ed25519)$' | head -5)
     fi
 
     # Also check filesystem

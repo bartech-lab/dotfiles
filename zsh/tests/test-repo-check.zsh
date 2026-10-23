@@ -133,4 +133,20 @@ for f in node_modules/x/index.js vendor/x.php .venv/pyvenv.cfg venv/pyvenv.cfg _
   expect_error "tracked $f"
 done
 
+for f in config/.env apps/web/.env.local; do
+  new_repo; add_file $f; commit_all
+  expect_error "committed $f"
+  [[ -n ${(M)${(f)out}:#*$f*} ]] || fail "committed $f is named: out=$out"
+done
+new_repo; add_file config/.env.example; commit_all
+run
+(( rc == 0 )) || fail "a committed config/.env.example is not an error: rc=$rc out=$out"
+for f in id_rsa keys/id_ed25519; do
+  new_repo; add_file $f; commit_all
+  expect_error "committed $f"
+done
+new_repo; add_file keys/id_rsa.pub; commit_all
+run
+(( rc == 0 )) || fail "a committed public key is not an error: rc=$rc out=$out"
+
 print -- "PASS: repo-check tests"
