@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 import {
     collectHumanReviews,
+    dateInWindow,
     createGlabApi,
     discussionContentHash,
     emptyLedger,
@@ -17,6 +18,7 @@ import {
     readLedger,
     resolveAuthors,
     resolveReviewer,
+    validateWindow,
     writeLedgerAtomic,
 } from './humanReviewsLib.mjs';
 
@@ -649,4 +651,71 @@ clicking on report link: [https://example.com/pipelines/1].
     );
     assert.equal(processOnlyReason('Pipeline failed'), 'automated message delivered into the thread, not a review');
     assert.equal(processOnlyReason('The pipeline failed because this test needs the flag'), null);
+});
+
+const mergeRun = { repository: 'example-repo', projectId, username: 'reviewer', userId: REVIEWER_ID, id: 'run-1' };
+const legacyLedger = (entry) => ({ ...emptyLedger({ repository: 'example-repo', projectId, username: 'reviewer', userId: REVIEWER_ID }), entries: [entry] });
+
+test('a date-only until includes the whole day', () => {
+    assert.equal(dateInWindow('2026-06-01T18:00:00Z', '2026-01-01', '2026-06-01'), true);
+    assert.equal(dateInWindow('2026-06-02T00:00:00Z', '2026-01-01', '2026-06-01'), false);
+});
+
+test('validateWindow rejects an unparseable until and names HR_UNTIL', () => {
+    assert.throws(() => validateWindow('2026-01-01', 'not-a-date'), /HR_UNTIL/);
+});
+
+test('validateWindow accepts a since later on the same day as a date-only until', () => {
+    assert.doesNotThrow(() => validateWindow('2026-06-01T12:00:00Z', '2026-06-01'));
+});
+
+test('a legacy entry without status that reappears unchanged becomes pending', () => {
+    const candidate = { id: `${projectId}:701`, noteId: '701', projectId, contentHash: 'h', body: 'text' };
+    const previous = legacyLedger({ ...candidate });
+    const next = mergeLedger(previous, { candidates: [candidate], exclusions: [] }, mergeRun);
+    assert.equal(next.entries[0].status, 'pending');
+});
+
+test('a legacy verdict stored under note is kept as reviewNote on rerun', () => {
+    const candidate = { id: `${projectId}:702`, noteId: '702', projectId, contentHash: 'h', body: 'text', status: 'pending' };
+    const previous = legacyLedger({ ...candidate, status: 'applied', note: 'legacy verdict' });
+    const next = mergeLedger(previous, { candidates: [candidate], exclusions: [] }, mergeRun);
+    assert.equal(next.entries[0].reviewNote, 'legacy verdict');
+});
+
+test('a previously excluded entry that returns as a candidate becomes active without excludedReason', () => {
+    const candidate = { id: `${projectId}:703`, noteId: '703', projectId, contentHash: 'h', body: 'text', status: 'pending' };
+    const previous = legacyLedger({ ...candidate, active: false, excludedReason: 'x' });
+    const next = mergeLedger(previous, { candidates: [candidate], exclusions: [] }, mergeRun);
+    assert.equal(next.entries[0].active, true);
+    assert.equal('excludedReason' in next.entries[0], false);
+});
+
+test('a reviewed entry excluded with an unchanged body keeps its verdict and goes inactive', () => {
+    const previous = legacyLedger({ id: `${projectId}:704`, noteId: '704', projectId, contentHash: 'h', body: 'same', status: 'applied' });
+    const next = mergeLedger(previous, {
+        candidates: [],
+        exclusions: [{ id: `${projectId}:704`, noteId: '704', reason: 'process-only', body: 'same' }],
+    }, mergeRun);
+    assert.equal(next.entries[0].status, 'applied');
+    assert.equal(next.entries[0].active, false);
+    assert.equal('contentChanged' in next.entries[0], false);
+    assert.equal('previousVerdict' in next.entries[0], false);
+});
+
+test('a partial merge marks lastRun in-progress and does not append to runs', () => {
+    const candidate = { id: `${projectId}:705`, noteId: '705', projectId, contentHash: 'h', body: 'text', status: 'pending' };
+    const snapshot = { candidates: [candidate], exclusions: [], total: 1, processed: 1, failures: [] };
+    const first = mergeLedger(null, snapshot, mergeRun);
+    assert.equal(first.runs.length, 1);
+    const next = mergeLedger(first, snapshot, { ...mergeRun, id: 'run-2' }, { partial: true });
+    assert.equal(next.lastRun.status, 'in-progress');
+    assert.equal(next.runs.length, 1);
+});
+
+test('exclusions from an earlier run absent from the current snapshot are kept', () => {
+    const exclusion = (id) => ({ id, noteId: id, reason: 'process-only', body: 'b' });
+    const first = mergeLedger(null, { candidates: [], exclusions: [exclusion('e1')] }, mergeRun);
+    const next = mergeLedger(first, { candidates: [], exclusions: [exclusion('e2')] }, { ...mergeRun, id: 'run-2' });
+    assert.deepEqual(next.exclusions.map((e) => e.id).sort(), ['e1', 'e2']);
 });
