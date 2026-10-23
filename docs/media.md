@@ -115,8 +115,11 @@ video-encode-cpu [path] [--subdir]
 - Scenes with lots of detail/motion
 
 **File naming:**
+- Sources: `.mov`, `.mp4`, `.mkv`, `.avi`
 - Source files with non-MP4 extension → same basename with `.mp4`
 - Source files with `.mp4` extension → basename with `-h265.mp4` suffix
+- An `.mp4` beside a same-name `.mov`/`.mkv`/`.avi` is treated as an earlier output and skipped
+- Two sources that would write the same output (`a.mov` and `a.mkv`): the first in name order is encoded, the other is reported as skipped
 
 **Examples:**
 ```bash
@@ -155,8 +158,11 @@ video-encode-gpu [path] [--subdir]
 - When speed matters more than max quality
 
 **File naming:**
+- Sources: `.mov`, `.mp4`, `.mkv`, `.avi`
 - Source files with non-MP4 extension → same basename with `.mp4`
 - Source files with `.mp4` extension → basename with `-h265.mp4` suffix
+- An `.mp4` beside a same-name `.mov`/`.mkv`/`.avi` is treated as an earlier output and skipped
+- Two sources that would write the same output (`a.mov` and `a.mkv`): the first in name order is encoded, the other is reported as skipped
 
 **Examples:**
 ```bash

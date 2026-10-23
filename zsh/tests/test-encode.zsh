@@ -110,6 +110,29 @@ out2=$(video-encode-cpu "$W" 2>&1); rc2=$?
 [[ $(vcodec "$W/a.mp4") == hevc ]] || fail "after second run a.mp4 not hevc rc=$rc2 out=$out2"
 [[ $(vcodec "$W/b-h265.mp4") == hevc ]] || fail "after second run b-h265.mp4 not hevc rc=$rc2 out=$out2"
 [[ $(sum "$W/a.mov") == $asum && $(sum "$W/b.mp4") == $bsum ]] || fail "second run changed sources rc=$rc2 out=$out2"
+got=$(cd "$W" && print -l -- *(N.) | sort | tr '\n' ' ')
+[[ $got == "a.mov a.mp4 b-h265.mp4 b.mp4 " ]] || fail "a second run re-encoded its own output: $got out=$out2"
+
+W="$TEST_ROOT/w8"
+mkdir -p "$W"
+clip "$W/a.mkv"
+clip "$W/c.avi"
+out=$(video-encode-cpu "$W" 2>&1); rc=$?
+(( rc == 0 )) || fail "mkv/avi rc=$rc out=$out"
+check_pair "$W" a.mkv a.mp4 "mkv rc=$rc out=$out"
+check_pair "$W" c.avi c.mp4 "avi rc=$rc out=$out"
+
+for mode in "" --subdir; do
+  W="$TEST_ROOT/w9$mode"
+  mkdir -p "$W"
+  clip "$W/a.mov"
+  clip "$W/a.mkv"
+  out=$(video-encode-cpu "$W" $mode 2>&1); rc=$?
+  (( rc == 0 )) || fail "collision $mode rc=$rc out=$out"
+  dst=a.mp4; [[ -n $mode ]] && dst=encoded/a.mp4
+  check_pair "$W" a.mkv $dst "collision $mode rc=$rc out=$out"
+  [[ $out == *"a.mov"*"a.mp4"* ]] || fail "collision $mode: the skipped a.mov is not reported: $out"
+done
 
 W="$TEST_ROOT/w7"
 mkdir -p "$W"
