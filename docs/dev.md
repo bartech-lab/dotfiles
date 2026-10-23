@@ -362,6 +362,7 @@ zsh ~/dotfiles/zsh/tests/test-repo-check.zsh
 zsh ~/dotfiles/zsh/tests/test-media.zsh
 zsh ~/dotfiles/zsh/tests/test-images.zsh
 zsh ~/dotfiles/zsh/tests/test-encode.zsh
+zsh ~/dotfiles/zsh/tests/test-macos.zsh
 ```
 
 ShellCheck is a static analyzer, not a formatter; `shfmt` remains optional and
