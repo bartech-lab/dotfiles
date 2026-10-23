@@ -561,3 +561,30 @@ test('an empty value in a version 24 database stays empty', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(JSON.parse(r.stdout).map((c) => [c.name, c.value]), [['empty', ''], ['full', 'x']]);
 });
+
+test('a domain and a name together match only that name on that domain', () => {
+  const env = mkEnv();
+  makeDb(env, [
+    { host: '.p.com', name: 'a', value: '1', expires: FAR },
+    { host: '.p.com', name: 'b', value: '2', expires: FAR },
+    { host: '.q.com', name: 'a', value: '3', expires: FAR },
+  ]);
+  const r = run(env, ['-d', 'p.com', 'a']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(rows(r.stdout).map((x) => [x[0], x[5], x[6]]), [['.p.com', 'a', '1']]);
+});
+
+test('a run of more than 16 equal final bytes is not taken as padding', () => {
+  const env = mkEnv();
+  const iter = IS_MAC ? 1003 : 1;
+  const key = crypto.pbkdf2Sync('fakepass', 'saltysalt', iter, 16, 'sha1');
+  const prefix = crypto.createHash('sha256').update('.example.com').digest();
+  const tail = 'x'.repeat(15) + '\x11'.repeat(17);
+  const cipher = crypto.createCipheriv('aes-128-cbc', key, Buffer.alloc(16, 0x20));
+  cipher.setAutoPadding(false);
+  const enc = Buffer.concat([Buffer.from('v10'), cipher.update(Buffer.concat([prefix, Buffer.from(tail)])), cipher.final()]);
+  makeDb(env, [{ host: '.example.com', name: 'p', enc, expires: FAR }]);
+  const r = run(env, ['-f', 'json']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(JSON.parse(r.stdout)[0].value, tail);
+});
