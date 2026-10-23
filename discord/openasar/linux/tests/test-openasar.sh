@@ -129,6 +129,7 @@ test_patch_bad_download_empty_cache() {
     run_prog openasar-patch
     assert_eq "$RC" 1 "bad download with empty cache"
     assert_has "$ERR" 'download is not OpenAsar' "stderr message"
+    [[ ! -e "$CACHE.new" ]] || fail "a rejected download must not leave $CACHE.new behind"
 }
 
 test_patch_curl_failure() {
@@ -292,7 +293,7 @@ test_check_core_missing_in_newest() {
     run_prog discord-check
     assert_eq "$(printf '%s\n' "$OUT" | head -n1)" 'ok   newest install: app-1.0.2' "newest"
     assert_has "$OUT" 'FAIL' "FAIL expected"
-    assert_has "$OUT" 'discord_desktop_core missing' "core missing line"
+    assert_has "$OUT" 'FAIL discord_desktop_core missing' "core missing line"
     assert_eq "$RC" 1 "exit code"
 }
 
@@ -300,7 +301,7 @@ test_check_openasar_not_applied() {
     new_case
     mkinstall 1.0.1 'stock asar' with-core
     run_prog discord-check
-    assert_has "$OUT" 'OpenAsar not applied' "line"
+    assert_has "$OUT" 'FAIL OpenAsar not applied' "line"
     assert_lacks "$OUT" 'OpenAsar applied' "no ok line"
     assert_eq "$RC" 1 "exit code"
 }
@@ -342,6 +343,7 @@ test_check_symlink_stale() {
     mkinstall 1.0.10 'OpenAsar build' with-core
     ln -s "$DISCORD/app-1.0.9" "$DISCORD/Discord"
     run_prog discord-check
+    assert_has "$OUT" 'FAIL Discord link points at' "stale link"
     assert_has "$OUT" 'half-finished update' "stale link"
     assert_eq "$RC" 1 "exit code"
 }
