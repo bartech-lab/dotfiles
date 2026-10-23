@@ -17,8 +17,7 @@ optimize-images [path] [--lossless]
 **Default behavior:**
 - Aggressive optimization
 - Parallel processing for speed
-- Transparent PNGs → JPEG (better compression)
-- Non-transparent PNGs → optimized PNG
+- PNGs → pngquant (quality 80-90) then oxipng; transparency is kept, the format never changes
 - JPEGs → cjpegli optimized when installed (~30% smaller at q85); mozjpeg cjpeg otherwise
 - Output in same directory with smart `-opt` suffixing (no `optimized/` folder)
 
@@ -39,7 +38,6 @@ optimize-images ./assets --lossless  # Lossless PNG optimization
 - optional: `cjpegli` (jpegli) - preferred automatically when present; not yet in Homebrew
 - `oxipng` - PNG optimization
 - `pngquant` - PNG quantization
-- `ffmpeg` - Image conversion
 
 **Performance:**
 - Processes multiple images simultaneously (4 workers)
@@ -48,8 +46,7 @@ optimize-images ./assets --lossless  # Lossless PNG optimization
 **File naming:**
 - Original files are preserved (never overwritten)
 - JPEG/JPG sources → `name-opt.jpg` / `name-opt.jpeg`
-- PNG sources in lossless mode → `name-opt.png`
-- Transparent PNGs in default mode → `name.jpg` when available, otherwise `name-opt.jpg`
+- PNG sources → `name-opt.png` (default and lossless mode)
 - Existing targets auto-increment (`name-opt2.jpg`, `name-opt3.jpg`, ...)
 
 ## video-remux
