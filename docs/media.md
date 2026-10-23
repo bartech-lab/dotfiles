@@ -135,7 +135,7 @@ video-encode-cpu --subdir     # Use encoded/ subdirectory
 
 ## video-encode-gpu
 
-Fast H.265 GPU encoding using Apple VideoToolbox.
+Fast H.265 GPU encoding: Apple VideoToolbox on macOS, NVENC or VAAPI on Linux.
 
 ```bash
 video-encode-gpu [path] [--subdir]
@@ -145,7 +145,10 @@ video-encode-gpu [path] [--subdir]
 - `path` - Directory to encode (defaults to current directory)
 - `--subdir` - Create `encoded/` subdirectory (legacy behavior)
 
-**Codec:** hevc_videotoolbox (hardware accelerated)
+**Codec:** hardware accelerated H.265
+- macOS: `hevc_videotoolbox`
+- Linux with `nvidia-smi`: `hevc_nvenc`
+- Other Linux: `hevc_vaapi`
 
 **Quality:** Good, very fast processing
 
@@ -169,6 +172,28 @@ video-encode-gpu --subdir     # Use encoded/ subdirectory
 - By default: same directory, smart naming
 - With `--subdir`: creates `encoded/` directory
 - H.265 codec, hardware accelerated
+
+## video-encode-av1
+
+10-bit AV1 GPU encoding with NVIDIA NVENC.
+
+```bash
+video-encode-av1 [path] [--subdir]
+```
+
+**Arguments:**
+- `path` - Directory to encode (defaults to current directory)
+- `--subdir` - Create `av1/` subdirectory
+
+**Codec:** `av1_nvenc` (needs an NVIDIA RTX 40xx or 50xx; exits 1 without `nvidia-smi`), audio AAC 192k stereo
+
+**Sources:** `.mov`, `.mp4`, `.mkv`; `*-av1.mp4` files are skipped
+
+**File naming:**
+- Source files with non-MP4 extension → same basename with `.mp4`
+- Source files with `.mp4` extension → basename with `-av1.mp4` suffix
+- With `--subdir`: `av1/<basename>.mp4`
+- An existing output is never overwritten
 
 ## ytdl
 
