@@ -95,6 +95,13 @@ echo '{"data":{"project":{"mergeRequests":{"nodes":[{"iid":"2"}],"pageInfo":{"ha
 [[ "$(grep -c 'after: null' "$FAKE/calls")" -eq 1 ]] || fail "first page starts with a null cursor"
 
 reset_fake
+echo '{"data":{"project":{"mergeRequests":{"nodes":[{"iid":"1"}],"pageInfo":{"hasNextPage":true,"endCursor":null}}}}}' > "$FAKE/page-1.json"
+echo '{"data":{"project":{"mergeRequests":{"nodes":[{"iid":"1"}],"pageInfo":{"hasNextPage":true,"endCursor":null}}}}}' > "$FAKE/page-2.json"
+out=$(fetch_all_mrs org/repo 2026-01-01 2026-01-31 main 2>&1) && fail "a next page without a cursor was accepted"
+[[ "$out" == *"without a cursor"* ]] || fail "cursorless page message: $out"
+[[ "$(cat "$FAKE/gql")" -eq 1 ]] || fail "a next page without a cursor is requested again"
+
+reset_fake
 echo '{"errors":[{"message":"bad field"}]}' > "$FAKE/page-1.json"
 out=$(fetch_all_mrs org/repo 2026-01-01 2026-01-31 main 2>&1) && fail "graphql errors were accepted"
 [[ "$out" == *"GraphQL error for project 'org/repo': bad field"* ]] || fail "graphql error message: $out"
