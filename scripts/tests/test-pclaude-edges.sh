@@ -153,4 +153,12 @@ launch
 [[ $(jsonget "$P/.claude.json" userID) == MISSING ]] || fail "userID copied into fresh profile"
 [[ $(mode "$P") == 700 ]] || fail "fresh profile dir mode is $(mode "$P"), want 700"
 
+mkdir -p "$B/.hidden-dir"
+launch
+[[ -L "$P/.hidden-dir" && $(readlink "$P/.hidden-dir") == "$B/.hidden-dir" ]] || fail "hidden directory was not shared"
+
+rm -f "$HOME/.claude.json" "$HOME/claude-call"
+launch
+[[ $(head -n 1 "$HOME/claude-call") == "$P" ]] || fail "pclaude did not start claude without ~/.claude.json"
+
 echo "PASS: pclaude edge tests"
