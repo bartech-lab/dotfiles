@@ -74,7 +74,7 @@ Run the smallest relevant checks before finishing:
 - Bash/POSIX sh changes: run `shellcheck --severity=warning` on changed files selected by their shebang, then keep the relevant `bash -n` or `sh -n` check
 - zsh changes: run `zsh -n`; do not pass zsh scripts to ShellCheck, even when they use a `.sh` suffix
 - script changes: run `--help` and one realistic invocation
-- Keep the relevant integration tests, including `git-auto-pull/tests/test.sh`, `scripts/gitlab-stats/tests/test.sh`, `scripts/gitlab-stats/tests/test-lib.sh`, `scripts/gitlab-stats/tests/test-stats.sh`, `zsh/tests/test-functions.zsh`, `zsh/tests/test-dev.zsh`, `zsh/tests/test-repo-check.zsh`, `zsh/tests/test-media.zsh`, `zsh/tests/test-images.zsh`, `zsh/tests/test-encode.zsh`, `zsh/tests/test-macos.zsh`, and `node --test scripts/gitlab-reviews/humanReviews.test.mjs` when affected
+- Keep the relevant integration tests, including `git-auto-pull/tests/test.sh`, `scripts/gitlab-stats/tests/test.sh`, `scripts/gitlab-stats/tests/test-lib.sh`, `scripts/gitlab-stats/tests/test-stats.sh`, `zsh/tests/test-functions.zsh`, `zsh/tests/test-dev.zsh`, `zsh/tests/test-repo-check.zsh`, `zsh/tests/test-media.zsh`, `zsh/tests/test-images.zsh`, `zsh/tests/test-encode.zsh`, `zsh/tests/test-macos.zsh`, `zsh/tests/test-pacman.zsh`, and `node --test scripts/gitlab-reviews/humanReviews.test.mjs` when affected
 - Tests must pass with no local config present. Run `HR_CONFIG=/nonexistent node --test scripts/gitlab-reviews/humanReviews.test.mjs` for the gitlab-reviews suite
 - Brewfile changes: `brew bundle check --file=~/dotfiles/Brewfile` when practical
 - docs changes: verify command names/flags exactly match implementation
