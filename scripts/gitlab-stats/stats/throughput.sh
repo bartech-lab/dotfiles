@@ -71,8 +71,6 @@ stat_throughput() {
       | sort_by(.month)
     ') || true
 
-    local header="Month|MRs merged"
-
     case "${FORMAT:-table}" in
       json)
         print_heading "Month | MRs merged"
