@@ -112,6 +112,9 @@ W="$TEST_ROOT/w7"
 mkdir -p "$W"
 h264_mov "$W/CLIP.MOV"
 out=$(video-remux "$W/CLIP.MOV" 2>&1); rc=$?
+(( rc == 0 )) || fail "upper-case extension rc=$rc out=$out"
+[[ -f "$W/CLIP.mp4" ]] || fail "CLIP.mp4 missing rc=$rc out=$out"
+[[ -n $(vcodec "$W/CLIP.mp4") ]] || fail "CLIP.mp4 unreadable rc=$rc out=$out"
 
 if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libvpx-vp9; then
   W="$TEST_ROOT/w8"
