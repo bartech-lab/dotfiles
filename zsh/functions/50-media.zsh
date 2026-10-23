@@ -373,6 +373,50 @@ video-remux() (
   _notify "video-remux" "Video remux complete!"
 )
 
+# Shared by video-encode-cpu and video-encode-gpu: pick .mov/.mp4/.mkv/.avi
+# sources, skip an .mp4 that a same-name source already produced, and report
+# two sources that would write the same output instead of dropping one.
+_video_encode_plan() {
+  local outdir=$1 subdir=$2 file base name ext out
+  local -A sources taken
+  local -a found
+  _venc_files=() _venc_outs=()
+  found=("${(@0)$(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.avi" \) ! -iname "*-h265.mp4" -print0 | sort -z)}")
+  found=("${(@)found:#}")
+  for file in "${found[@]}"; do
+    base=${file:t}; ext=${${base##*.}:l}
+    [[ $ext != mp4 ]] && sources[${${base%.*}:l}]=$base
+  done
+  for file in "${found[@]}"; do
+    base=${file:t}; name=${base%.*}; ext=${${base##*.}:l}
+    if [[ $ext == mp4 && -n ${sources[${name:l}]} ]]; then
+      echo "⏭️  Skipping $base: output of ${sources[${name:l}]}"
+      continue
+    fi
+    if (( subdir )); then
+      out="$outdir/$name.mp4"
+    elif [[ $ext == mp4 ]]; then
+      out="$name-h265.mp4"
+    else
+      out="$name.mp4"
+    fi
+    if [[ -n ${taken[$out]} ]]; then
+      echo "⚠️  Skipping $base: $out is already the output of ${taken[$out]}"
+      continue
+    fi
+    taken[$out]=$base
+    _venc_files+=("$file")
+    _venc_outs+=("$out")
+  done
+}
+
+_video_encode_pairs() {
+  local i
+  for (( i = 1; i <= ${#_venc_files}; i++ )); do
+    printf '%s\0%s\0' "${_venc_files[i]}" "${_venc_outs[i]}"
+  done
+}
+
 video-encode-cpu() (
   local SOURCE_DIR="."
   local USE_SUBDIR=0
@@ -410,11 +454,10 @@ video-encode-cpu() (
   # Clear old error log if exists
   rm -f "$ERROR_LOG"
   
-  # Count files
-  local files=()
-  while IFS= read -r -d '' file; do
-    files+=("$file")
-  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" \) ! -iname "*-h265.mp4" -print0)
+  local files=() outs=()
+  _video_encode_plan "$OUTDIR" "$USE_SUBDIR"
+  files=("${_venc_files[@]}")
+  outs=("${_venc_outs[@]}")
   
   local total_files=${#files[@]}
   
@@ -437,20 +480,10 @@ video-encode-cpu() (
   fi
 
   # Process files in parallel using xargs
-  printf '%s\0' "${files[@]}" | xargs -0 -P "$enc_parallel" -I{} sh -c '
+  _video_encode_pairs | xargs -0 -n 2 -P "$enc_parallel" sh -c '
     file="$1"
+    out="$2"
     base=$(basename "$file")
-    name="${base%.*}"
-    ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
-    
-    # Determine output filename
-    if [[ "'$USE_SUBDIR'" == "1" ]]; then
-      out="'${OUTDIR}'/${name}.mp4"
-    elif [[ "$ext" == "mp4" ]]; then
-      out="${name}-h265.mp4"
-    else
-      out="${name}.mp4"
-    fi
     
     tmp="$out.part"
     if [[ ! -f "$out" ]]; then
@@ -461,7 +494,7 @@ video-encode-cpu() (
         echo "FAILED: $base" >> "'$ERROR_LOG'"
       fi
     fi
-  ' _ {}
+  ' _
   
   # Show errors if any
   if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
@@ -517,11 +550,10 @@ video-encode-gpu() (
   # Clear old error log if exists
   rm -f "$ERROR_LOG"
   
-  # Count files
-  local files=()
-  while IFS= read -r -d '' file; do
-    files+=("$file")
-  done < <(find . -maxdepth 1 -type f \( -iname "*.mov" -o -iname "*.mp4" \) ! -iname "*-h265.mp4" -print0)
+  local files=() outs=()
+  _video_encode_plan "$OUTDIR" "$USE_SUBDIR"
+  files=("${_venc_files[@]}")
+  outs=("${_venc_outs[@]}")
   
   local total_files=${#files[@]}
   
@@ -551,20 +583,10 @@ video-encode-gpu() (
   export DOTFILES_ENCODER_FLAGS="$enc_flags"
   
   # Process files in parallel using xargs (4 jobs for GPU)
-  printf '%s\0' "${files[@]}" | xargs -0 -P 4 -I{} sh -c '
+  _video_encode_pairs | xargs -0 -n 2 -P 4 sh -c '
     file="$1"
+    out="$2"
     base=$(basename "$file")
-    name="${base%.*}"
-    ext=$(printf "%s" "${base##*.}" | tr "[:upper:]" "[:lower:]")
-    
-    # Determine output filename
-    if [[ "'"$USE_SUBDIR"'" == "1" ]]; then
-      out="'"$OUTDIR"'/${name}.mp4"
-    elif [[ "$ext" == "mp4" ]]; then
-      out="${name}-h265.mp4"
-    else
-      out="${name}.mp4"
-    fi
     
     tmp="$out.part"
     if [[ ! -f "$out" ]]; then
@@ -595,7 +617,7 @@ video-encode-gpu() (
         fi
       fi
     fi
-  ' _ {}
+  ' _
   
   # Show errors if any
   if [[ -f "$ERROR_LOG" && -s "$ERROR_LOG" ]]; then
