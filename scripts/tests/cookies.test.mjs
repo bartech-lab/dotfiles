@@ -550,3 +550,14 @@ test('a final byte that only looks like padding is kept', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.equal(JSON.parse(r.stdout)[0].value, 'abcdefghijklmn\x01\x02');
 });
+
+test('an empty value in a version 24 database stays empty', () => {
+  const env = mkEnv();
+  makeDb(env, [
+    { host: '.example.com', name: 'empty', value: '', expires: FAR },
+    { host: '.example.com', name: 'full', value: 'x', expires: FAR },
+  ]);
+  const r = run(env, ['-f', 'json']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(JSON.parse(r.stdout).map((c) => [c.name, c.value]), [['empty', ''], ['full', 'x']]);
+});
