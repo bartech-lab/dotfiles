@@ -114,6 +114,7 @@ if [[ ${dry_run} -eq 1 ]]; then
   exit 0
 fi
 
+mkdir -p "${omp_dir}"
 for d in "${targets[@]}"; do
   name="${d##*/}"
   dest="${omp_dir}/${name}"

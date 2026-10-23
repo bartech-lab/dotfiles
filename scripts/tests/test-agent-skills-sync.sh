@@ -28,7 +28,6 @@ new_home() {
     SYNCED="$HOME_DIR/.claude/skills/synced"
     TARGET="$HOME_DIR/.agents/skills"
     CODEX="$HOME_DIR/.codex/skills"
-    # The script does not create the target root itself (cp fails without it), so every case starts with it empty.
     mkdir -p "$TARGET"
 }
 
@@ -88,6 +87,15 @@ case_no_skills_in_newest_bundle() {
     assert_eq "$RC" 2 "no skills exit"
     [[ -n "$ERR" ]] || fail "no skills: no stderr message"
     assert_no_writes "no skills"
+}
+
+case_missing_target_root_is_created() {
+    new_home
+    rmdir "$TARGET"
+    mk_skill b1 alpha
+    run_sync
+    assert_eq "$RC" 0 "missing target root exit"
+    assert_exists "$TARGET/alpha/SKILL.md" "missing target root: skill not mirrored"
 }
 
 case_newest_bundle_by_mtime_not_name() {
@@ -313,6 +321,7 @@ main() {
         case_missing_synced_dir \
         case_no_bundle_dir \
         case_no_skills_in_newest_bundle \
+        case_missing_target_root_is_created \
         case_newest_bundle_by_mtime_not_name \
         case_ignores_non_skill_entries \
         case_full_run_mirrors_with_marker_and_nested \
