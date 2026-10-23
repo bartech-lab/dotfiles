@@ -253,9 +253,20 @@ assert_eq "$(record_value alpha last_success)" "$success" 'fail dropped last_suc
 bash "$JOB_STATUS_SCRIPT" ok alpha
 assert_eq "$(record_value alpha max_age_hours)" 6 'ok without the flag dropped max_age_hours'
 [[ -n "$(record_value alpha last_failure)" ]] || fail 'ok dropped last_failure'
+assert_eq "$(record_value alpha reason)" 'first line second a=b' 'ok dropped the failure reason'
 bash "$JOB_STATUS_SCRIPT" fail alpha reason2 --max-age 9
 assert_eq "$(record_value alpha max_age_hours)" 9 'fail --max-age not stored'
 assert_eq "$(record_value alpha reason)" reason2 'second fail did not replace reason'
+bash "$JOB_STATUS_SCRIPT" fail alpha $'carriage\rreturn'
+assert_eq "$(record_value alpha reason)" 'carriage return' 'a carriage return in the reason was not replaced'
+snapshot=$(cat "$JOB_DIR/alpha.status")
+for bad in 'fail alpha' 'ok alpha --max-age abc' 'ok alpha --max-age' 'ok alpha extra'; do
+    rc=0
+    # shellcheck disable=SC2086
+    bash "$JOB_STATUS_SCRIPT" $bad 2>/dev/null || rc=$?
+    assert_eq "$rc" 2 "'$bad' must exit 2"
+done
+assert_eq "$(cat "$JOB_DIR/alpha.status")" "$snapshot" 'a rejected call changed the record'
 rc=0
 bash "$JOB_STATUS_SCRIPT" ok '../x' || rc=$?
 assert_eq "$rc" 2 'invalid job name must exit 2'
