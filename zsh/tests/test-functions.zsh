@@ -8,6 +8,8 @@ REPO_ROOT=${0:A:h:h:h}
 
 fail() { print -u2 -- "FAIL: $*"; exit 1 }
 
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+
 BIN="$TEST_ROOT/bin"
 mkdir -p "$BIN"
 for opener in open xdg-open; do
