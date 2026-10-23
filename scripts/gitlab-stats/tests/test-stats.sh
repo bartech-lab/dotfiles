@@ -53,7 +53,21 @@ export MR_DATA FORMAT SINCE UNTIL
 [[ "$(EXCLUDE_BOTS=false stat_size_distribution | body | sed -n 3p)" == '"Renovate","1","0","0","0","1"' ]] || fail "600 changes are XL"
 [[ "$(BUCKETS=0,45,999999 stat_size_distribution | body)" == $'Author,MR count,S,M\n"Alice","2","1","1"' ]] || fail "custom buckets"
 
+SIZE_DATA='[
+  {"author":{"name":"Ann","username":"ann","bot":false},"diffStatsSummary":{"additions":200,"deletions":0}},
+  {"author":{"name":"Ann","username":"ann","bot":false},"diffStatsSummary":{"additions":1000000,"deletions":0}},
+  {"author":{"name":"Ben","username":"ben","bot":false},"diffStatsSummary":{"additions":1,"deletions":0}}
+]'
+[[ "$(MR_DATA=$SIZE_DATA stat_size_distribution | body | sed -n 2p)" == '"Ann","2","0","0","1","1"' ]] || fail "200 is L only and 1000000 is still XL"
+[[ "$(MR_DATA=$SIZE_DATA TOP_N=1 stat_size_distribution | body | wc -l | tr -d ' ')" == 2 ]] || fail "TOP_N limits size rows"
+[[ "$(MR_DATA=$SIZE_DATA BUCKETS=0,10,20,30,40,999999 stat_size_distribution | body | head -1)" == 'Author,MR count,S,M,L,XL,B4' ]] || fail "a fifth bucket is labelled B4"
+
 [[ "$(stat_throughput | body)" == $'Author,2026-01,2026-02,Total\n"Alice","1","1","2"\n"Bob","0","1","1"' ]] || fail "throughput per author with empty months"
 [[ "$(BY_AUTHOR=false stat_throughput | body)" == $'"Month","Count"\n"2026-01","1"\n"2026-02","2"' ]] || fail "overall throughput without bots"
+
+OPEN_DATA=$(jq -c '. + [{"iid":"5","author":{"name":"Alice","username":"zara","bot":false},"mergedAt":null}]' <<< "$MR_DATA")
+[[ "$(MR_DATA=$OPEN_DATA stat_throughput | body)" == $'Author,2026-01,2026-02,Total\n"Alice","1","1","2"\n"Bob","0","1","1"' ]] || fail "an unmerged MR is skipped, not fatal"
+[[ "$(TOP_N=1 stat_throughput | body)" == $'Author,2026-01,2026-02,Total\n"Alice","1","1","2"' ]] || fail "TOP_N limits throughput rows"
+[[ "$(UNTIL=2026-03-31 BY_AUTHOR=false stat_throughput | body)" == $'"Month","Count"\n"2026-01","1"\n"2026-02","2"\n"2026-03","0"' ]] || fail "overall throughput lists an empty month as 0"
 
 echo "PASS: gitlab-stats stat tests"
