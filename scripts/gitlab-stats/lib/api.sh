@@ -120,7 +120,11 @@ fetch_all_mrs() {
 
     result=$(printf '%s\n%s\n' "$result" "$page_nodes" | jq -s 'add')
 
-    if [[ "$has_next" == "true" && -n "$end_cursor" ]]; then
+    if [[ "$has_next" == "true" ]]; then
+      if [[ -z "$end_cursor" ]]; then
+        echo "Error: GitLab reported another page of merge requests without a cursor for project '$project' (page $page); results would be incomplete." >&2
+        return 1
+      fi
       cursor="\"${end_cursor}\""
     fi
 
