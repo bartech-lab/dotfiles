@@ -86,4 +86,12 @@ for t in bash python3 head tr env; do ln -sf "$(command -v "$t")" "$TEST_ROOT/no
 err=$(PATH="$TEST_ROOT/norclone" "$TOOL" --check 2>&1 >/dev/null) || true
 [[ $err == *"rclone missing"* ]] || fail "a missing rclone is warned about: $err"
 
+
+build "$FILEN_ASAR"
+printf '            this.showOrOpenDriveWindow();\n        }\n' >> "$FILEN_ASAR"
+RC=0
+"$TOOL" --check >/dev/null 2>&1 || RC=$?
+[[ $RC -eq 1 ]] || fail "an existing showOrOpenDriveWindow call elsewhere: expected --check exit 1, got $RC"
+"$TOOL" >/dev/null 2>&1 || fail "an existing showOrOpenDriveWindow call elsewhere: patch failed"
+! grep -q 'this.driveWindow.focus();' "$FILEN_ASAR" || fail "an existing showOrOpenDriveWindow call elsewhere: handler left unpatched"
 echo "PASS: filen-fix-window"
