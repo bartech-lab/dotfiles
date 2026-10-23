@@ -177,4 +177,17 @@ expect_status_zero "case 8b"
 expect_branch feature/x "case 8b"
 expect_stderr_contains "case 8b" "staying on"
 
+mk_case c9 develop
+start_feature
+wrapped status --short
+expect_status_zero "case 9"
+expect_branch feature/x "case 9"
+
+mk_case c10 develop
+start_feature
+"$REAL" -C "$WT" switch --detach feature/x >/dev/null 2>&1
+wrapped push origin HEAD:refs/heads/feature/x
+expect_status_zero "case 10"
+expect_branch HEAD "case 10"
+
 echo "PASS: git-autoswitch edge tests"
