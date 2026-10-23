@@ -675,7 +675,7 @@ macos-defaults-export() {
     defaults read com.apple.dock show-recents >/dev/null 2>&1 && echo "defaults write com.apple.dock show-recents -bool $(defaults read com.apple.dock show-recents)"
     defaults read com.apple.dock expose-animation-duration >/dev/null 2>&1 && echo "defaults write com.apple.dock expose-animation-duration -float $(defaults read com.apple.dock expose-animation-duration)"
     defaults read com.apple.dock mru-spaces >/dev/null 2>&1 && echo "defaults write com.apple.dock mru-spaces -bool $(defaults read com.apple.dock mru-spaces)"
-    defaults read com.apple.dock mineffect >/dev/null 2>&1 && echo "defaults write com.apple.dock mineffect -string '$(defaults read com.apple.dock mineffect)'"
+    defaults read com.apple.dock mineffect >/dev/null 2>&1 && echo "defaults write com.apple.dock mineffect -string ${(qq)"$(defaults read com.apple.dock mineffect)"}"
     defaults read com.apple.dock minimize-to-application >/dev/null 2>&1 && echo "defaults write com.apple.dock minimize-to-application -bool $(defaults read com.apple.dock minimize-to-application)"
     defaults read com.apple.dock launchanim >/dev/null 2>&1 && echo "defaults write com.apple.dock launchanim -bool $(defaults read com.apple.dock launchanim)"
     defaults read com.apple.dock wvous-tl-corner >/dev/null 2>&1 && echo "defaults write com.apple.dock wvous-tl-corner -int $(defaults read com.apple.dock wvous-tl-corner)"
@@ -694,13 +694,13 @@ macos-defaults-export() {
     defaults read com.apple.finder ShowPathbar >/dev/null 2>&1 && echo "defaults write com.apple.finder ShowPathbar -bool $(defaults read com.apple.finder ShowPathbar)"
     defaults read com.apple.finder ShowStatusBar >/dev/null 2>&1 && echo "defaults write com.apple.finder ShowStatusBar -bool $(defaults read com.apple.finder ShowStatusBar)"
     defaults read com.apple.finder _FXSortFoldersFirst >/dev/null 2>&1 && echo "defaults write com.apple.finder _FXSortFoldersFirst -bool $(defaults read com.apple.finder _FXSortFoldersFirst)"
-    defaults read com.apple.finder FXDefaultSearchScope >/dev/null 2>&1 && echo "defaults write com.apple.finder FXDefaultSearchScope -string '$(defaults read com.apple.finder FXDefaultSearchScope)'"
+    defaults read com.apple.finder FXDefaultSearchScope >/dev/null 2>&1 && echo "defaults write com.apple.finder FXDefaultSearchScope -string ${(qq)"$(defaults read com.apple.finder FXDefaultSearchScope)"}"
     defaults read com.apple.finder FXEnableExtensionChangeWarning >/dev/null 2>&1 && echo "defaults write com.apple.finder FXEnableExtensionChangeWarning -bool $(defaults read com.apple.finder FXEnableExtensionChangeWarning)"
     defaults read com.apple.finder DisableAllAnimations >/dev/null 2>&1 && echo "defaults write com.apple.finder DisableAllAnimations -bool $(defaults read com.apple.finder DisableAllAnimations)"
     defaults read com.apple.finder _FXShowPosixPathInTitle >/dev/null 2>&1 && echo "defaults write com.apple.finder _FXShowPosixPathInTitle -bool $(defaults read com.apple.finder _FXShowPosixPathInTitle)"
     defaults read com.apple.finder QuitMenuItem >/dev/null 2>&1 && echo "defaults write com.apple.finder QuitMenuItem -bool $(defaults read com.apple.finder QuitMenuItem)"
-    defaults read com.apple.finder NewWindowTarget >/dev/null 2>&1 && echo "defaults write com.apple.finder NewWindowTarget -string '$(defaults read com.apple.finder NewWindowTarget)'"
-    defaults read com.apple.finder NewWindowTargetPath >/dev/null 2>&1 && echo "defaults write com.apple.finder NewWindowTargetPath -string '$(defaults read com.apple.finder NewWindowTargetPath)'"
+    defaults read com.apple.finder NewWindowTarget >/dev/null 2>&1 && echo "defaults write com.apple.finder NewWindowTarget -string ${(qq)"$(defaults read com.apple.finder NewWindowTarget)"}"
+    defaults read com.apple.finder NewWindowTargetPath >/dev/null 2>&1 && echo "defaults write com.apple.finder NewWindowTargetPath -string ${(qq)"$(defaults read com.apple.finder NewWindowTargetPath)"}"
     defaults read com.apple.desktopservices DSDontWriteNetworkStores >/dev/null 2>&1 && echo "defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool $(defaults read com.apple.desktopservices DSDontWriteNetworkStores)"
     defaults read com.apple.desktopservices DSDontWriteUSBStores >/dev/null 2>&1 && echo "defaults write com.apple.desktopservices DSDontWriteUSBStores -bool $(defaults read com.apple.desktopservices DSDontWriteUSBStores)"
     
@@ -708,10 +708,10 @@ macos-defaults-export() {
     
     # Screenshot settings
     echo "# Screenshot settings"
-    defaults read com.apple.screencapture location >/dev/null 2>&1 && echo "defaults write com.apple.screencapture location -string '$(defaults read com.apple.screencapture location)'"
+    defaults read com.apple.screencapture location >/dev/null 2>&1 && echo "defaults write com.apple.screencapture location -string ${(qq)"$(defaults read com.apple.screencapture location)"}"
     defaults read com.apple.screencapture disable-shadow >/dev/null 2>&1 && echo "defaults write com.apple.screencapture disable-shadow -bool $(defaults read com.apple.screencapture disable-shadow)"
-    defaults read com.apple.screencapture type >/dev/null 2>&1 && echo "defaults write com.apple.screencapture type -string '$(defaults read com.apple.screencapture type)'"
-    defaults read com.apple.screencapture target >/dev/null 2>&1 && echo "defaults write com.apple.screencapture target -string '$(defaults read com.apple.screencapture target)'"
+    defaults read com.apple.screencapture type >/dev/null 2>&1 && echo "defaults write com.apple.screencapture type -string ${(qq)"$(defaults read com.apple.screencapture type)"}"
+    defaults read com.apple.screencapture target >/dev/null 2>&1 && echo "defaults write com.apple.screencapture target -string ${(qq)"$(defaults read com.apple.screencapture target)"}"
     defaults read com.apple.screencapture show-thumbnail >/dev/null 2>&1 && echo "defaults write com.apple.screencapture show-thumbnail -bool $(defaults read com.apple.screencapture show-thumbnail)"
     
     echo ""
@@ -733,7 +733,7 @@ macos-defaults-export() {
     defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool $(defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode2)"
     defaults read NSGlobalDomain PMPrintingExpandedStateForPrint >/dev/null 2>&1 && echo "defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool $(defaults read NSGlobalDomain PMPrintingExpandedStateForPrint)"
     defaults read NSGlobalDomain PMPrintingExpandedStateForPrint2 >/dev/null 2>&1 && echo "defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool $(defaults read NSGlobalDomain PMPrintingExpandedStateForPrint2)"
-    defaults read NSGlobalDomain AppleShowScrollBars >/dev/null 2>&1 && echo "defaults write NSGlobalDomain AppleShowScrollBars -string '$(defaults read NSGlobalDomain AppleShowScrollBars)'"
+    defaults read NSGlobalDomain AppleShowScrollBars >/dev/null 2>&1 && echo "defaults write NSGlobalDomain AppleShowScrollBars -string ${(qq)"$(defaults read NSGlobalDomain AppleShowScrollBars)"}"
     defaults read NSGlobalDomain NSUseAnimatedFocusRing >/dev/null 2>&1 && echo "defaults write NSGlobalDomain NSUseAnimatedFocusRing -bool $(defaults read NSGlobalDomain NSUseAnimatedFocusRing)"
     defaults read NSGlobalDomain com.apple.mouse.tapBehavior >/dev/null 2>&1 && echo "defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int $(defaults read NSGlobalDomain com.apple.mouse.tapBehavior)"
     
@@ -772,8 +772,8 @@ macos-defaults-export() {
     echo "# VS Code settings"
     defaults read com.microsoft.VSCode ApplePressAndHoldEnabled >/dev/null 2>&1 && echo "defaults write com.microsoft.VSCode ApplePressAndHoldEnabled -bool $(defaults read com.microsoft.VSCode ApplePressAndHoldEnabled)"
     defaults read com.vscodium ApplePressAndHoldEnabled >/dev/null 2>&1 && echo "defaults write com.vscodium ApplePressAndHoldEnabled -bool $(defaults read com.vscodium ApplePressAndHoldEnabled)"
-    defaults read com.microsoft.VSCode AppleWindowTabbingMode >/dev/null 2>&1 && echo "defaults write com.microsoft.VSCode AppleWindowTabbingMode -string '$(defaults read com.microsoft.VSCode AppleWindowTabbingMode)'"
-    defaults read com.vscodium AppleWindowTabbingMode >/dev/null 2>&1 && echo "defaults write com.vscodium AppleWindowTabbingMode -string '$(defaults read com.vscodium AppleWindowTabbingMode)'"
+    defaults read com.microsoft.VSCode AppleWindowTabbingMode >/dev/null 2>&1 && echo "defaults write com.microsoft.VSCode AppleWindowTabbingMode -string ${(qq)"$(defaults read com.microsoft.VSCode AppleWindowTabbingMode)"}"
+    defaults read com.vscodium AppleWindowTabbingMode >/dev/null 2>&1 && echo "defaults write com.vscodium AppleWindowTabbingMode -string ${(qq)"$(defaults read com.vscodium AppleWindowTabbingMode)"}"
     
     echo ""
     
