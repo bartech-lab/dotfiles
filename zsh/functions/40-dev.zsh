@@ -24,6 +24,23 @@ extract() {
 
     local file="$1"
 
+    case "$file" in
+        *.tar.zst)
+            if ! command -v zstd >/dev/null; then
+                echo "❌ zstd not found. Install with: brew install zstd"
+                return 1
+            fi ;;
+        *.zip|*.rar|*.7z)
+            if ! command -v unar >/dev/null; then
+                echo "❌ unar not found. Install with: brew install unar"
+                return 1
+            fi ;;
+        *.tar.gz|*.tgz|*.tar.bz2|*.tbz2|*.tar.xz|*.tar|*.gz|*.bz2|*.xz|*.Z) ;;
+        *)
+            echo "❌ Unknown archive format: $file"
+            return 1 ;;
+    esac
+
     # Extract base name (remove all known extensions)
     local base_name="$file"
     # Strip extensions in order from most specific to least
@@ -45,7 +62,7 @@ extract() {
     # Create extraction directory
     local extract_dir="$base_name"
     local counter=2
-    while [[ -d "$extract_dir" ]]; do
+    while [[ -e "$extract_dir" ]]; do
         extract_dir="${base_name}-${counter}"
         ((counter++))
     done
@@ -54,27 +71,16 @@ extract() {
     echo "📁 Extracting to: $extract_dir/"
 
     case "$file" in
-        *.tar.zst)
-            if ! command -v zstd >/dev/null; then
-                echo "❌ zstd not found. Install with: brew install zstd"
-                return 1
-            fi
-            zstd -cd "$file" | tar xf - -C "$extract_dir" ;;
+        *.tar.zst) zstd -cd "$file" | tar xf - -C "$extract_dir" ;;
         *.tar.gz|*.tgz)  gzip -cd "$file" | tar xf - -C "$extract_dir" ;;
         *.tar.bz2|*.tbz2)  bzip2 -cd "$file" | tar xf - -C "$extract_dir" ;;
         *.tar.xz)  xz -cd "$file" | tar xf - -C "$extract_dir" ;;
         *.tar)     tar xf "$file" -C "$extract_dir" ;;
-        *.zip|*.rar|*.7z)
-            if ! command -v unar >/dev/null; then
-                echo "❌ unar not found. Install with: brew install unar"
-                return 1
-            fi
-            unar -q -D -o "$extract_dir" "$file" ;;
+        *.zip|*.rar|*.7z) unar -q -D -o "$extract_dir" "$file" ;;
         *.gz)      gunzip -c "$file" > "$extract_dir/$(basename "${file%.gz}")" ;;
         *.bz2)     bunzip2 -c "$file" > "$extract_dir/$(basename "${file%.bz2}")" ;;
         *.xz)      unxz -c "$file" > "$extract_dir/$(basename "${file%.xz}")" ;;
         *.Z)       uncompress -c "$file" > "$extract_dir/$(basename "${file%.Z}")" ;;
-        *) echo "❌ Unknown archive format: $file" ;;
     esac
 }
 
