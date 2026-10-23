@@ -167,7 +167,7 @@ function queryCookies(browser, domain, names) {
   const clauses = [];
   if (domain) {
     const dotDomain = domain.startsWith('.') ? domain : '.' + domain;
-    const conds = [`host_key LIKE '${sqlEscape(dotDomain)}'`];
+    const conds = [`host_key LIKE '${sqlEscape(dotDomain).replace(/[\\%_]/g, '\\$&')}' ESCAPE '\\'`];
     if (!domain.startsWith('.'))
       conds.push(`host_key = '${sqlEscape(domain)}'`);
     clauses.push(`(${conds.join(' OR ')})`);

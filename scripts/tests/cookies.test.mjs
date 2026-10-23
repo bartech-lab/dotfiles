@@ -588,3 +588,14 @@ test('a run of more than 16 equal final bytes is not taken as padding', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.equal(JSON.parse(r.stdout)[0].value, tail);
 });
+
+test('an underscore in -d is a literal character, not a wildcard', () => {
+  const env = mkEnv();
+  makeDb(env, [
+    { host: '.a_b.com', name: 'a', value: '1', expires: FAR },
+    { host: '.aXb.com', name: 'a', value: '2', expires: FAR },
+  ]);
+  const r = run(env, ['-d', 'a_b.com']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(hosts(r.stdout), ['.a_b.com']);
+});
