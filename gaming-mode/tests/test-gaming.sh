@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+[[ "$(uname -s)" == Linux ]] || { echo "SKIP: gaming is Linux-only (needs flock and systemd)"; exit 0; }
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GAMING_BIN="${GAMING_BIN:-$SCRIPT_DIR/gaming}"
 TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/gaming-mode-test.XXXXXX")
