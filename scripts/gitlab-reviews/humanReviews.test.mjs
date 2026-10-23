@@ -719,3 +719,22 @@ test('exclusions from an earlier run absent from the current snapshot are kept',
     const next = mergeLedger(first, { candidates: [], exclusions: [exclusion('e2')] }, { ...mergeRun, id: 'run-2' });
     assert.deepEqual(next.exclusions.map((e) => e.id).sort(), ['e1', 'e2']);
 });
+
+test('glab API output that is not JSON fails with the endpoint named', async () => {
+    const api = createGlabApi({
+        execFileFn: (file, args, options, callback) => callback(null, { stdout: '<html>login</html>', stderr: '' }),
+    });
+    await assert.rejects(api('projects/1/merge_requests'), /Invalid JSON from glab for projects\/1\/merge_requests/);
+});
+
+test('a comment that is only an emoji or shortcode is a process-only acknowledgement', () => {
+    assert.equal(processOnlyReason(':+1:'), 'process-only approval or acknowledgement');
+    assert.equal(processOnlyReason('👍'), 'process-only approval or acknowledgement');
+});
+
+test('a merged run records its failure count and a string project id', () => {
+    const run = { repository: 'example-repo', projectId: 77, username: 'reviewer', userId: REVIEWER_ID, id: 'run-1', status: 'complete' };
+    const ledger = mergeLedger(null, { candidates: [], exclusions: [], total: 2, processed: 1, failures: [{ mr: 1 }, { mr: 2 }] }, run);
+    assert.equal(ledger.lastRun.failures, 2);
+    assert.equal(ledger.projectId, '77');
+});
