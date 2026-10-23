@@ -84,4 +84,54 @@ TFG_API_KEY=k2 tfg 3 || fail "tfg 3 failed"
 TFG_API_KEY=k3 tfg --codex 12 || fail "tfg --codex 12 failed"
 [[ $(<"$TEST_ROOT/ran") == "k3|--codex 12" ]] || fail "codex flag and count are passed through"
 
+source "$REPO_ROOT/zsh/functions/61-discord.zsh"
+
+HOME="$TEST_ROOT/dhome"
+mkdir -p "$HOME"
+unset XDG_CONFIG_HOME XDG_DATA_HOME
+DOTFILES_OS=macos
+[[ $(_discord_config_dir) == "$HOME/Library/Application Support/discord" ]] || fail "macos config dir"
+[[ $(_discord_backup_dir) == "$HOME/Library/OpenAsarPersist" ]] || fail "macos backup dir"
+[[ $(_discord_asar_path) == /Applications/Discord.app/Contents/Resources/app.asar ]] || fail "macos asar path"
+
+DOTFILES_OS=linux
+[[ $(_discord_config_dir) == "$HOME/.config/discord" ]] || fail "linux config dir default"
+[[ $(XDG_CONFIG_HOME=/x/cfg _discord_config_dir) == /x/cfg/discord ]] || fail "linux config dir honours XDG_CONFIG_HOME"
+[[ $(_discord_backup_dir) == "$HOME/.local/share/OpenAsarPersist" ]] || fail "linux backup dir default"
+[[ $(XDG_DATA_HOME=/x/data _discord_backup_dir) == /x/data/OpenAsarPersist ]] || fail "linux backup dir honours XDG_DATA_HOME"
+
+if [[ ! -d /opt/discord && ! -d /usr/lib/discord ]]; then
+  out=$(discord-openasar-status)
+  [[ $out == *"Discord:       not installed"* ]] || fail "status without discord: $out"
+  [[ $out == *"app.asar:      missing"* && $out == *"settings:      missing"* ]] || fail "status without files: $out"
+  [[ $out == *"Backups:       none"* && $out == *"OpenAsar src:  not downloaded"* ]] || fail "status without backups: $out"
+
+  app="$HOME/.local/share/discord"
+  mkdir -p "$app/resources" "$HOME/.config/discord" "$HOME/.local/share/OpenAsarPersist/backups"
+  [[ $(_discord_asar_path) == "$app/resources/app.asar" ]] || fail "linux asar path under the found app dir"
+  head -c 99999 /dev/zero > "$app/resources/app.asar"
+  print -r -- '{"openasar": {}}' > "$HOME/.config/discord/settings.json"
+  out=$(discord-openasar-status)
+  [[ $out == *"Discord:       found at $app"* ]] || fail "status finds the user app dir: $out"
+  [[ $out == *"app.asar:      99999 bytes  (likely OpenAsar)"* ]] || fail "a small asar is OpenAsar: $out"
+  [[ $out == *"settings:      OpenAsar configured"* ]] || fail "openasar settings: $out"
+  [[ $out == *"Backups:       none"* ]] || fail "an empty backups dir is none: $out"
+
+  head -c 100000 /dev/zero > "$app/resources/app.asar"
+  print -r -- '{"other": 1}' > "$HOME/.config/discord/settings.json"
+  print -r -- old > "$HOME/.local/share/OpenAsarPersist/backups/b-old"
+  touch -t 202001010000 "$HOME/.local/share/OpenAsarPersist/backups/b-old"
+  print -r -- new > "$HOME/.local/share/OpenAsarPersist/backups/a-new"
+  print -r -- src > "$HOME/.local/share/OpenAsarPersist/openasar.app.asar"
+  out=$(discord-openasar-status)
+  [[ $out == *"(likely stock Discord)"* ]] || fail "a 100000-byte asar is stock: $out"
+  [[ $out == *"settings:      no OpenAsar config"* ]] || fail "settings without openasar: $out"
+  [[ $out == *"Backups:"*"b-old"*"a-new"* ]] || fail "backups list oldest first: $out"
+  [[ $out == *"OpenAsar src:  "* && $out != *"not downloaded"* ]] || fail "downloaded OpenAsar source: $out"
+  print -r -- '{not json' > "$HOME/.config/discord/settings.json"
+  [[ $(discord-openasar-status) == *"settings:      no OpenAsar config"* ]] || fail "invalid settings json"
+else
+  print -- "SKIP: discord status checks, a system Discord is installed"
+fi
+
 print -- "PASS: zsh function tests"
