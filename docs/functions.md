@@ -428,7 +428,7 @@ archive [name] [--dry-run] [-gzip]
 - `--dry-run` or `-n` - Preview what would be archived
 - `-gzip` - Use gzip -6 instead of zstd (creates .tar.gz)
 
-**Default compression:** zstd -19 (creates .tar.zst)
+**Default compression:** zstd -12 (creates .tar.zst)
 
 **Exclusions:**
 - Development artifacts (.git, .vscode, node_modules)
