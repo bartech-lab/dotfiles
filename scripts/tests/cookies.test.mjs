@@ -512,3 +512,41 @@ test('peanuts is used when no keyring answers', { skip: IS_MAC }, () => {
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(rows(r.stdout).map((x) => x[6]), ['lv']);
 });
+
+test('a v11-prefixed value decrypts like v10', () => {
+  const env = mkEnv();
+  const iter = IS_MAC ? 1003 : 1;
+  const prefix = crypto.createHash('sha256').update('.example.com').digest();
+  const v10 = encrypt(Buffer.concat([prefix, Buffer.from('eleven')]), 'fakepass', iter);
+  const v11 = Buffer.concat([Buffer.from('v11'), v10.subarray(3)]);
+  makeDb(env, [{ host: '.example.com', name: 'n', enc: v11, expires: FAR }]);
+  const r = run(env, ['-f', 'header']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stdout.trim(), 'n=eleven');
+});
+
+test('an encrypted value of only the version tag is skipped', () => {
+  const env = mkEnv();
+  makeDb(env, [
+    { host: '.example.com', name: 'bare', enc: Buffer.from('v10'), expires: FAR },
+    { host: '.example.com', name: 'ok', value: 'fine', expires: FAR },
+  ]);
+  const r = run(env, ['-f', 'header']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stdout.trim(), 'ok=fine');
+});
+
+test('a final byte that only looks like padding is kept', () => {
+  const env = mkEnv();
+  const iter = IS_MAC ? 1003 : 1;
+  const key = crypto.pbkdf2Sync('fakepass', 'saltysalt', iter, 16, 'sha1');
+  const prefix = crypto.createHash('sha256').update('.example.com').digest();
+  const plain = Buffer.concat([prefix, Buffer.from('abcdefghijklmn\x01\x02')]);
+  const cipher = crypto.createCipheriv('aes-128-cbc', key, Buffer.alloc(16, 0x20));
+  cipher.setAutoPadding(false);
+  const enc = Buffer.concat([Buffer.from('v10'), cipher.update(plain), cipher.final()]);
+  makeDb(env, [{ host: '.example.com', name: 'p', enc, expires: FAR }]);
+  const r = run(env, ['-f', 'json']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(JSON.parse(r.stdout)[0].value, 'abcdefghijklmn\x01\x02');
+});
