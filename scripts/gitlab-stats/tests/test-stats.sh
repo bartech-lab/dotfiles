@@ -7,6 +7,7 @@ ROOT_DIR="$(cd "$TEST_DIR/.." && pwd)"
 source "$ROOT_DIR/lib/utils.sh"
 source "$ROOT_DIR/lib/format.sh"
 source "$ROOT_DIR/stats/approvals.sh"
+source "$ROOT_DIR/stats/comments.sh"
 source "$ROOT_DIR/stats/merged-by.sh"
 source "$ROOT_DIR/stats/mr-authors.sh"
 source "$ROOT_DIR/stats/size-distribution.sh"
@@ -69,5 +70,16 @@ OPEN_DATA=$(jq -c '. + [{"iid":"5","author":{"name":"Alice","username":"zara","b
 [[ "$(MR_DATA=$OPEN_DATA stat_throughput | body)" == $'Author,2026-01,2026-02,Total\n"Alice","1","1","2"\n"Bob","0","1","1"' ]] || fail "an unmerged MR is skipped, not fatal"
 [[ "$(TOP_N=1 stat_throughput | body)" == $'Author,2026-01,2026-02,Total\n"Alice","1","1","2"' ]] || fail "TOP_N limits throughput rows"
 [[ "$(UNTIL=2026-03-31 BY_AUTHOR=false stat_throughput | body)" == $'"Month","Count"\n"2026-01","1"\n"2026-02","2"\n"2026-03","0"' ]] || fail "overall throughput lists an empty month as 0"
+
+note() { printf '{"system":%s,"author":{"name":"%s","username":"%s","bot":%s}}' "$1" "$2" "$3" "$4"; }
+thread() { printf '{"notes":{"nodes":[%s]}}' "$(IFS=,; echo "$*")"; }
+COMMENT_DATA="[
+  {\"discussions\":{\"nodes\":[$(thread "$(note false Zed zed false)" "$(note false Dee dee false)"),$(thread "$(note false Zed zed false)")]}},
+  {\"discussions\":{\"nodes\":[$(thread "$(note true Eve eve false)"),$(thread "$(note false Bot bot true)"),$(thread "$(note false Dee dee false)")]}},
+  {\"discussions\":null}
+]"
+[[ "$(MR_DATA=$COMMENT_DATA stat_comments | body)" == $'Reviewer,Review threads started\n"Zed","2"\n"Dee","1"' ]] || fail "comments count first notes only, skip system notes and bots, most first"
+[[ "$(MR_DATA=$COMMENT_DATA EXCLUDE_BOTS=false stat_comments | body | grep -c Bot)" -eq 1 ]] || fail "comments with bots"
+[[ "$(MR_DATA=$COMMENT_DATA TOP_N=1 stat_comments | body | wc -l | tr -d ' ')" -eq 2 ]] || fail "TOP_N limits comment rows"
 
 echo "PASS: gitlab-stats stat tests"
