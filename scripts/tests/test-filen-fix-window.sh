@@ -54,4 +54,36 @@ RC=0
 [[ -e "$TEST_ROOT/sudo-called" ]] || fail "read-only asar: sudo was not called"
 [[ $RC -eq 97 ]] || fail "read-only asar: expected the sudo stub's exit 97, got $RC"
 
+chmod u+w "$FILEN_ASAR"
+rm -f "$TEST_ROOT/sudo-called"
+
+build "$FILEN_ASAR"
+before=$(cksum < "$FILEN_ASAR")
+RC=0
+"$TOOL" --check >/dev/null 2>&1 || RC=$?
+[[ $RC -eq 1 ]] || fail "unpatched --check: expected exit 1, got $RC"
+[[ "$(cksum < "$FILEN_ASAR")" == "$before" ]] || fail "unpatched --check modified the asar"
+
+{ build "$TEST_ROOT/one"; cat "$TEST_ROOT/one" "$TEST_ROOT/one"; } > "$FILEN_ASAR"
+"$TOOL" >/dev/null 2>&1 || fail "two handlers: patch failed"
+[[ "$(grep -c 'this.showOrOpenDriveWindow();' "$FILEN_ASAR")" -eq 2 ]] || fail "two handlers: both must be patched"
+if grep -q 'this.driveWindow.focus();' "$FILEN_ASAR"; then fail "two handlers: an unpatched handler is left"; fi
+
+head -c 4096 /dev/zero | tr '\0' 'c' > "$FILEN_ASAR"
+before=$(cksum < "$FILEN_ASAR")
+RC=0
+"$TOOL" >/dev/null 2>&1 || RC=$?
+[[ $RC -eq 2 ]] || fail "no handler block: expected exit 2, got $RC"
+[[ "$(cksum < "$FILEN_ASAR")" == "$before" ]] || fail "no handler block: the asar was modified"
+
+RC=0
+FILEN_ASAR="$TEST_ROOT/missing.asar" "$TOOL" >/dev/null 2>&1 || RC=$?
+[[ $RC -eq 2 ]] || fail "missing asar: expected exit 2, got $RC"
+
+build "$FILEN_ASAR"
+mkdir -p "$TEST_ROOT/norclone"
+for t in bash python3 head tr env; do ln -sf "$(command -v "$t")" "$TEST_ROOT/norclone/$t"; done
+err=$(PATH="$TEST_ROOT/norclone" "$TOOL" --check 2>&1 >/dev/null) || true
+[[ $err == *"rclone missing"* ]] || fail "a missing rclone is warned about: $err"
+
 echo "PASS: filen-fix-window"
