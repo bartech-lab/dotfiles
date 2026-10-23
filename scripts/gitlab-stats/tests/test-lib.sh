@@ -23,6 +23,8 @@ months=$(get_months_between 2025-11-20 2026-02-03 | tr '\n' ' ')
 [[ "$(make_cache_key p b 2026-01-01 2026-02-01)" != "$(make_cache_key p b 2026-01-01 2026-02-02)" ]] || fail "cache key ignores until"
 [[ "$(make_cache_key p b s u)" == "$(make_cache_key p b s u base-v2)" ]] || fail "cache key default variant is base-v2"
 [[ "$(make_cache_key p b s u)" != "$(make_cache_key p b s u other)" ]] || fail "cache key ignores variant"
+[[ "$(make_cache_key p b s u)" != "$(make_cache_key p c s u)" ]] || fail "cache key ignores branch"
+[[ "$(CACHE_DIR="$TMP_DIR/cache dir" get_cache_dir)" == "$TMP_DIR/cache dir" && -d "$TMP_DIR/cache dir" ]] || fail "CACHE_DIR is created and used"
 
 cache="$TMP_DIR/sub/dir/c.json"
 cache_write "$cache" '[1,2]' || fail "cache_write into a new directory"
@@ -43,6 +45,7 @@ cache_clear "$cache"
 rows='[{"name":"Al, Jr.","n":2}]'
 [[ "$(FORMAT=csv format_results "$rows" '[.name, .n]' 'Name|Count')" == $'Name,Count\n"Al, Jr.",2' ]] || fail "csv quotes a comma and uses comma headers"
 table=$(FORMAT=table format_results "$rows" '[.name, .n]' 'Name|Count')
+[[ "$(unset FORMAT; format_results "$rows" '[.name, .n]' 'Name|Count')" == "$table" ]] || fail "table is the default format"
 [[ "$(head -1 <<< "$table" | tr -s ' ')" == "Name Count" ]] || fail "table header"
 [[ "$table" == *"Al, Jr."*"2"* ]] || fail "table row"
 [[ -z "$(format_results '[]' '[.name]' 'Name')" ]] || fail "no rows print nothing"
