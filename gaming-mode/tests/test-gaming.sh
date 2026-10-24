@@ -155,7 +155,7 @@ since=$(grep -m1 '^since=' "$PAUSE_FILE" | cut -d= -f2)
 (( since >= before && since <= after )) || fail 'since is not the time of on'
 assert_file_has "$PAUSE_FILE" '^owner=gaming$' 'pause file lacks owner=gaming'
 assert_file_has "$PAUSE_FILE" '^max_age_hours=12$' 'pause file lacks max_age_hours=12'
-for n in bonsai.service bonsai-cc-proxy.service bonsai-http bonsai-cc-proxy system-update.service toolsmith.service logbook-sync.service; do
+for n in bonsai.service bonsai-cc-proxy.service bonsai-http bonsai-cc-proxy bonsai-no-crash system-update.service toolsmith.service logbook-sync.service; do
     assert_file_has "$PAUSE_FILE" "^pause=$n\$" "pause file lacks pause=$n"
 done
 assert_eq "$(grep -vE '^(since|owner|max_age_hours|pause)=' "$PAUSE_FILE" | grep -c . || true)" 0 'pause file has lines outside the key=value format'
