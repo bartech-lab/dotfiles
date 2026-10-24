@@ -10,7 +10,7 @@ usage() {
 Usage: gaming [on|off|status|run -- COMMAND...]
 
   (none)   toggle
-  on       stop Bonsai, Docker, heavy monitors and heavy timers
+  on       stop Bonsai (the proxy stays up and answers 503), Docker, heavy monitors and heavy timers
   off      restart exactly what `on` stopped
   status   show what is stopped and how much VRAM is free
   run      `on`, run COMMAND, then `off` (Steam: gaming run -- %command%)
@@ -27,11 +27,13 @@ HEALTH_WAIT="${GAMING_HEALTH_WAIT:-360}"
 MAX_AGE_HOURS="${GAMING_MAX_AGE_HOURS:-12}"
 
 # Stop order. `off` restarts in reverse.
-USER_SERVICES=(bonsai-cc-proxy.service bonsai.service)
+# bonsai-cc-proxy.service keeps running: in game mode it answers 503 "game
+# mode", so clients learn why Bonsai is down instead of getting a refused port.
+USER_SERVICES=(bonsai.service)
 SYSTEM_UNITS=(docker.socket docker.service)
 USER_TIMERS=(system-update.timer toolsmith.timer logbook-sync.timer)
 # Heartbeat names that go quiet while Bonsai is stopped.
-PAUSED_PROBES=(bonsai-http bonsai-cc-proxy)
+PAUSED_PROBES=(bonsai-cc-proxy.service bonsai-http bonsai-cc-proxy)
 DEFAULT_APPS=('app-io.missioncenter.MissionCenter@*.service' 'app-org.kde.plasma\x2dsystemmonitor@*.service' 'app-psensor@*.service')
 
 say() {
