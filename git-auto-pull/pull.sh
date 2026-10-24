@@ -37,6 +37,13 @@ fi
 
 export GIT_TERMINAL_PROMPT=0
 
+# An unreachable host (work VPN off) is not a run failure. Each reachable probe
+# refreshes a job record instead, and the heartbeat reports the host as stale
+# once it has been unreachable for HOST_MAX_AGE_HOURS.
+JOB_STATUS_BIN="${JOB_STATUS_BIN:-$HOME/.local/bin/job-status}"
+HOST_MAX_AGE_HOURS=96
+unreachable_skips=0
+
 notify_divergence() {
     local repo_path="$1" branch_name="$2" local_sha="$3" remote_sha="$4"
     local key="$repo_path $branch_name $local_sha $remote_sha" ops_bin="${OPS_BIN:-$HOME/.agents/ops/bin/ops}"
@@ -136,6 +143,10 @@ host_is_reachable() {
     if GIT_TERMINAL_PROMPT=0 git -C "$repo" ls-remote origin HEAD >/dev/null 2>&1; then
         PROBE_HOSTS[${#PROBE_HOSTS[@]}]="$host"
         PROBE_RESULTS[${#PROBE_RESULTS[@]}]="ok"
+        if [[ -x "$JOB_STATUS_BIN" ]]; then
+            "$JOB_STATUS_BIN" ok "git-auto-pull-$host" --max-age "$HOST_MAX_AGE_HOURS" >/dev/null 2>&1 \
+                || log_error "Unable to record reachability of $host"
+        fi
         return 0
     fi
 
@@ -276,8 +287,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
         cfg_remote=$(git -C "$repo_path" remote get-url origin 2>/dev/null || true)
         cfg_host=$(remote_host "$cfg_remote")
         if [[ -n "$cfg_host" ]] && ! host_is_reachable "$cfg_host" "$repo_path"; then
-            run_status=1
-            setup_failures=$((setup_failures + 1))
+            unreachable_skips=$((unreachable_skips + 1))
             continue
         fi
 
@@ -303,8 +313,7 @@ for d in "$HOME/Projects"/*/; do
     [[ -z "$disc_remote" ]] && continue
     disc_host=$(remote_host "$disc_remote")
     if [[ -n "$disc_host" ]] && ! host_is_reachable "$disc_host" "$repo"; then
-            run_status=1
-            setup_failures=$((setup_failures + 1))
+        unreachable_skips=$((unreachable_skips + 1))
         continue
     fi
 
@@ -335,15 +344,14 @@ if [[ -d "$HOME/dotfiles/.git" ]]; then
                 fi
             fi
         else
-            run_status=1
-            setup_failures=$((setup_failures + 1))
+            unreachable_skips=$((unreachable_skips + 1))
         fi
     fi
 fi
 
 pids=()
 repo_count=${#REPO_PATHS[@]}
-log_info "Scheduled git auto-pull: repositories=$repo_count setup_failures=$setup_failures"
+log_info "Scheduled git auto-pull: repositories=$repo_count setup_failures=$setup_failures unreachable_skips=$unreachable_skips"
 
 for i in "${!REPO_PATHS[@]}"; do
     process_repo "${REPO_PATHS[$i]}" "${REPO_BRANCHES[$i]}" &
@@ -365,5 +373,5 @@ if (( failed_count > 0 )); then
     run_status=1
 fi
 
-log_info "Completed git auto-pull: repositories=$completed_count/$repo_count setup_failures=$setup_failures repo_failures=$failed_count status=$run_status"
+log_info "Completed git auto-pull: repositories=$completed_count/$repo_count setup_failures=$setup_failures repo_failures=$failed_count unreachable_skips=$unreachable_skips status=$run_status"
 exit "$run_status"
