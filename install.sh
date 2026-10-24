@@ -792,6 +792,9 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     # Brave GPU flags
     config_symlinks "$DOTFILES_DIR/linux/brave-flags.conf" "$HOME/.config/brave-flags.conf" "Brave flags"
 
+    # Bonsai proxy unit (After= only: starting the proxy must not start Bonsai)
+    config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai-cc-proxy.service" "$HOME/.config/systemd/user/bonsai-cc-proxy.service" "Bonsai proxy unit"
+
     # Desktop overrides (Wayland for Electron apps)
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code-oss.desktop" "$HOME/.local/share/applications/code-oss.desktop" "Code - OSS desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standard-notes.desktop" "$HOME/.local/share/applications/standard-notes.desktop" "Standard Notes desktop"

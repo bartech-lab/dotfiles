@@ -1,0 +1,18 @@
+[Unit]
+Description=Anthropic shim for Claude Code against local Bonsai
+After=bonsai.service
+# It binds the Tailscale IP, which can appear after login. Keep retrying instead of hitting the start limit.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/bonsai/env
+Environment=BONSAI_UPSTREAM=http://127.0.0.1:8080
+Environment=BONSAI_PROXY_PORT=8090
+Environment=BONSAI_PROXY_HOST=100.125.58.95
+ExecStart=/usr/bin/python3 %h/.local/bin/bonsai-cc-proxy.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
