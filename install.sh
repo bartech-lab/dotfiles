@@ -795,6 +795,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     # Bonsai units (archpc only; After= only: starting the proxy must not start Bonsai)
     config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai.service" "$HOME/.config/systemd/user/bonsai.service" "Bonsai unit"
     config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai-cc-proxy.service" "$HOME/.config/systemd/user/bonsai-cc-proxy.service" "Bonsai proxy unit"
+    config_symlinks "$DOTFILES_DIR/linux/bin/bonsai-cc-proxy.py" "$HOME/.local/bin/bonsai-cc-proxy.py" "Bonsai proxy script"
 
     # Desktop overrides (Wayland for Electron apps)
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code-oss.desktop" "$HOME/.local/share/applications/code-oss.desktop" "Code - OSS desktop"
