@@ -229,7 +229,8 @@ fi
 assert_contains "$ERROR_LOG" "Remote did not advertise a default branch for $BROKEN_REPO" \
     'missing remote HEAD was not reported'
 
-# A failed cached host probe must fail the run, even when no repo is scheduled.
+# An unreachable host is skipped without failing the run and without
+# refreshing its reachability record, so the heartbeat sees it go stale.
 MOCK_BIN="$TEST_ROOT/mock-bin"
 mkdir -p "$MOCK_BIN"
 export TEST_REAL_GIT
@@ -248,12 +249,30 @@ fi
 exec "$TEST_REAL_GIT" "$@"
 MOCK
 chmod +x "$MOCK_BIN/git"
-if PATH="$MOCK_BIN:$PATH" run_pull; then
-    fail 'auto-pull returned success after a host probe failure'
-fi
+export TEST_JOB_LOG="$TEST_ROOT/job-status.log"
+: > "$TEST_JOB_LOG"
+cat > "$MOCK_BIN/job-status" <<'MOCK'
+#!/bin/bash
+printf '%s\n' "$*" >> "$TEST_JOB_LOG"
+MOCK
+chmod +x "$MOCK_BIN/job-status"
+export JOB_STATUS_BIN="$MOCK_BIN/job-status"
+PATH="$MOCK_BIN:$PATH" run_pull || fail 'auto-pull failed when the only problem was an unreachable host'
+assert_eq 0 "$(wc -l < "$TEST_JOB_LOG" | tr -d ' ')" \
+    'an unreachable host refreshed its reachability record'
 assert_eq 1 "$(wc -l < "$TEST_PROBE_LOG" | tr -d ' ')" \
     'failed host probe was not cached'
 assert_contains "$ERROR_LOG" 'Skipped all unreachable.invalid repositories' \
     'host probe failure was not logged'
+assert_contains "$LOG_FILE" 'unreachable_skips=' 'unreachable skips were not counted in the summary'
+
+# A reachable host refreshes its record with the stale threshold.
+sed -i.orig -e 's/unreachable.invalid/reachable.invalid/' -e 's/    exit 128/    exit 0/' "$MOCK_BIN/git"
+rm -f "$MOCK_BIN/git.orig"
+PATH="$MOCK_BIN:$PATH" run_pull || true
+assert_eq 'ok git-auto-pull-reachable.invalid --max-age 96' "$(sort -u "$TEST_JOB_LOG")" \
+    'a reachable host did not record its reachability once per run'
+assert_eq 1 "$(wc -l < "$TEST_JOB_LOG" | tr -d ' ')" \
+    'the reachability record was written more than once per host'
 
 echo 'PASS: git-auto-pull default-branch and override integration tests'

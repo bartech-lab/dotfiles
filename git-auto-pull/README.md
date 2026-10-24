@@ -149,6 +149,8 @@ systemctl --user disable git-auto-pull.timer
 - Only works when you're online; a default-branch lookup or fetch failure is logged in `error.log`
 - A default branch that is only ahead of the remote is skipped and logged in `pull.log` with its unpushed commit count.
 - A diverged default branch is skipped, logged in `error.log`, and fails the run, so the heartbeat reports it. Nothing is merged automatically.
+- Each remote host is probed once per run. An unreachable host (for example GitLab with the work VPN off) skips its repositories and logs one line in `error.log`, but does not fail the run.
+- A reachable host refreshes the job record `git-auto-pull-<host>` with a 96-hour limit. The heartbeat reports that record as stale after 96 hours without a successful probe.
 
 ## Uninstallation
 
