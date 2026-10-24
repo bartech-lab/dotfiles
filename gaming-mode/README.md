@@ -18,8 +18,10 @@ Press **Meta+Shift+G**, or type `gaming`. Press or type it again after the game.
 Only units that are running are recorded in `$XDG_RUNTIME_DIR/gaming/state`, and `off`
 starts only those, in reverse order. A reboot clears the state; the units autostart anyway.
 
-- `bonsai-cc-proxy.service`, `bonsai.service` (llama-server: about 12 GB VRAM, 20 GB RAM).
-  Clients of `bonsai.sh` fall back to OpenRouter while it is down.
+- `bonsai.service` (llama-server: about 12 GB VRAM, 20 GB RAM). `bonsai-cc-proxy.service`
+  keeps running and answers every request with HTTP 503 and a `game_mode` error naming the
+  start time, so agents on both machines see why Bonsai is down. `bonsai.sh` then falls back
+  to OpenRouter.
 - `docker.socket`, `docker.service`, through `sudo -n`. Without a passwordless rule they are
   reported as not stopped; `sudoers.example` holds a narrow rule.
 - `system-update.timer`, `toolsmith.timer`, `logbook-sync.timer`. A run already in progress is

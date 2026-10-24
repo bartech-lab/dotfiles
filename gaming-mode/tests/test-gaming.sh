@@ -91,7 +91,7 @@ export PATH="$MOCK_BIN:$PATH"
 export GAMING_STATE_DIR="$STATE_DIR" GAMING_APPS_FILE="$APPS_FILE" GAMING_NO_WAIT=1
 export XDG_RUNTIME_DIR="$T/run"
 
-USER_UNITS=(bonsai-cc-proxy.service bonsai.service)
+USER_UNITS=(bonsai.service)
 SYS_UNITS=(docker.socket docker.service)
 TIMERS=(system-update.timer toolsmith.timer logbook-sync.timer)
 ALL_UNITS=("${USER_UNITS[@]}" "${SYS_UNITS[@]}" "${TIMERS[@]}")
@@ -99,7 +99,7 @@ ALL_UNITS=("${USER_UNITS[@]}" "${SYS_UNITS[@]}" "${TIMERS[@]}")
 reset() {
     rm -rf "$T"
     mkdir -p "$T/run" "$STATE_DIR"
-    printf '%s\n' "${ALL_UNITS[@]}" > "$ACTIVE"
+    printf '%s\n' bonsai-cc-proxy.service "${ALL_UNITS[@]}" > "$ACTIVE"
     : > "$EVENTS"
     : > "$APPS_FILE"
 }
@@ -141,7 +141,8 @@ for u in "${SYS_UNITS[@]}"; do
     assert_file_lacks "$EVENTS" "^systemctl --user stop $u\$" "system unit $u stopped with --user"
 done
 assert_file_lacks "$EVENTS" '^sudo .*(bonsai|timer)' 'user unit stopped through sudo'
-[[ -z "$(grep -c . "$ACTIVE" | grep -v '^0$' || true)" ]] || fail 'units still active after on'
+assert_file_lacks "$EVENTS" 'stop bonsai-cc-proxy' 'on stopped the proxy, so clients get a refused port instead of the game mode 503'
+assert_eq "$(cat "$ACTIVE")" bonsai-cc-proxy.service 'after on only the proxy may stay active'
 assert_file_lacks "$EVENTS" 'stop-saw-pause=n' 'a unit was stopped before the pause file existed'
 assert_file_has "$EVENTS" 'stop-saw-pause=y' 'no stop observed (pause ordering untestable)'
 [[ -f "$STATE_DIR/state" ]] || fail 'state file missing after on'
@@ -161,7 +162,7 @@ assert_eq "$(grep -vE '^(since|owner|max_age_hours|pause)=' "$PAUSE_FILE" | grep
 
 echo "== off: reverse order, state and pause removed"
 stops=$(calls stop)
-assert_eq "$(printf '%s\n' "$stops" | grep -c .)" 7 'expected one stop per active unit'
+assert_eq "$(printf '%s\n' "$stops" | grep -c .)" 6 'expected one stop per active unit'
 clear_events
 run_gaming off
 assert_eq "$rc" 0 'off must exit 0'
@@ -169,8 +170,6 @@ assert_has "$out" 'Game mode off' 'off did not print "Game mode off"'
 starts=$(calls start)
 assert_eq "$(printf '%s\n' "$starts" | tr '\n' ' ')" "$(printf '%s\n' "$stops" | tac | tr '\n' ' ')" 'start order is not the reverse of stop order'
 bi=$(printf '%s\n' "$starts" | index_of bonsai.service)
-pi=$(printf '%s\n' "$starts" | index_of bonsai-cc-proxy.service)
-(( bi < pi )) || fail 'bonsai.service must start before bonsai-cc-proxy.service'
 for t in "${TIMERS[@]}"; do
     ti=$(printf '%s\n' "$starts" | index_of "$t")
     (( ti < bi )) || fail "$t must start before bonsai.service"
@@ -184,7 +183,7 @@ done
 [[ ! -e "$STATE_DIR/state" ]] || fail 'state file survived off'
 [[ ! -e "$PAUSE_FILE" ]] || fail 'pause file survived off'
 [[ ! -s "$SETSID_LOG" ]] || fail 'setsid called with GAMING_NO_WAIT=1 during off'
-assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" "$(printf '%s\n' "${ALL_UNITS[@]}" | sort | tr '\n' ' ')" 'off did not restore the active set'
+assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" "$(printf '%s\n' bonsai-cc-proxy.service "${ALL_UNITS[@]}" | sort | tr '\n' ' ')" 'off did not restore the active set'
 
 echo "== on twice keeps the first snapshot"
 reset
@@ -201,12 +200,12 @@ assert_eq "$(calls start | sorted)" "$(printf '%s\n' "${ALL_UNITS[@]}" | sorted)
 
 echo "== units inactive before on are never started"
 reset
-printf '%s\n' bonsai-cc-proxy.service bonsai.service docker.socket system-update.timer logbook-sync.timer > "$ACTIVE"
+printf '%s\n' bonsai.service docker.socket system-update.timer logbook-sync.timer > "$ACTIVE"
 run_gaming on
 assert_eq "$rc" 0 'on with partly inactive units must exit 0'
 run_gaming off
 assert_eq "$rc" 0 'off must exit 0'
-assert_eq "$(calls start | sorted)" "$(printf '%s\n' bonsai-cc-proxy.service bonsai.service docker.socket system-update.timer logbook-sync.timer | sorted)" 'off started a different set than was active'
+assert_eq "$(calls start | sorted)" "$(printf '%s\n' bonsai.service docker.socket system-update.timer logbook-sync.timer | sorted)" 'off started a different set than was active'
 assert_file_lacks "$EVENTS" 'start docker\.service' 'inactive docker.service was started'
 assert_file_lacks "$EVENTS" 'start toolsmith\.timer' 'inactive toolsmith.timer was started'
 
@@ -229,9 +228,8 @@ line=$(printf '%s\n' "$out" | grep -F 'Not stopped:' || true)
 assert_has "$line" 'bonsai.service' 'failed unit not named after Not stopped:'
 assert_lacks "$line" 'docker' 'Not stopped lists a unit that stopped'
 assert_lacks "$line" 'timer' 'Not stopped lists a timer that stopped'
-assert_lacks "$line" 'bonsai-cc-proxy' 'Not stopped lists the proxy that stopped'
 assert_eq "$(calls stop | sorted)" "$(printf '%s\n' "${ALL_UNITS[@]}" | sorted)" 'a failure stopped the run early'
-assert_eq "$(cat "$ACTIVE")" bonsai.service 'only the failing unit may remain active'
+assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'bonsai-cc-proxy.service bonsai.service ' 'only the proxy and the failing unit may remain active'
 
 echo "== sudo has no rule"
 reset
@@ -244,7 +242,7 @@ assert_has "$line" 'docker.socket' 'docker.socket not named'
 assert_has "$line" 'docker.service' 'docker.service not named'
 assert_lacks "$line" 'bonsai' 'user unit reported though stopped without sudo'
 assert_lacks "$line" 'timer' 'timer reported though stopped without sudo'
-assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'docker.service docker.socket ' 'user units/timers must stop even without sudo'
+assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'bonsai-cc-proxy.service docker.service docker.socket ' 'user units/timers must stop even without sudo'
 
 echo "== start failure on off"
 reset
@@ -347,12 +345,12 @@ assert_file_lacks "$SETSID_LOG" 'fd9-open' 'the Bonsai wait inherited the lock o
 
 echo "== an inactive user service is neither recorded nor restarted"
 reset
-grep -vxF bonsai-cc-proxy.service "$ACTIVE" > "$ACTIVE.new"; mv "$ACTIVE.new" "$ACTIVE"
+grep -vxF bonsai.service "$ACTIVE" > "$ACTIVE.new"; mv "$ACTIVE.new" "$ACTIVE"
 run_gaming on
-assert_file_lacks "$STATE_DIR/state" 'bonsai-cc-proxy' 'an inactive user service was recorded as stopped'
+assert_file_lacks "$STATE_DIR/state" 'bonsai\.service' 'an inactive user service was recorded as stopped'
 clear_events
 run_gaming off
-assert_lacks "$(calls start)" 'bonsai-cc-proxy.service' 'off started a user service that was not running before on'
+assert_lacks "$(calls start)" 'bonsai.service' 'off started a user service that was not running before on'
 
 echo "== usage errors"
 reset
