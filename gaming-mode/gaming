@@ -33,7 +33,7 @@ USER_SERVICES=(bonsai.service)
 SYSTEM_UNITS=(docker.socket docker.service)
 USER_TIMERS=(system-update.timer toolsmith.timer logbook-sync.timer)
 # Heartbeat names that go quiet while Bonsai is stopped.
-PAUSED_PROBES=(bonsai-cc-proxy.service bonsai-http bonsai-cc-proxy)
+PAUSED_PROBES=(bonsai-cc-proxy.service bonsai-http bonsai-cc-proxy bonsai-no-crash)
 DEFAULT_APPS=('app-io.missioncenter.MissionCenter@*.service' 'app-org.kde.plasma\x2dsystemmonitor@*.service' 'app-psensor@*.service')
 
 say() {
