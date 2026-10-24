@@ -1,0 +1,17 @@
+[Unit]
+Description=Ternary Bonsai 2 27B (llama-server, PrismML fork)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/Bonsai-demo
+EnvironmentFile=%h/.config/bonsai/env
+ExecStart=/bin/sh -c 'exec %h/Projects/Bonsai-demo/scripts/start_llama_server.sh -a bonsai-2-27b $BONSAI_EXTRA'
+Restart=on-failure
+RestartSec=5
+# The model is ~7.2 GB; give the first load room before systemd gives up.
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
