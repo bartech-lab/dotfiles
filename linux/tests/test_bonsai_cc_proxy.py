@@ -481,6 +481,37 @@ class StreamingTest(ProxyCase):
         self.assertIn("text/event-stream", resp.getheader("Content-Type"))
         self.assertEqual(data, b"data: one\n\ndata: two\n\ndata: three\n\n")
 
+    def test_first_sse_chunk_reaches_the_client_before_the_upstream_sends_the_next(self):
+        seen = threading.Event()
+
+        def hook(h, body, idx):
+            h.send_response(200)
+            h.send_header("Content-Type", "text/event-stream")
+            h.send_header("Transfer-Encoding", "chunked")
+            h.end_headers()
+            for text in ("data: one\n\n", "data: two\n\n"):
+                data = text.encode()
+                h.wfile.write(b"%x\r\n%s\r\n" % (len(data), data))
+                h.wfile.flush()
+                seen.wait(5)
+            h.wfile.write(b"0\r\n\r\n")
+            h.wfile.flush()
+            return True
+
+        self.up.hook = hook
+        port = self.start()
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=3)
+        self.addCleanup(conn.close)
+        conn.request("POST", "/v1/chat/completions", body=json.dumps({"stream": True, "messages": []}),
+                     headers={"Authorization": "Bearer " + KEY, "Content-Type": "application/json"})
+        resp = conn.getresponse()
+        try:
+            first = resp.read1(1024)
+        finally:
+            seen.set()
+        self.assertEqual(first, b"data: one\n\n")
+        self.assertEqual(resp.read(), b"data: two\n\n")
+
 
 class GameModeTest(ProxyCase):
     def write_state(self):
