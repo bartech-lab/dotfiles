@@ -342,7 +342,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Transfer-Encoding", "chunked")
         self.end_headers()
         while True:
-            chunk = resp.read(8192)
+            chunk = resp.read1(8192)
             if not chunk:
                 break
             self.wfile.write(b"%X\r\n%s\r\n" % (len(chunk), chunk))
