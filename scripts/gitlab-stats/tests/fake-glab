@@ -55,6 +55,38 @@ if [[ "$endpoint" == */merge_requests/102/discussions && "${GLAB_MODE:-}" == ret
   fi
 fi
 
+if [[ -n "${GLAB_BAD_IID:-}" && "$endpoint" == */merge_requests/${GLAB_BAD_IID}/discussions ]]; then
+  case "${GLAB_MODE:-}" in
+    fail-discussion)
+      echo "500 discussion test failure" >&2
+      exit 1
+      ;;
+    nonarray-discussion)
+      jq -cn '{message: "500"}'
+      exit 0
+      ;;
+    no-author)
+      jq -cn '[{id: "bad-note", individual_note: false, notes: [
+        {id: 20, system: false}
+      ]}]'
+      exit 0
+      ;;
+    system-no-author)
+      jq -cn '[{id: "sys-note", individual_note: false, notes: [
+        {id: 21, system: true}
+      ]}]'
+      exit 0
+      ;;
+  esac
+fi
+
+if [[ "$endpoint" =~ /merge_requests/10[3-5]/discussions$ ]]; then
+  jq -cn '[{id: "generic", individual_note: false, notes: [
+    {id: 30, author: {id: 1, name: "Alice", username: "alice"}, system: false}
+  ]}]'
+  exit 0
+fi
+
 if [[ "$endpoint" == */merge_requests/101/discussions ]]; then
   if [[ "$page" == 1 ]]; then
     jq -cn '
