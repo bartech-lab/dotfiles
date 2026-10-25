@@ -28,7 +28,8 @@ config.color_schemes = {
 config.color_scheme = 'Pro (bartech)'
 
 -- Match Ghostty's Meslo 11 appearance and 10px window padding.
-config.font = wezterm.font_with_fallback { 'MesloLGS NF' }
+local cjk_font = wezterm.target_triple:find 'darwin' and 'Hiragino Sans GB' or 'Noto Sans CJK SC'
+config.font = wezterm.font_with_fallback { 'MesloLGS NF', cjk_font }
 config.font_size = 11
 config.window_padding = {
   left = 10,
