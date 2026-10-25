@@ -17,6 +17,7 @@ Listens on 127.0.0.1:8090 by default; forwards to $BONSAI_UPSTREAM.
 """
 import http.server
 import hmac
+import io
 import json
 import os
 import socketserver
@@ -291,6 +292,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(401)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.close_connection = True
         self.end_headers()
         self.wfile.write(body)
         return False
@@ -325,6 +328,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return urllib.request.urlopen(req, timeout=1800), None
         except urllib.error.HTTPError as exc:
             return None, exc
+        except (urllib.error.URLError, OSError) as exc:
+            reason = getattr(exc, "reason", exc)
+            body = json.dumps({"error": {"message": "Bonsai upstream unreachable: %s" % reason,
+                                         "type": "upstream_unavailable"}}).encode()
+            return None, urllib.error.HTTPError(req.full_url, 502, "Bad Gateway", {}, io.BytesIO(body))
 
     def _relay(self, resp):
         self.send_response(resp.status)
