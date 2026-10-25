@@ -60,6 +60,7 @@ cat > "$FAKE/bin/glab" <<'GLAB'
 dir="$(dirname "$0")/.."
 echo "$*" >> "$dir/calls"
 if [[ "$*" == *"projects/:id"* ]]; then
+  [[ -n "${FAKE_PROJECT:-}" ]] && { printf '{"path_with_namespace":"%s"}' "$FAKE_PROJECT"; exit 0; }
   exit 1
 fi
 if [[ "${2:-}" == graphql ]]; then
@@ -71,6 +72,7 @@ fi
 n=$(( $(cat "$dir/rest" 2>/dev/null || echo 0) + 1 ))
 echo "$n" > "$dir/rest"
 if (( n <= ${FAKE_FAILS:-0} )); then echo "fail $n"; exit 1; fi
+if [[ -n "${FAKE_USER:-}" ]]; then echo "$FAKE_USER"; exit 0; fi
 echo '{"ok":true}'
 GLAB
 chmod +x "$FAKE/bin/glab"
@@ -89,6 +91,18 @@ done
 git -C "$repo" remote set-url origin git@github.com:o/r.git
 if out=$(cd "$repo" && detect_project 2>&1); then fail "a github remote was accepted"; fi
 [[ "$out" == *"not hosted on gitlab.com"* ]] || fail "github remote message: $out"
+[[ "$(cd "$repo" && FAKE_PROJECT=team/real detect_project)" == team/real ]] || fail "glab's project wins over the remote"
+
+raw='[{"iid":"7","discussions":[{"notes":[{"system":false,"author":{"id":5,"name":"Old","username":"old"}}]}]}]'
+reset_fake
+if out=$(normalize_discussion_data "$raw" 2>&1); then fail "an author response without bot was accepted"; fi
+[[ "$out" == *"invalid author response for MR IIDs 7"* ]] || fail "invalid author message: $out"
+reset_fake
+author=$(FAKE_USER='{"id":5,"name":"Real","username":"real","bot":true}' normalize_discussion_data "$raw" | jq -c '.[0].discussions[0].notes.nodes[0].author')
+[[ "$author" == '{"name":"Real","username":"real","bot":true}' ]] || fail "the looked-up author replaces the note author: $author"
+
+if out=$(merge_discussion_data '[{"iid":"1"},{"iid":"2"}]' '[{"iid":"1","discussions":[]}]' 2>&1); then fail "discussions missing an MR were merged"; fi
+[[ "$out" == *"does not cover every fetched merge request"* ]] || fail "partial discussion merge message: $out"
 
 reset_fake
 echo '{"data":{"project":{"mergeRequests":{"nodes":[{"iid":"1"}],"pageInfo":{"hasNextPage":true,"endCursor":"c1"}}}}}' > "$FAKE/page-1.json"
