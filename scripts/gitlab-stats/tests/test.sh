@@ -64,6 +64,42 @@ fi
 assert_contains "$(<"$TMP_DIR/fail.err")" "MR IIDs 102"
 assert_contains "$(<"$TMP_DIR/fail.err")" "GET /users/2"
 
+mrs_of() {
+  jq -cn --argjson n "$1" '[range(0;$n) | {iid: ((101 + .) | tostring)}]'
+}
+
+if GLAB_BAD_IID=102 GLAB_MODE=fail-discussion fetch_discussion_data org/group/repo "$(mrs_of 2)" >"$TMP_DIR/f2.out" 2>"$TMP_DIR/f2.err"; then
+  fail "persistent discussion failure on the second MR did not fail the fetch"
+fi
+[[ ! -s "$TMP_DIR/f2.out" ]] || fail "partial discussion data printed after failure of the second MR"
+
+: > "$GLAB_LOG"
+if GLAB_BAD_IID=103 GLAB_MODE=fail-discussion fetch_discussion_data org/group/repo "$(mrs_of 5)" >"$TMP_DIR/f5.out" 2>"$TMP_DIR/f5.err"; then
+  fail "persistent discussion failure inside the parallel batch did not fail the fetch"
+fi
+[[ ! -s "$TMP_DIR/f5.out" ]] || fail "partial discussion data printed after failure inside the batch"
+[[ "$(rg -c '/merge_requests/103/discussions' "$GLAB_LOG")" -eq 4 ]] || fail "expected four attempts for the failing MR"
+
+if GLAB_BAD_IID=102 GLAB_MODE=fail-discussion bash "$ROOT_DIR/gitlab-stats" --project org/group/repo --since 2026-07-01 --until 2026-07-15 --stats comments --format json --no-cache >"$TMP_DIR/cli-fail.out" 2>"$TMP_DIR/cli-fail.err"; then
+  fail "CLI run succeeded despite a failing discussion fetch"
+fi
+[[ ! -s "$TMP_DIR/cli-fail.out" ]] || fail "CLI printed statistics despite a failing discussion fetch"
+
+if GLAB_BAD_IID=103 GLAB_MODE=nonarray-discussion fetch_discussion_data org/group/repo "$(mrs_of 3)" >"$TMP_DIR/na.out" 2>"$TMP_DIR/na.err"; then
+  fail "non-array discussion response did not fail the fetch"
+fi
+[[ ! -s "$TMP_DIR/na.out" ]] || fail "data printed after a non-array discussion response"
+assert_contains "$(<"$TMP_DIR/na.err")" "!103"
+
+if GLAB_BAD_IID=103 GLAB_MODE=no-author fetch_discussion_data org/group/repo "$(mrs_of 3)" >"$TMP_DIR/na2.out" 2>"$TMP_DIR/na2.err"; then
+  fail "note without author id did not fail the fetch"
+fi
+[[ ! -s "$TMP_DIR/na2.out" ]] || fail "data printed after a note without author id"
+grep -qiE 'invalid discussion data|partial statistics' "$TMP_DIR/na2.err" || fail "missing invalid discussion data error"
+
+sys_data=$(GLAB_BAD_IID=103 GLAB_MODE=system-no-author fetch_discussion_data org/group/repo "$(mrs_of 3)") || fail "system note without author failed the fetch"
+[[ -n "$sys_data" ]] || fail "no data for system note without author"
+
 export CACHE_DIR="$TMP_DIR/cache"
 first_output=$(bash "$ROOT_DIR/gitlab-stats" --project org/group/repo --since 2026-07-01 --until 2026-07-15 --stats comments --format json --no-cache 2>"$TMP_DIR/cli-first.err") || fail "CLI comments run failed"
 assert_contains "$first_output" "Reviewer | Review threads started"
