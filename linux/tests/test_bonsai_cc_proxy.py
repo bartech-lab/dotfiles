@@ -56,6 +56,9 @@ class Handler(BaseHTTPRequestHandler):
                 {"method": self.command, "path": path, "headers": {k.lower(): v for k, v in self.headers.items()}, "body": body}
             )
         if self.command == "POST" and path == "/tokenize":
+            if srv.tokenize_status != 200:
+                self.reply(srv.tokenize_status, b'{"error":"x"}')
+                return
             self.reply(200, json.dumps({"tokens": [1] * srv.tokens}).encode())
             return
         if self.command == "GET" and path == "/health":
@@ -82,6 +85,7 @@ class Upstream(ThreadingHTTPServer):
         self.inference_count = 0
         self.tokens = 10
         self.health_status = 200
+        self.tokenize_status = 200
         self.hook = None
         self.thread = threading.Thread(target=self.serve_forever, daemon=True)
         self.thread.start()
@@ -682,6 +686,19 @@ class AdmissionTest(ProxyCase):
         started = time.time()
         self.assertEqual(call(port, "POST", "/v1/chat/completions", self.BODY)[0], 200)
         self.assertLess(time.time() - started, 10)
+
+    def test_a_failed_tokenize_still_counts_the_prompt_by_its_length(self):
+        self.setup_gate()
+        self.up.tokenize_status = 500
+        self.BODY = {"max_tokens": 100, "messages": [{"role": "user", "content": "x" * 3000}]}
+        port = self.start(BONSAI_KV_BUDGET="1900", BONSAI_KV_WAIT="60")
+        results = {}
+        self.send_async(port, results, "first")
+        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 1))
+        self.send_async(port, results, "second")
+        self.assertFalse(wait_until(lambda: len(self.up.inference()) == 2, 1))
+        self.finish(results, 2)
+        self.assertEqual(results, {"first": 200, "second": 200})
 
     def second_runs_beside_first(self, budget, second_body):
         self.setup_gate()
