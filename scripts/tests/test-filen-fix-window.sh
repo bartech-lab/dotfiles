@@ -94,4 +94,12 @@ RC=0
 [[ $RC -eq 1 ]] || fail "an existing showOrOpenDriveWindow call elsewhere: expected --check exit 1, got $RC"
 "$TOOL" >/dev/null 2>&1 || fail "an existing showOrOpenDriveWindow call elsewhere: patch failed"
 ! grep -q 'this.driveWindow.focus();' "$FILEN_ASAR" || fail "an existing showOrOpenDriveWindow call elsewhere: handler left unpatched"
+build "$FILEN_ASAR"
+chmod a-w "$FILEN_ASAR"
+rm -f "$TEST_ROOT/sudo-called"
+RC=0
+"$TOOL" --check >/dev/null 2>&1 || RC=$?
+[[ ! -e "$TEST_ROOT/sudo-called" ]] || fail "--check on a read-only asar asked for sudo"
+[[ $RC -eq 1 ]] || fail "--check on a read-only asar: expected exit 1, got $RC"
+chmod u+w "$FILEN_ASAR"
 echo "PASS: filen-fix-window"
