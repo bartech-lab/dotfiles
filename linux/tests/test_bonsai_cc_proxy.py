@@ -448,6 +448,14 @@ class PassthroughTest(ProxyCase):
         self.assertEqual(status, 200)
         self.assertEqual(self.up.inference()[0]["body"], raw)
 
+    def test_json_that_is_not_an_object_is_forwarded_byte_for_byte(self):
+        port = self.start()
+        for path, raw in (("/v1/chat/completions", b"[]"), ("/v1/responses", b"null"), ("/v1/completions", b"[1, 2]")):
+            with self.subTest(path=path):
+                status, _, _ = call(port, "POST", path, raw, headers={"Content-Type": "application/json"})
+                self.assertEqual(status, 200)
+                self.assertEqual(self.up.inference()[-1]["body"], raw)
+
     def test_get_is_forwarded_to_same_path_upstream(self):
         port = self.start()
         status, _, data = call(port, "GET", "/v1/models")
@@ -593,7 +601,7 @@ class AdmissionTest(ProxyCase):
         self.assertNotIn("second", results)
         released = time.time()
         self.gate.set()
-        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 2, 3))
+        self.assertTrue(wait_until(lambda: len(self.arrivals) == 2, 3))
         t1.join(10)
         t2.join(10)
         self.assertEqual(results, {"first": 200, "second": 200})
@@ -607,7 +615,7 @@ class AdmissionTest(ProxyCase):
         self.assertTrue(wait_until(lambda: len(self.up.inference()) == 1))
         sent = time.time()
         self.send_async(port, results, "second")
-        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 2, 5))
+        self.assertTrue(wait_until(lambda: len(self.arrivals) == 2, 5))
         elapsed = self.arrivals[1][1] - sent
         self.assertGreaterEqual(elapsed, 0.35)
         self.assertLess(elapsed, 3.0)
@@ -663,7 +671,7 @@ class QueueTest(ProxyCase):
         gate.set()
         t.join(10)
         self.assertTrue(
-            wait_until(lambda: json.loads(call(port, "GET", "/queue")[2])["depth"] == 0, 3)
+            wait_until(lambda: json.loads(call(port, "GET", "/queue")[2])["running_age_s"] is None, 3)
         )
 
     def test_queue_requires_the_key(self):
