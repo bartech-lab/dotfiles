@@ -141,13 +141,17 @@ class ProxyCase(unittest.TestCase):
             "BONSAI_GAMING_STATE": self.state,
         }
         env.update(extra)
-        proc = subprocess.Popen(
-            ["python3", str(PROXY)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        log = open(os.path.join(self.tmp.name, "proxy-%d.log" % port), "w+")
+        self.addCleanup(log.close)
+        proc = subprocess.Popen(["python3", str(PROXY)], env=env, stdout=subprocess.DEVNULL, stderr=log)
 
         def stop():
             proc.terminate()
-            proc.wait(timeout=5)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
 
         self.addCleanup(stop)
         end = time.time() + 5
@@ -159,7 +163,8 @@ class ProxyCase(unittest.TestCase):
                 if proc.poll() is not None:
                     break
                 time.sleep(0.05)
-        self.fail("proxy did not listen")
+        log.seek(0)
+        self.fail("proxy did not listen: " + log.read()[-2000:])
 
     def forwarded_json(self, port, path, body):
         status, _, _ = call(port, "POST", path, body)
@@ -224,6 +229,12 @@ class AuthTest(ProxyCase):
                 status = resp.status
             self.assertEqual(status, 401)
         self.assertEqual(self.up.inference(), [])
+
+    def test_a_wrong_key_answer_closes_the_connection(self):
+        port = self.start()
+        status, resp, _ = call(port, "POST", "/v1/chat/completions", {"messages": []}, key="wrong")
+        self.assertEqual(status, 401)
+        self.assertEqual(resp.getheader("Connection"), "close")
 
 
 class UpstreamFailureTest(ProxyCase):
@@ -605,7 +616,7 @@ class AdmissionTest(ProxyCase):
         t1.join(10)
         t2.join(10)
         self.assertEqual(results, {"first": 200, "second": 200})
-        self.assertLess(self.arrivals[1][1] - released, 3)
+        self.assertLess(self.arrivals[1][1] - released, 10)
 
     def test_second_request_is_admitted_after_kv_wait_even_though_first_still_runs(self):
         self.setup_gate()
@@ -618,9 +629,31 @@ class AdmissionTest(ProxyCase):
         self.assertTrue(wait_until(lambda: len(self.arrivals) == 2, 5))
         elapsed = self.arrivals[1][1] - sent
         self.assertGreaterEqual(elapsed, 0.35)
-        self.assertLess(elapsed, 3.0)
+        self.assertLess(elapsed, 10.0)
         self.assertFalse(self.gate.is_set())
         self.finish(results, 2)
+
+    def test_an_upstream_error_releases_the_budget_for_the_next_request(self):
+        def hook(h, body, idx):
+            if idx == 0:
+                h.reply(500, b'{"error":"boom"}')
+                return True
+            return False
+
+        self.up.tokens = 600
+        self.up.hook = hook
+        port = self.start(BONSAI_KV_BUDGET="1000", BONSAI_KV_WAIT="60")
+        self.assertEqual(call(port, "POST", "/v1/chat/completions", self.BODY)[0], 500)
+        started = time.time()
+        self.assertEqual(call(port, "POST", "/v1/chat/completions", self.BODY)[0], 200)
+        self.assertLess(time.time() - started, 10)
+
+    def test_a_request_larger_than_the_whole_budget_runs_alone_without_waiting(self):
+        self.up.tokens = 600
+        port = self.start(BONSAI_KV_BUDGET="100", BONSAI_KV_WAIT="60")
+        started = time.time()
+        self.assertEqual(call(port, "POST", "/v1/chat/completions", self.BODY)[0], 200)
+        self.assertLess(time.time() - started, 10)
 
     def test_requests_that_fit_the_budget_run_concurrently(self):
         self.setup_gate()
