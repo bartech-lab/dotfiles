@@ -62,8 +62,15 @@ SIZE_DATA='[
 [[ "$(MR_DATA=$SIZE_DATA stat_size_distribution | body | sed -n 2p)" == '"Ann","2","0","0","1","1"' ]] || fail "200 is L only and 1000000 is still XL"
 [[ "$(MR_DATA=$SIZE_DATA TOP_N=1 stat_size_distribution | body | wc -l | tr -d ' ')" == 2 ]] || fail "TOP_N limits size rows"
 [[ "$(MR_DATA=$SIZE_DATA BUCKETS=0,10,20,30,40,999999 stat_size_distribution | body | head -1)" == 'Author,MR count,S,M,L,XL,B4' ]] || fail "a fifth bucket is labelled B4"
+[[ "$(MR_DATA=$SIZE_DATA BUCKETS=0,10,20,30,40,999999 stat_size_distribution | body | sed -n 2p)" == '"Ann","2","0","0","0","0","2"' ]] || fail "the B4 column holds its count"
+EDGE_DATA='[
+  {"author":{"name":"Ann","username":"ann","bot":false},"diffStatsSummary":{"additions":499,"deletions":0}},
+  {"author":{"name":"Ann","username":"ann","bot":false},"diffStatsSummary":{"additions":300,"deletions":200}}
+]'
+[[ "$(MR_DATA=$EDGE_DATA stat_size_distribution | body | sed -n 2p)" == '"Ann","2","0","0","1","1"' ]] || fail "499 is L and 500 is XL"
 
 [[ "$(stat_throughput | body)" == $'Author,2026-01,2026-02,Total\n"Alice","1","1","2"\n"Bob","0","1","1"' ]] || fail "throughput per author with empty months"
+[[ "$(EXCLUDE_BOTS=false stat_throughput | body | grep Renovate)" == '"Renovate","0","1","1"' ]] || fail "throughput per author with bots"
 [[ "$(BY_AUTHOR=false stat_throughput | body)" == $'"Month","Count"\n"2026-01","1"\n"2026-02","2"' ]] || fail "overall throughput without bots"
 
 OPEN_DATA=$(jq -c '. + [{"iid":"5","author":{"name":"Alice","username":"zara","bot":false},"mergedAt":null}]' <<< "$MR_DATA")
