@@ -449,6 +449,23 @@ class ResponsesTest(ProxyCase):
         self.assertEqual(got, body)
 
 
+class ResponsesItemTypeTest(ProxyCase):
+    def test_only_function_call_outputs_lose_their_non_text_parts(self):
+        image = {"type": "input_image", "image_url": "data:image/png;base64,AAAA"}
+        body = {"input": [{"type": "custom_tool_call_output", "output": [image]}]}
+        port = self.start()
+        got = self.forwarded_json(port, "/v1/responses", body)
+        self.assertEqual(got["input"][0]["output"], [image])
+
+
+class OddMessagesTest(ProxyCase):
+    def test_a_message_list_with_a_non_object_keeps_that_element(self):
+        body = {"messages": ["hi", {"role": "system", "content": "be brief"}]}
+        port = self.start()
+        got = self.forwarded_json(port, "/v1/messages", body)
+        self.assertIn("hi", got["messages"])
+
+
 class PassthroughTest(ProxyCase):
     def test_non_json_body_is_forwarded_byte_for_byte(self):
         port = self.start()
@@ -562,6 +579,17 @@ class GameModeTest(ProxyCase):
         status, _, _ = call(port, "GET", "/v1/models")
         self.assertEqual(status, 200)
         self.assertEqual(len(self.up.inference()), 2)
+
+    def test_a_state_file_without_a_since_line_reports_an_unknown_start(self):
+        with open(self.state, "w") as fh:
+            fh.write("on\n")
+        self.up.health_status = 503
+        port = self.start()
+        status, _, data = call(port, "POST", "/v1/chat/completions", {"messages": []})
+        self.assertEqual(status, 503)
+        err = json.loads(data)["error"]
+        self.assertIsNone(err["since"])
+        self.assertIn("since unknown", err["message"])
 
     def test_unhealthy_upstream_without_state_file_is_not_game_mode(self):
         self.up.health_status = 503
