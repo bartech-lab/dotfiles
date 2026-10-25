@@ -658,6 +658,8 @@ class QueueTest(ProxyCase):
         q = json.loads(data)
         self.assertIsInstance(q["running_age_s"], (int, float))
         self.assertNotIsInstance(q["running_age_s"], bool)
+        self.assertEqual(q["depth"], 0)
+        self.assertIsNone(q["oldest_waiting_age_s"])
         gate.set()
         t.join(10)
         self.assertTrue(
