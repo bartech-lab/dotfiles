@@ -366,8 +366,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             else:
                 payload = normalize(payload)
             raw = json.dumps(payload).encode()
-        except (ValueError, TypeError):
-            pass  # not JSON we understand — forward verbatim
+        except (ValueError, TypeError, AttributeError):
+            payload = None  # not JSON we understand — forward verbatim
 
         gated = any(self.path.startswith(p) for p in INFER_PATHS)
         cost = 0
