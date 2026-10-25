@@ -30,7 +30,7 @@ STATE_DIR = os.environ.get("SU_STATE_DIR", os.path.expanduser("~/.local/state/sy
 ACK_FILE = os.path.join(STATE_DIR, "news-ack")
 OPS = os.environ.get("OPS_BIN", os.path.expanduser("~/.agents/ops/bin/ops"))
 ETC_DIR = os.environ.get("SU_ETC_DIR", "/etc")
-UPDATE_CMD = shlex.split(os.environ.get("SU_UPDATE_CMD", "/usr/bin/yay -Syu --noconfirm"))
+UPDATE_CMD = shlex.split(os.environ.get("SU_UPDATE_CMD", "/usr/bin/yay -Syu --noconfirm --removemake"))
 INTERVENTION = re.compile(r"manual(ly)? intervention|intervention (is |may be )?required|requires? manual", re.I)
 
 
