@@ -683,6 +683,48 @@ class AdmissionTest(ProxyCase):
         self.assertEqual(call(port, "POST", "/v1/chat/completions", self.BODY)[0], 200)
         self.assertLess(time.time() - started, 10)
 
+    def second_runs_beside_first(self, budget, second_body):
+        self.setup_gate()
+        self.up.tokens = 10
+        port = self.start(BONSAI_KV_BUDGET=str(budget), BONSAI_KV_WAIT="60")
+        results = {}
+        self.send_async(port, results, "first")
+        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 1))
+
+        def run():
+            results["second"] = call(port, "POST", "/v1/chat/completions", second_body)[0]
+
+        threading.Thread(target=run, daemon=True).start()
+        admitted = wait_until(lambda: len(self.up.inference()) == 2, 3)
+        self.finish(results, 2)
+        return admitted
+
+    def test_max_completion_tokens_sets_the_reservation(self):
+        body = {"max_completion_tokens": 100, "messages": [{"role": "user", "content": "hi"}]}
+        self.assertTrue(self.second_runs_beside_first(1000, body))
+
+    def test_n_predict_sets_the_reservation(self):
+        body = {"n_predict": 100, "messages": [{"role": "user", "content": "hi"}]}
+        self.assertTrue(self.second_runs_beside_first(1000, body))
+
+    def test_a_huge_output_length_is_capped_when_reserving(self):
+        body = {"max_tokens": 1000000, "messages": [{"role": "user", "content": "hi"}]}
+        self.assertTrue(self.second_runs_beside_first(40000, body))
+
+    def test_queue_reports_a_waiting_request_and_the_running_age(self):
+        self.setup_gate()
+        port = self.start(BONSAI_KV_BUDGET="1000", BONSAI_KV_WAIT="60")
+        results = {}
+        self.send_async(port, results, "first")
+        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 1))
+        self.send_async(port, results, "second")
+        self.assertTrue(wait_until(lambda: json.loads(call(port, "GET", "/queue")[2])["depth"] == 1, 5))
+        time.sleep(0.3)
+        queue = json.loads(call(port, "GET", "/queue")[2])
+        self.assertGreaterEqual(queue["running_age_s"], 0.2)
+        self.assertIsInstance(queue["oldest_waiting_age_s"], float)
+        self.finish(results, 2)
+
     def test_requests_that_fit_the_budget_run_concurrently(self):
         self.setup_gate()
         self.up.tokens = 100
