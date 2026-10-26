@@ -356,14 +356,12 @@ bash ~/dotfiles/git-auto-pull/tests/test.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test-lib.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test-stats.sh
-zsh ~/dotfiles/zsh/tests/test-functions.zsh
-zsh ~/dotfiles/zsh/tests/test-dev.zsh
-zsh ~/dotfiles/zsh/tests/test-repo-check.zsh
-zsh ~/dotfiles/zsh/tests/test-media.zsh
-zsh ~/dotfiles/zsh/tests/test-images.zsh
-zsh ~/dotfiles/zsh/tests/test-encode.zsh
-zsh ~/dotfiles/zsh/tests/test-macos.zsh
+zsh ~/dotfiles/zsh/tests/run.zsh            # every zsh test
+zsh ~/dotfiles/zsh/tests/run.zsh test-images # or name the affected ones
 ```
+
+`run.zsh` runs each zsh test from a temporary directory under `timeout`
+(`TEST_TIMEOUT`, default 300 s), which kills the whole process tree of a hung test.
 
 ShellCheck is a static analyzer, not a formatter; `shfmt` remains optional and
 is not part of the validation gate.
