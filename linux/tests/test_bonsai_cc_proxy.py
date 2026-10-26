@@ -800,5 +800,159 @@ class QueueTest(ProxyCase):
         self.assertEqual(status, 401)
 
 
+class AdmissionHelpers:
+    BODY = AdmissionTest.BODY
+    setup_gate = AdmissionTest.setup_gate
+    finish = AdmissionTest.finish
+    send_async = AdmissionTest.send_async
+    second_runs_beside_first = AdmissionTest.second_runs_beside_first
+
+
+class AdmissionBoundaryTest(AdmissionHelpers, ProxyCase):
+    # first request costs 10 prompt tokens + 100 reserved = 110
+    def body(self, **fields):
+        return dict(fields, messages=[{"role": "user", "content": "hi"}])
+
+    def test_exact_fit_is_admitted_beside_the_running_request(self):
+        self.assertTrue(self.second_runs_beside_first(220, self.body(max_tokens=100)))
+
+    def test_one_token_over_the_budget_waits(self):
+        self.assertFalse(self.second_runs_beside_first(219, self.body(max_tokens=100)))
+
+    def test_zero_length_field_reserves_4096_exact_fit_is_admitted(self):
+        self.assertTrue(self.second_runs_beside_first(110 + 10 + 4096, self.body(max_tokens=0)))
+
+    def test_zero_length_field_reserves_4096_one_over_waits(self):
+        self.assertFalse(self.second_runs_beside_first(110 + 10 + 4096 - 1, self.body(max_tokens=0)))
+
+    def test_negative_length_field_reserves_4096_exact_fit_is_admitted(self):
+        self.assertTrue(self.second_runs_beside_first(110 + 10 + 4096, self.body(max_tokens=-5)))
+
+    def test_negative_length_field_reserves_4096_one_over_waits(self):
+        self.assertFalse(self.second_runs_beside_first(110 + 10 + 4096 - 1, self.body(max_tokens=-5)))
+
+    def test_absent_length_field_reserves_4096_exact_fit_is_admitted(self):
+        self.assertTrue(self.second_runs_beside_first(110 + 10 + 4096, self.body()))
+
+    def test_absent_length_field_reserves_4096_one_over_waits(self):
+        self.assertFalse(self.second_runs_beside_first(110 + 10 + 4096 - 1, self.body()))
+
+    def test_zero_max_tokens_falls_through_to_the_next_positive_field(self):
+        body = self.body(max_tokens=0, n_predict=100)
+        self.assertTrue(self.second_runs_beside_first(220, body))
+
+
+class QueueDetailTest(AdmissionHelpers, ProxyCase):
+    def test_trailing_slash_queue_is_answered_by_the_proxy_not_forwarded(self):
+        port = self.start()
+        status, _, data = call(port, "GET", "/queue/")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(data)["depth"], 0)
+        self.assertEqual([r for r in self.up.records if r["path"].startswith("/queue")], [])
+
+    def test_running_age_is_the_oldest_and_waiting_age_the_newer_request(self):
+        self.setup_gate()
+        port = self.start(BONSAI_KV_BUDGET="1000", BONSAI_KV_WAIT="60")
+        results = {}
+        self.send_async(port, results, "first")
+        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 1))
+        time.sleep(1.0)
+        self.send_async(port, results, "second")
+        self.assertTrue(wait_until(lambda: json.loads(call(port, "GET", "/queue")[2])["depth"] == 1, 5))
+        q = json.loads(call(port, "GET", "/queue/")[2])
+        self.assertEqual(q["depth"], 1)
+        self.assertGreaterEqual(q["running_age_s"], 1.0)
+        self.assertLess(q["oldest_waiting_age_s"], q["running_age_s"])
+        self.assertGreaterEqual(q["running_age_s"] - q["oldest_waiting_age_s"], 0.7)
+        self.finish(results, 2)
+
+
+class GameModeEmptySinceTest(ProxyCase):
+    def test_empty_since_value_reports_an_unknown_start(self):
+        Path(self.state).write_text("since=\n")
+        self.up.health_status = 503
+        port = self.start()
+        status, _, data = call(port, "POST", "/v1/chat/completions", {"messages": []})
+        self.assertEqual(status, 503)
+        err = json.loads(data)["error"]
+        self.assertEqual(err["type"], "game_mode")
+        self.assertIsNone(err["since"])
+        self.assertIn("unknown", err["message"])
+
+
+def system_texts(system):
+    if system is None:
+        return []
+    if isinstance(system, str):
+        return [system]
+    return [b["text"] for b in system]
+
+
+class EmptySystemTest(ProxyCase):
+    def test_anthropic_empty_string_system_adds_no_block(self):
+        port = self.start()
+        body = {"system": "", "messages": [{"role": "system", "content": "real"}, {"role": "user", "content": "q"}]}
+        got = self.forwarded_json(port, "/v1/messages", body)
+        self.assertEqual(got["system"], [{"type": "text", "text": "real"}])
+        self.assertEqual(got["messages"], [{"role": "user", "content": "q"}])
+
+    def test_anthropic_empty_stray_system_message_adds_no_block(self):
+        port = self.start()
+        body = {
+            "system": "base",
+            "messages": [{"role": "system", "content": ""}, {"role": "user", "content": "q"}],
+        }
+        got = self.forwarded_json(port, "/v1/messages", body)
+        self.assertEqual(system_texts(got.get("system")), ["base"])
+        self.assertEqual(got["messages"], [{"role": "user", "content": "q"}])
+
+    def test_chat_single_leading_system_with_list_content_is_forwarded_unchanged(self):
+        port = self.start()
+        body = {
+            "messages": [
+                {"role": "system", "content": [{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]},
+                {"role": "user", "content": "u"},
+            ]
+        }
+        got = self.forwarded_json(port, "/v1/chat/completions", body)
+        self.assertEqual(got, body)
+
+    def test_chat_all_empty_system_messages_are_removed_without_adding_one(self):
+        port = self.start()
+        body = {
+            "messages": [
+                {"role": "system", "content": ""},
+                {"role": "user", "content": "u"},
+                {"role": "system", "content": ""},
+            ]
+        }
+        got = self.forwarded_json(port, "/v1/chat/completions", body)
+        self.assertEqual(got["messages"], [{"role": "user", "content": "u"}])
+
+
+class KeylessAndErrorTypeTest(ProxyCase):
+    def test_proxy_without_a_key_accepts_unauthenticated_requests(self):
+        port = self.start(BONSAI_KEY="")
+        status, _, _ = call(port, "POST", "/v1/chat/completions", {"messages": []}, key=None)
+        self.assertEqual(status, 200)
+        status, _, _ = call(port, "GET", "/v1/models", key=None)
+        self.assertEqual(status, 200)
+        status, _, _ = call(port, "POST", "/v1/chat/completions", {"messages": []}, key="any-client-key")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(self.up.inference()), 3)
+
+    def test_upstream_error_post_is_json_typed_with_the_upstream_body_unchanged(self):
+        def hook(h, body, idx):
+            h.reply(500, b"plain upstream failure", ctype="text/plain")
+            return True
+
+        self.up.hook = hook
+        port = self.start()
+        status, resp, data = call(port, "POST", "/v1/chat/completions", {"messages": []})
+        self.assertEqual(status, 500)
+        self.assertEqual(data, b"plain upstream failure")
+        self.assertIn("application/json", resp.getheader("Content-Type"))
+
+
 if __name__ == "__main__":
     unittest.main()
