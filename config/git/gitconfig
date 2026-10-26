@@ -2,7 +2,6 @@
     path = ~/.gitconfig.local
 [core]
   excludesfile = ~/.gitignore_global
-  fsmonitor = true
   untrackedCache = true
 [init]
   defaultBranch = main
