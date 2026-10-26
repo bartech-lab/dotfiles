@@ -41,6 +41,8 @@ ERROR_LOG="$CONFIG_DIR/error.log"
 PROBE_TIMEOUT="${HEARTBEAT_PROBE_TIMEOUT:-20}"
 MAX_LOG_BYTES="${HEARTBEAT_MAX_LOG_BYTES:-1048576}"
 PAUSE_FILE="${HEARTBEAT_PAUSE_FILE:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/heartbeat-pause}"
+BOOT_GRACE="${HEARTBEAT_BOOT_GRACE:-300}"
+UPTIME_FILE="${HEARTBEAT_UPTIME_FILE:-/proc/uptime}"
 
 if ! mkdir -p "$CONFIG_DIR"; then
     printf 'Error: unable to create log directory: %s\n' "$CONFIG_DIR" >&2
@@ -257,6 +259,29 @@ fi
 
 rotate_log "$LOG_FILE"
 rotate_log "$ERROR_LOG"
+
+# Prints whole seconds since boot, or nothing when unknown.
+uptime_seconds() {
+    local boot value
+    if [[ "$(uname -s)" == Darwin ]]; then
+        boot=$(sysctl -n kern.boottime 2>/dev/null | sed -n 's/^{ sec = \([0-9]*\),.*/\1/p')
+        [[ "$boot" =~ ^[0-9]+$ ]] && echo $(( $(date +%s) - boot ))
+    else
+        read -r value _ < "$UPTIME_FILE" 2>/dev/null || return 0
+        value="${value%%.*}"
+        [[ "$value" =~ ^[0-9]+$ ]] && echo "$value"
+    fi
+    return 0
+}
+
+# A catch-up run right after boot or login sees services that have not started yet.
+if (( ! STATUS_MODE )) && [[ "$BOOT_GRACE" =~ ^[0-9]+$ ]] && (( BOOT_GRACE > 0 )); then
+    uptime=$(uptime_seconds)
+    if [[ -n "$uptime" ]] && (( uptime < BOOT_GRACE )); then
+        log_info "Run skipped: uptime=${uptime}s inside boot grace ${BOOT_GRACE}s"
+        exit 0
+    fi
+fi
 
 monitored=0
 loaded=0

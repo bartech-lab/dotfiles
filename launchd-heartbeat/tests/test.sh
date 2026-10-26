@@ -123,6 +123,7 @@ chmod +x "$MOCK_BIN/notify-send"
 export CALL_LOG NOTIFY_LOG
 export HOME="$TEST_HOME"
 export PATH="$MOCK_BIN:$PATH"
+export HEARTBEAT_BOOT_GRACE=0
 
 help_output=$(bash "$SCRIPT_DIR/heartbeat.sh" --help)
 [[ "$help_output" == *'Usage: heartbeat.sh [--help]'* ]] || fail '--help did not print usage'

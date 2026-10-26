@@ -13,7 +13,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 
 mkdir -p "$MOCK_BIN"
 export HOME="$TEST_ROOT/home" JOB_STATUS_DIR="$JOB_DIR" CALLS
-export HEARTBEAT_PAUSE_FILE="$TEST_ROOT/no-pause" HEARTBEAT_MAX_LOG_BYTES=1048576
+export HEARTBEAT_PAUSE_FILE="$TEST_ROOT/no-pause" HEARTBEAT_MAX_LOG_BYTES=1048576 HEARTBEAT_BOOT_GRACE=0
 export PATH="$MOCK_BIN:$PATH"
 cat > "$MOCK_BIN/notify-send" <<'SH'
 #!/bin/sh
@@ -201,5 +201,63 @@ printf '#!/bin/sh\necho "ops $*" >> "$CALLS"\nexit 1\n' > "$TEST_ROOT/ops-fail"
 chmod +x "$TEST_ROOT/ops-fail"
 OPS_BIN="$TEST_ROOT/ops-fail" bash "$SCRIPT_DIR/heartbeat.sh" >/dev/null 2>&1 || true
 grep -q '^ops notify' "$CALLS" && grep -q '^desktop' "$CALLS" || fail "a failing ops notify falls back to the desktop notifier: $(cat "$CALLS" 2>/dev/null)"
+
+os Linux
+cat > "$MOCK_BIN/systemctl" <<'SH'
+#!/bin/sh
+exit 1
+SH
+chmod +x "$MOCK_BIN/systemctl"
+grace_run() {
+    rm -f "$CALLS"
+    HEARTBEAT_BOOT_GRACE=300 HEARTBEAT_UPTIME_FILE="$TEST_ROOT/uptime" OPS_BIN="$TEST_ROOT/ops" \
+        bash "$SCRIPT_DIR/heartbeat.sh" "$@" 2>&1
+}
+
+reset
+printf 'last_failure=1700000000\n' > "$JOB_DIR/bad.status"
+printf '299.50 100.00\n' > "$TEST_ROOT/uptime"
+grace_run >/dev/null || true
+[[ ! -e $CALLS ]] || fail "a run inside the boot grace notifies nothing: $(cat "$CALLS")"
+[[ ! -e $CONF_DIR/last-notified ]] || fail "a run inside the boot grace leaves last-notified alone"
+grep -q 'Run skipped: uptime=299s' "$CONF_DIR/heartbeat.log" || fail "a skipped run is logged: $(cat "$CONF_DIR/heartbeat.log" 2>/dev/null)"
+
+reset
+printf 'last_failure=1700000000\n' > "$JOB_DIR/bad.status"
+printf '300.10 100.00\n' > "$TEST_ROOT/uptime"
+grace_run >/dev/null || true
+grep -q '^ops notify heartbeat Failed or missing: bad (failed)' "$CALLS" 2>/dev/null || fail "a run past the boot grace notifies: $(cat "$CALLS" 2>/dev/null)"
+
+reset
+printf 'last_failure=1700000000\n' > "$JOB_DIR/bad.status"
+printf '10.00 1.00\n' > "$TEST_ROOT/uptime"
+rc=0; out=$(grace_run --status) || rc=$?
+[[ $rc -eq 2 && $out == *"FAIL bad failed"* ]] || fail "--status ignores the boot grace: rc=$rc $out"
+
+reset
+printf 'last_failure=1700000000\n' > "$JOB_DIR/bad.status"
+rm -f "$TEST_ROOT/uptime"
+grace_run >/dev/null || true
+grep -q '^ops notify' "$CALLS" 2>/dev/null || fail "an unreadable uptime runs the checks instead of skipping: $(cat "$CALLS" 2>/dev/null)"
+
+os Darwin
+cat > "$MOCK_BIN/launchctl" <<'SH'
+#!/bin/sh
+exit 1
+SH
+cat > "$MOCK_BIN/sysctl" <<'SH'
+#!/bin/sh
+echo "{ sec = $BOOT_SEC, usec = 0 } Mon Oct 26 21:02:58 2026"
+SH
+chmod +x "$MOCK_BIN/launchctl" "$MOCK_BIN/sysctl"
+reset
+printf 'last_failure=1700000000\n' > "$JOB_DIR/bad.status"
+BOOT_SEC=$(( $(date +%s) - 60 )) grace_run >/dev/null || true
+[[ ! -e $CALLS ]] || fail "Darwin: a run 60s after boot notifies nothing: $(cat "$CALLS")"
+reset
+printf 'last_failure=1700000000\n' > "$JOB_DIR/bad.status"
+BOOT_SEC=$(( $(date +%s) - 3600 )) grace_run >/dev/null || true
+grep -q '^ops notify' "$CALLS" 2>/dev/null || fail "Darwin: a run an hour after boot notifies: $(cat "$CALLS" 2>/dev/null)"
+rm -f "$MOCK_BIN/sysctl" "$MOCK_BIN/launchctl"
 
 echo "PASS: launchd-heartbeat edge tests"
