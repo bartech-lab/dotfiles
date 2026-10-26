@@ -352,6 +352,24 @@ clear_events
 run_gaming off
 assert_lacks "$(calls start)" 'bonsai.service' 'off started a user service that was not running before on'
 
+echo "== a timer's service that is running now is named and left alone"
+reset
+echo system-update.service >> "$ACTIVE"
+run_gaming on
+assert_has "$out" 'system-update.service (running now, left alone)' 'on did not name the running timer service'
+assert_lacks "$out" 'toolsmith.service' 'on named a timer service that was not running'
+assert_file_has "$ACTIVE" '^system-update\.service$' 'on stopped a timer service that was running'
+
+echo "== VRAM is unknown when nvidia-smi gives no number"
+reset
+cat > "$MOCK_BIN/nvidia-smi" <<'STUB'
+#!/bin/bash
+echo '[N/A]'
+STUB
+run_gaming status
+assert_has "$out" 'VRAM free: ? GB' 'a non-numeric nvidia-smi answer was not reported as unknown'
+printf '#!/bin/bash\necho 14336\n' > "$MOCK_BIN/nvidia-smi"
+
 echo "== usage errors"
 reset
 run_gaming run
