@@ -84,6 +84,7 @@ cat > "$MOCK_BIN/setsid" <<'STUB'
 #!/bin/bash
 echo "$*" >> "$SETSID_LOG"
 if { : >&9; } 2>/dev/null; then echo "fd9-open" >> "$SETSID_LOG"; fi
+echo "setsid-end" >> "$SETSID_LOG"
 STUB
 chmod +x "$MOCK_BIN"/*
 
@@ -340,6 +341,7 @@ echo "== the background Bonsai wait does not hold the command lock"
 reset; : > "$SETSID_LOG"
 run_gaming on
 GAMING_NO_WAIT=0 run_gaming off
+for _ in $(seq 50); do grep -qx setsid-end "$SETSID_LOG" && break; sleep 0.1; done
 assert_file_has "$SETSID_LOG" '_wait-bonsai' 'off did not start the Bonsai wait'
 assert_file_lacks "$SETSID_LOG" 'fd9-open' 'the Bonsai wait inherited the lock on fd 9, so the next gaming on blocks for up to the health wait'
 
