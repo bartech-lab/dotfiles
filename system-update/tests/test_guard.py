@@ -237,10 +237,11 @@ class NvidiaTest(unittest.TestCase):
                 return io.StringIO(loaded + "\n")
             return real_open(file, *args, **kwargs)
 
-        env = {"PATH": str(bindir) + os.pathsep + os.environ["PATH"], "SU_ETC_DIR": str(etc)}
+        env = {"PATH": str(bindir) + os.pathsep + os.environ["PATH"]}
         with mock.patch.dict(os.environ, env), mock.patch.object(builtins, "open", fake_open), \
-                mock.patch("os.path.isdir", return_value=True):
+                mock.patch.object(module, "ETC_DIR", str(etc)), mock.patch("os.path.isdir", return_value=True):
             result = module.post_checks(0.0)
+        self.assertNotIn("new .pacnew files", [t for t, _ in result], "the test read the real /etc")
         return [(t, m) for t, m in result if "nvidia" in (t + m).lower()]
 
     def test_differing_versions_report_reboot_needed_naming_both(self):
