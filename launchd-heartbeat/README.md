@@ -15,6 +15,7 @@ Supports **macOS** (LaunchAgents) and **Linux** (systemd user units). Detects pl
 - Sends one desktop notification when the set of problems changes. It does not repeat while the set stays the same.
 - Writes errors to a separate log file. Each log moves to `.1` above 1 MB.
 - `launchd-heartbeat --status` prints one line per check and exits 2 when any check has a problem. It never notifies.
+- Skips a run within `HEARTBEAT_BOOT_GRACE` seconds of boot (default 300, 0 disables), because a catch-up run at boot or login sees services that have not started yet. `--status` never skips.
 
 ## Setup
 
