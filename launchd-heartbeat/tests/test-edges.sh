@@ -69,6 +69,16 @@ printf 'last_success=%s\nmax_age_hours=24\n' "$(date +%s)" > "$JOB_DIR/ok.status
 status
 [[ $status_rc -eq 0 && $out == *"ok ok job last_success="* ]] || fail "a recent success is ok: rc=$status_rc $out"
 
+reset
+printf 'last_success=%s\nmax_age_hours=day\n' "$(( $(date +%s) - 60 ))" > "$JOB_DIR/typo.status"
+status
+[[ $status_rc -eq 0 && $out == *"ok typo job"* ]] || fail "a non-numeric max_age_hours is ignored, not a stale alarm: rc=$status_rc $out"
+
+reset
+printf 'last_failure=1700000000\n' > "$JOB_DIR/silent.status"
+status
+[[ $out == *"FAIL silent failed"*"reason=unknown"* ]] || fail "a failure without a reason says reason=unknown: $out"
+
 cat > "$MOCK_BIN/systemctl" <<'SH'
 #!/bin/sh
 case "$*" in
