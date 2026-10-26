@@ -21,6 +21,7 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -94,6 +95,11 @@ def run(cmd):
         return ""
 
 
+def filesystem_now():
+    with tempfile.TemporaryFile() as handle:
+        return os.fstat(handle.fileno()).st_ctime
+
+
 def post_checks(started):
     findings = []
     failed = [line.split()[0] for scope in ([], ["--user"])
@@ -154,7 +160,7 @@ def main(argv):
         if info:
             write_ack(max(i["published"] for i in info))
 
-    started = time.time()
+    started = filesystem_now()
     code = subprocess.run(UPDATE_CMD).returncode
     if code != 0:
         print(f"update failed: {' '.join(UPDATE_CMD)} exited {code}", file=sys.stderr)
