@@ -141,13 +141,24 @@ class GuardTest(unittest.TestCase):
     def test_other_intervention_phrasings_hold_the_update(self):
         for title, body in (("Intervention Required for foo", "details"),
                             ("foo 1.2 update", "this requires manual steps"),
-                            ("foo 1.2 update", "manual intervention may be needed: intervention is required")):
+                            ("foo 1.2 update", "manual intervention may be needed: intervention is required"),
+                            ("foo 1.2 update", "intervention may be required when upgrading"),
+                            ("foo 1.2 update", "this may require manual steps")):
             with self.subTest(title=title, body=body):
                 self.seed()
                 item = dict(title=title, slug="foo", body=body, date="Thu, 22 Oct 2026 08:00:00 +0000")
                 self.feed.write_text(feed(item, OLD))
                 self.assertEqual(self.guard().returncode, 3)
                 self.assertFalse(self.updated.exists())
+
+    def test_ack_stops_at_the_newest_item_so_a_late_listed_older_item_still_holds(self):
+        self.feed.write_text(feed(OLD))
+        self.assertEqual(self.guard("--ack").returncode, 0)
+        late = dict(title="foo requires manual intervention", slug="late", body="details",
+                    date="Tue, 06 Oct 2026 10:00:00 +0000")
+        self.feed.write_text(feed(late, OLD))
+        self.assertEqual(self.guard().returncode, 3)
+        self.assertFalse(self.updated.exists())
 
     def test_two_informational_items_are_both_announced_once(self):
         self.seed()
