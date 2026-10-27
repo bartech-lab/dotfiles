@@ -15,7 +15,7 @@ set -eu
 PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
 export PATH
 
-BREW=/opt/homebrew/bin/brew
+BREW="${BREW_BIN:-/opt/homebrew/bin/brew}"
 [ -x "$BREW" ] || exit 0
 
 LOG_DIR="$HOME/Library/Logs/brew-autoupdate"
