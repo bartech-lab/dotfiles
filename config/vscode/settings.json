@@ -15,5 +15,6 @@
   "git.autorefresh": true,
   "git.autofetch": true,
   "git.autofetchPeriod": 60,
-  "terminal.integrated.enableMultiLinePasteWarning": "never"
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
+  "editor.accessibilitySupport": "off"
 }
