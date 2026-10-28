@@ -103,4 +103,28 @@ run_tool
 [[ "$(git -C "$HOME/dotfiles" rev-parse HEAD)" == "$new" ]] || fail "\$HOME/dotfiles was not fast-forwarded without a config entry (rc=$RC): $(cat "$ERRLOG" 2>/dev/null)"
 echo "ok: ~/dotfiles is auto-scheduled and fast-forwarded"
 
+# Test 6: one rejected ls-remote and one rejected fetch are retried, not failures.
+rm -f "$CONF"/*.log "$CONF"/*.log.1
+REAL_GIT=$(command -v git)
+mkdir -p "$TEST_ROOT/bin"
+cat > "$TEST_ROOT/bin/git" <<STUB
+#!/bin/bash
+for cmd in ls-remote fetch; do
+    if [[ " \$* " == *" \$cmd "* && ! -e "$TEST_ROOT/rejected-\$cmd" ]]; then
+        touch "$TEST_ROOT/rejected-\$cmd"
+        echo 'git@gitlab.com: Permission denied (publickey).' >&2
+        exit 128
+    fi
+done
+exec "$REAL_GIT" "\$@"
+STUB
+chmod +x "$TEST_ROOT/bin/git"
+publish v6
+new=$(git -C "$DEV" rev-parse HEAD)
+PATH="$TEST_ROOT/bin:$PATH" REMOTE_RETRY_DELAY=0 run_tool
+[[ "$RC" -eq 0 ]] || fail "a single rejected remote call must be retried, got rc=$RC: $(cat "$ERRLOG" 2>/dev/null)"
+[[ -e "$TEST_ROOT/rejected-ls-remote" && -e "$TEST_ROOT/rejected-fetch" ]] || fail "setup: the stub did not reject both calls"
+[[ "$(git -C "$HOME/dotfiles" rev-parse HEAD)" == "$new" ]] || fail "dotfiles was not fast-forwarded after a retry"
+echo "ok: a single rejected ls-remote or fetch is retried"
+
 echo "PASS: git-auto-pull edge tests"
