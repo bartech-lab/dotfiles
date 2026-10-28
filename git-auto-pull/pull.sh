@@ -89,6 +89,16 @@ log_error() {
     echo "$(timestamp): $1" >> "$ERROR_LOG"
 }
 
+# gitlab.com occasionally rejects a single SSH auth (Permission denied
+# (publickey)) while the same key works seconds earlier and later.
+REMOTE_RETRY_DELAY="${REMOTE_RETRY_DELAY:-10}"
+
+git_remote() {
+    git "$@" 2>&1 && return 0
+    sleep "$REMOTE_RETRY_DELAY"
+    git "$@" 2>&1
+}
+
 resolve_default_branch() {
     local repo_path="$1"
     local remote
@@ -100,7 +110,7 @@ resolve_default_branch() {
         return 2
     fi
 
-    if ! head_output=$(git -C "$repo_path" ls-remote --symref origin HEAD 2>&1); then
+    if ! head_output=$(git_remote -C "$repo_path" ls-remote --symref origin HEAD); then
         log_error "Default branch lookup failed for $repo_path: $head_output"
         return 1
     fi
@@ -190,7 +200,7 @@ process_repo() {
     fi
 
     local fetch_output
-    if ! fetch_output=$(git fetch --quiet origin "$branch_name" 2>&1); then
+    if ! fetch_output=$(git_remote fetch --quiet origin "$branch_name"); then
         log_error "Fetch failed for $repo_path ($branch_name): $fetch_output"
         return 1
     fi
