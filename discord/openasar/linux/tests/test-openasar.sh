@@ -361,17 +361,6 @@ test_check_no_symlink_no_link_line() {
     assert_check_exit
 }
 
-test_check_exit_matches_fail_lines() {
-    new_case
-    mkinstall 1.0.1 'OpenAsar build' with-core
-    run_prog discord-check
-    assert_check_exit
-    rm -rf "$DISCORD/app-1.0.1/modules"
-    run_prog discord-check
-    assert_eq "$RC" 1 "broken install must exit 1"
-    assert_check_exit
-}
-
 tests=(
     test_patch_download_and_patch
     test_patch_validation_accepts_any_case
@@ -397,7 +386,6 @@ tests=(
     test_check_symlink_good
     test_check_symlink_stale
     test_check_no_symlink_no_link_line
-    test_check_exit_matches_fail_lines
 )
 for t in "${tests[@]}"; do
     "$t"

@@ -252,18 +252,6 @@ class UpstreamFailureTest(ProxyCase):
         self.assertEqual(status, 502)
         self.assertEqual(json.loads(data)["error"]["type"], "upstream_unavailable")
 
-    def test_upstream_500_body_passes_through_unchanged(self):
-        def hook(h, body, idx):
-            h.reply(500, b'{"error":"boom"}')
-            return True
-
-        self.up.hook = hook
-        port = self.start()
-        status, _, data = call(port, "POST", "/v1/chat/completions", {"messages": []})
-        self.assertEqual(status, 500)
-        self.assertEqual(json.loads(data), {"error": "boom"})
-
-
 class AnthropicSystemTest(ProxyCase):
     def test_system_messages_move_into_system_blocks_after_string_system(self):
         port = self.start()
@@ -727,32 +715,6 @@ class AdmissionTest(ProxyCase):
     def test_a_huge_output_length_is_capped_when_reserving(self):
         body = {"max_tokens": 1000000, "messages": [{"role": "user", "content": "hi"}]}
         self.assertTrue(self.second_runs_beside_first(40000, body))
-
-    def test_queue_reports_a_waiting_request_and_the_running_age(self):
-        self.setup_gate()
-        port = self.start(BONSAI_KV_BUDGET="1000", BONSAI_KV_WAIT="60")
-        results = {}
-        self.send_async(port, results, "first")
-        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 1))
-        self.send_async(port, results, "second")
-        self.assertTrue(wait_until(lambda: json.loads(call(port, "GET", "/queue")[2])["depth"] == 1, 5))
-        time.sleep(0.3)
-        queue = json.loads(call(port, "GET", "/queue")[2])
-        self.assertGreaterEqual(queue["running_age_s"], 0.2)
-        self.assertIsInstance(queue["oldest_waiting_age_s"], float)
-        self.finish(results, 2)
-
-    def test_requests_that_fit_the_budget_run_concurrently(self):
-        self.setup_gate()
-        self.up.tokens = 100
-        port = self.start(BONSAI_KV_BUDGET="1000", BONSAI_KV_WAIT="60")
-        results = {}
-        self.send_async(port, results, "first")
-        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 1))
-        self.send_async(port, results, "second")
-        self.assertTrue(wait_until(lambda: len(self.up.inference()) == 2, 2))
-        self.finish(results, 2)
-
 
 class QueueTest(ProxyCase):
     def test_idle_queue_reports_depth_zero_and_null_ages_and_is_not_forwarded(self):

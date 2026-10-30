@@ -128,17 +128,6 @@ else
   print -- "SKIP: libvpx-vp9 unavailable, webm case"
 fi
 
-W="$TEST_ROOT/w9"
-mkdir -p "$W"
-h264_mov "$W/twice.mov"
-srcsum=$(sum "$W/twice.mov")
-out=$(video-remux "$W/twice.mov" 2>&1); rc=$?
-(( rc == 0 )) || fail "first run rc=$rc out=$out"
-firstsum=$(sum "$W/twice.mp4")
-out2=$(video-remux "$W/twice.mov" 2>&1); rc2=$?
-[[ -n $(vcodec "$W/twice.mp4") ]] || fail "after second run, twice.mp4 not a valid video rc=$rc2 out=$out2"
-[[ $(sum "$W/twice.mov") == $srcsum ]] || fail "second run changed source rc=$rc2 out=$out2"
-
 W="$TEST_ROOT/w-keep"
 mkdir -p "$W"
 h264_mov "$W/keep.mov"

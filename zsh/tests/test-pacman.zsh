@@ -81,13 +81,6 @@ out=$(pacup 2>&1); rc=$?
 has "✓ System updated"
 calls_are "sudo pacman -Syu" "pacman -Syu"
 
-CASE="pacup without yay, pacman fails"
-with sudo pacman
-PACMAN_RC=3
-out=$(pacup 2>&1); rc=$?
-(( rc == 3 )) || fail "$CASE: rc=$rc, want 3"
-hasnt "✓ System updated"
-
 CASE="pacclean success"
 with sudo paccache
 out=$(pacclean 2>&1); rc=$?

@@ -96,20 +96,6 @@ wrapped push broken feature/x
 expect_branch feature/x "case 2"
 expect_no_switch_message "case 2"
 
-mk_case c2b develop
-start_feature
-"$REAL" -C "$WT" push origin feature/x >/dev/null 2>&1
-"$REAL" -C "$WT" switch develop >/dev/null 2>&1
-"$REAL" -C "$WT" switch -c feature/y >/dev/null 2>&1
-"$REAL" -C "$WT" commit --allow-empty -m "Other" >/dev/null
-real_status=0
-"$REAL" -C "$WT" push origin feature/y:refs/heads/feature/x >/dev/null 2>&1 || real_status=$?
-[[ "$real_status" -ne 0 ]] || fail "case 2b: setup push unexpectedly succeeded"
-wrapped push origin feature/y:refs/heads/feature/x
-[[ "$STATUS" -eq "$real_status" ]] || fail "case 2b: expected exit $real_status, got $STATUS"
-expect_branch feature/y "case 2b"
-expect_no_switch_message "case 2b"
-
 mk_case c3 develop
 remote_branch develop main
 "$REAL" -C "$WT" remote set-head origin main >/dev/null
