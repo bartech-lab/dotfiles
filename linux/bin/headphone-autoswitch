@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Switch the default sink to the front headphone jack when it is plugged in,
+# and back to the previous sink when it is unplugged.
+set -u
+
+CARD=${HEADPHONE_CARD:-alsa_card.usb-Generic_USB_Audio-00}
+PORT=${HEADPHONE_PORT:-[Out] Headphones}
+HP_SINK=${HEADPHONE_SINK:-alsa_output.usb-Generic_USB_Audio-00.HiFi__Headphones__sink}
+FALLBACK_SINK=${FALLBACK_SINK:-alsa_output.usb-Generic_USB_Audio-00.HiFi__Speaker__sink}
+STATE_FILE=${XDG_STATE_HOME:-$HOME/.local/state}/headphone-autoswitch/previous-sink
+
+log() { printf '%s\n' "$*"; }
+
+port_state() {
+    pactl -f json list cards 2>/dev/null |
+        jq -r --arg c "$CARD" --arg p "$PORT" \
+            '.[] | select(.name == $c) | .ports[$p].availability // empty'
+}
+
+sink_exists() { pactl list short sinks | awk '{print $2}' | grep -qxF "$1"; }
+
+plugged() {
+    local current
+    current=$(pactl get-default-sink)
+    if [[ "$current" != "$HP_SINK" ]]; then
+        mkdir -p "${STATE_FILE%/*}"
+        printf '%s\n' "$current" >"$STATE_FILE"
+    fi
+    pactl set-default-sink "$HP_SINK" && log "plugged: default sink -> $HP_SINK (was $current)"
+}
+
+unplugged() {
+    local current target
+    current=$(pactl get-default-sink)
+    [[ "$current" == "$HP_SINK" ]] || { log "unplugged: default is $current, leaving it"; return; }
+    target=$(cat "$STATE_FILE" 2>/dev/null || true)
+    if [[ -z "$target" ]] || ! sink_exists "$target"; then
+        target=$FALLBACK_SINK
+    fi
+    pactl set-default-sink "$target" && log "unplugged: default sink -> $target"
+}
+
+apply() {
+    case "$1" in
+        available) plugged ;;
+        "not available") unplugged ;;
+    esac
+}
+
+last=$(port_state)
+log "start: $PORT is '${last:-missing}'"
+[[ "$last" == available ]] && apply "$last"
+
+while IFS= read -r line; do
+    [[ "$line" == *"on card #"* ]] || continue
+    now=$(port_state)
+    [[ -n "$now" && "$now" != "$last" ]] || continue
+    last=$now
+    apply "$now"
+done < <(pactl subscribe)
+
+log "pactl subscribe ended"
+exit 1

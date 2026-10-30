@@ -797,6 +797,10 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai-cc-proxy.service" "$HOME/.config/systemd/user/bonsai-cc-proxy.service" "Bonsai proxy unit"
     config_symlinks "$DOTFILES_DIR/linux/bin/bonsai-cc-proxy.py" "$HOME/.local/bin/bonsai-cc-proxy.py" "Bonsai proxy script"
 
+    # Headphone jack auto-switch (front panel of the USB Audio card)
+    config_symlinks "$DOTFILES_DIR/linux/systemd/headphone-autoswitch.service" "$HOME/.config/systemd/user/headphone-autoswitch.service" "Headphone auto-switch unit"
+    config_symlinks "$DOTFILES_DIR/linux/bin/headphone-autoswitch" "$HOME/.local/bin/headphone-autoswitch" "Headphone auto-switch script"
+
     # Desktop overrides (Wayland for Electron apps)
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code-oss.desktop" "$HOME/.local/share/applications/code-oss.desktop" "Code - OSS desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standard-notes.desktop" "$HOME/.local/share/applications/standard-notes.desktop" "Standard Notes desktop"
