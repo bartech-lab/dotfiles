@@ -481,7 +481,8 @@ symlink, so every other file stays per account.
 `~/.claude.json` is not shared, because it holds the account identity. On each
 launch `pclaude` copies user MCP servers, update settings, a few UI choices
 (`/code-review` level, diff panel, expanded todos), and per-project MCP
-servers, trust and allowed tools from it. MCP changes made inside a `pclaude`
+servers, trust and allowed tools from it, and drops a private project entry
+whose folder no longer exists. MCP changes made inside a `pclaude`
 session are overwritten on the next launch; use `pclaude mcp ...` or `claude
 mcp ...` instead. Connectors added on claude.ai follow the account.
 

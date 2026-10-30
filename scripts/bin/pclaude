@@ -162,6 +162,8 @@ for path, sp in src.get("projects", {}).items():
             dp[key] = sp[key]
         else:
             dp.pop(key, None)
+for path in [p for p in projects if p not in src.get("projects", {}) and not os.path.isdir(p)]:
+    del projects[path]
 
 if json.dumps(dst, sort_keys=True) == before:
     sys.exit(0)
