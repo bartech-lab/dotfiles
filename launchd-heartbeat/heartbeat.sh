@@ -157,10 +157,10 @@ record_ok() {
 }
 
 record_problem() {
-    local name="$1" status="$2" detail="$3"
-    log_error "Label=$name status=$status $detail"
+    local name="$1" status="$2" detail="$3" alerted="${4:-}"
+    log_error "Label=$name status=$status $detail${alerted:+ alerted_by=jobrun}"
     (( STATUS_MODE )) && printf 'FAIL %s %s %s\n' "$name" "$status" "$detail"
-    problem_labels="${problem_labels}${problem_labels:+, }$name ($status)"
+    [[ -n "$alerted" ]] || problem_labels="${problem_labels}${problem_labels:+, }$name ($status)"
     problem_count=$((problem_count + 1))
     return 0
 }
@@ -336,6 +336,10 @@ if [[ -d "$JOBS_DIR" ]]; then
             ok*)
                 loaded=$((loaded + 1))
                 record_ok "$job" "job ${result#ok }"
+                ;;
+            failed*)
+                # jobrun already sent this failure's alert; a stale or missing job still alerts here.
+                record_problem "$job" failed "job ${result#* }" "$( [[ -e "$JOBS_DIR/$job.alerted" ]] && echo 1 )"
                 ;;
             *)
                 record_problem "$job" "${result%% *}" "job ${result#* }"

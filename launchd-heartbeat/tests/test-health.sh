@@ -297,6 +297,35 @@ heartbeat
 assert_eq "$(notify_count)" 1 'recovery sent a notification'
 [[ ! -s "$LAST_NOTIFIED" ]] || fail 'last-notified not emptied after job recovery'
 
+echo "== a failure jobrun already alerted is not repeated"
+reset
+now=$(date +%s)
+write_record sync "last_failure=$((now - 60))" "last_success=$((now - 7200))" 'reason=exit 1: timeout'
+: > "$JOB_DIR/sync.alerted"
+write_record backup "last_failure=$((now - 60))" 'reason=exit 2: disk full'
+rc=0
+out=$(heartbeat --status) || rc=$?
+assert_eq "$rc" 2 'an alerted failure must still make --status exit 2'
+assert_line "$out" '^FAIL sync failed' 'alerted failure missing from --status'
+heartbeat
+assert_eq "$(notify_count)" 1 'expected one summary for the unalerted failure'
+assert_contains "$NOTIFY_LOG" 'backup (failed)' 'unalerted failure missing from the summary'
+assert_not_contains "$NOTIFY_LOG" 'sync (failed)' 'jobrun-alerted failure repeated in the summary'
+assert_contains "$ERROR_LOG" 'Label=sync status=failed' 'alerted failure missing from error.log'
+reset
+write_record sync "last_failure=$((now - 60))" 'reason=exit 1: timeout'
+: > "$JOB_DIR/sync.alerted"
+rc=0
+heartbeat --status > /dev/null || rc=$?
+assert_eq "$rc" 2 'an alerted failure alone must still make --status exit 2'
+heartbeat
+assert_eq "$(notify_count)" 0 'an alerted failure alone sent a summary'
+reset
+write_record nightly "last_success=$((now - 30 * 3600))" 'max_age_hours=26'
+: > "$JOB_DIR/nightly.alerted"
+heartbeat
+assert_contains "$NOTIFY_LOG" 'nightly (stale)' 'a stale job must alert even with an old .alerted marker'
+
 echo "== pause file"
 write_pause() {
     local since="$1" maxage="$2" owner="$3"
