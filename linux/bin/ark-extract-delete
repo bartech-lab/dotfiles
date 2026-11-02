@@ -1,0 +1,7 @@
+#!/bin/bash
+for archive in "$@"; do
+    ark --batch --autodestination --autosubfolder "$archive"
+    if [ $? -eq 0 ]; then
+        rm -f "$archive"
+    fi
+done

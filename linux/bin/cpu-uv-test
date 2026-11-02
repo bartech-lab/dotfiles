@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# Per-core stability test for Ryzen Curve Optimizer undervolts.
+# Loads one core at a time (single thread, like CoreCycler), alternating
+# steady load with on/off bursts, because CO instability shows up at
+# single-core boost clocks and load transitions, not under all-core load.
+set -uo pipefail
+
+usage() {
+  cat <<'EOF'
+usage: cpu-uv-test [-m MINUTES_PER_CORE] [-r ROUNDS] [-c CORES]
+  -m  minutes per core per round (default 6)
+  -r  rounds over all cores (default 3)
+  -c  comma-separated core ids to test (default: all physical cores)
+Log: ~/logbook/Archive/Projects/archpc-thermal/runs/<timestamp>.log. Exit 0 = all cores passed, 1 = a failure.
+EOF
+}
+
+minutes=6 rounds=3 only=""
+while getopts "m:r:c:h" o; do
+  case $o in
+    m) minutes=$OPTARG ;;
+    r) rounds=$OPTARG ;;
+    c) only=$OPTARG ;;
+    *) usage; exit 2 ;;
+  esac
+done
+
+command -v stress-ng >/dev/null || { echo "stress-ng missing: sudo pacman -S stress-ng" >&2; exit 2; }
+
+hwmon=$(grep -l '^k10temp$' /sys/class/hwmon/*/name | head -1)
+hwmon=${hwmon%/name}
+
+declare -A first_cpu
+for c in /sys/devices/system/cpu/cpu[0-9]*; do
+  cpu=${c##*cpu} core=$(<"$c/topology/core_id")
+  if [[ -z ${first_cpu[$core]:-} || $cpu -lt ${first_cpu[$core]} ]]; then
+    first_cpu[$core]=$cpu
+  fi
+done
+mapfile -t cores < <(printf '%s\n' "${!first_cpu[@]}" | sort -n)
+[[ -n $only ]] && IFS=, read -ra cores <<<"$only"
+
+logdir=$HOME/logbook/Archive/Projects/archpc-thermal/runs
+mkdir -p "$logdir"
+log=$logdir/$(date +%F_%H%M%S).log
+start=$(date '+%F %T')
+exec > >(tee -a "$log") 2>&1
+
+echo "cpu-uv-test start $start, ${minutes}m/core, $rounds rounds, cores: ${cores[*]}"
+echo "BIOS: $(</sys/class/dmi/id/bios_version) $(</sys/class/dmi/id/bios_date)"
+
+mce_count() {
+  journalctl -k --since "$start" --no-pager -q 2>/dev/null |
+    grep -ciE 'machine check|hardware error|mce: \[hardware error\]'
+}
+
+declare -A result peak
+sec=$((minutes * 60))
+steady=$((sec * 2 / 3)) bursts=$(((sec - steady) / 15))
+methods=(fft matrixprod int64float jmp)
+
+for ((r = 1; r <= rounds; r++)); do
+  for core in "${cores[@]}"; do
+    cpu=${first_cpu[$core]}
+    [[ ${result[$core]:-} == FAIL* ]] && continue
+    m=${methods[$(((r - 1) % ${#methods[@]}))]}
+    printf '%s round %d/%d core %s (cpu %s, %s): ' "$(date +%T)" "$r" "$rounds" "$core" "$cpu" "$m"
+    before=$(mce_count) fail=""
+
+    maxt=0
+    ( while :; do cat "$hwmon/temp1_input"; sleep 2; done ) >"$logdir/.temp.$$" &
+    tpid=$!
+
+    taskset -c "$cpu" stress-ng --cpu 1 --cpu-method "$m" --verify \
+      --timeout "${steady}s" -q >>"$log.stress" 2>&1 || fail="stress-ng exit $? (steady)"
+    for ((b = 0; b < bursts; b++)); do
+      [[ -n $fail ]] && break
+      taskset -c "$cpu" stress-ng --cpu 1 --cpu-method "$m" --verify \
+        --timeout 10s -q >>"$log.stress" 2>&1 || fail="stress-ng exit $? (burst)"
+      sleep 5
+    done
+
+    kill "$tpid" 2>/dev/null; wait "$tpid" 2>/dev/null
+    maxt=$(sort -n "$logdir/.temp.$$" | tail -1); rm -f "$logdir/.temp.$$"
+    maxt=$((${maxt:-0} / 1000))
+    (( maxt > ${peak[$core]:-0} )) && peak[$core]=$maxt
+
+    after=$(mce_count)
+    (( after > before )) && fail="${fail:+$fail, }$((after - before)) kernel hardware error(s)"
+    if [[ -n $fail ]]; then
+      result[$core]="FAIL r$r: $fail"
+      echo "FAIL ($fail), peak ${maxt}C"
+    else
+      result[$core]=PASS
+      echo "ok, peak ${maxt}C"
+    fi
+  done
+done
+
+echo
+echo "== summary ($(date '+%F %T')) =="
+rc=0
+for core in "${cores[@]}"; do
+  printf 'core %s  %-50s peak %sC\n' "$core" "${result[$core]:-not run}" "${peak[$core]:-?}"
+  [[ ${result[$core]:-} == PASS ]] || rc=1
+done
+[[ -s $log.stress ]] || rm -f "$log.stress"
+echo "log: $log"
+exit $rc

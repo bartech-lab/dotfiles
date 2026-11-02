@@ -1,0 +1,9 @@
+[Unit]
+Description=Ping the e2e-casebook demo every 10 minutes, all day
+
+[Timer]
+OnCalendar=*:0/10
+Persistent=false
+
+[Install]
+WantedBy=timers.target

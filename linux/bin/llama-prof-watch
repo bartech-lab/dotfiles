@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -u
+
+pid=${1:?usage: llama-prof-watch <llama-server pid>}
+dir=${LLAMA_PROF_DIR:-/var/tmp/llama-prof}
+max=${LLAMA_PROF_MAX:-3}
+min_w=${LLAMA_PROF_MIN_W:-80}
+max_gpu=${LLAMA_PROF_MAX_GPU:-10}
+secs=${LLAMA_PROF_SECS:-60}
+rapl=/sys/class/powercap/intel-rapl:0/energy_uj
+wrap=$(<"${rapl%/*}/max_energy_range_uj")
+mkdir -p "$dir"
+
+hits=0 taken=0
+prev_e=$(<"$rapl") prev_t=$(date +%s%N)
+while ((taken < max)) && kill -0 "$pid" 2>/dev/null; do
+  sleep 10
+  e=$(<"$rapl") t=$(date +%s%N)
+  watts=$(awk -v de=$((e - prev_e)) -v wrap="$wrap" -v dt=$((t - prev_t)) 'BEGIN{if (de < 0) de += wrap; printf "%.0f", de / (dt / 1000)}')
+  prev_e=$e prev_t=$t
+  gpu=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits | tr -d ' ')
+  if ((watts > min_w && gpu < max_gpu)); then hits=$((hits + 1)); else hits=0; fi
+  ((hits < 2)) && continue
+
+  stamp=$(date +%F_%H%M%S)
+  echo "$stamp trigger: pkg ${watts} W, gpu ${gpu}%"
+  journalctl --user -u bonsai.service --since '-15min' --no-pager >"$dir/$stamp-bonsai.log"
+  perf record -m 64 -F 499 -g -p "$pid" -o "$dir/$stamp.data" -- sleep "$secs"
+  perf report -i "$dir/$stamp.data" --no-children -g none --sort dso,sym --stdio >"$dir/$stamp-flat.txt" 2>/dev/null
+  perf report -i "$dir/$stamp.data" --no-children --sort sym --stdio >"$dir/$stamp-callgraph.txt" 2>/dev/null
+  taken=$((taken + 1)) hits=0
+  sleep 600
+  prev_e=$(<"$rapl") prev_t=$(date +%s%N)
+done

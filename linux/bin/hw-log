@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -u
+
+interval=${HW_LOG_INTERVAL:-10}
+out=${1:-$HOME/logbook/Archive/Projects/archpc-thermal/runs/$(date +%F_%H%M%S)-hw-log.csv}
+rapl=/sys/class/powercap/intel-rapl:0/energy_uj
+wrap=$(<"${rapl%/*}/max_energy_range_uj")
+
+[[ -s $out ]] || echo "ts,cpu_util_pct,cpu_mhz_avg,cpu_pkg_w,tctl_c,tccd1_c,load1,mem_used_mb,gpu_util_pct,gpu_temp_c,gpu_w,gpu_mem_mb,nvme_c,fan1_rpm,fan5_rpm,fan6_rpm,top3_cpu_pct" >"$out"
+
+read -r _ u n s i w q sq st _ </proc/stat
+prev_busy=$((u + n + s + q + sq + st)) prev_total=$((u + n + s + i + w + q + sq + st))
+prev_e=$(<"$rapl") prev_t=$(date +%s%N)
+
+while :; do
+  top3=$(/usr/bin/top -b -n 2 -d "$interval" -o %CPU -w 200 |
+    awk '/^top -/{n++} n==2 && /^ *[0-9]/{gsub(",", ".", $9); printf "%s%s %s", (c ? "," : ""), $12, $9; if (++c == 3) exit}')
+
+  read -r _ u n s i w q sq st _ </proc/stat
+  busy=$((u + n + s + q + sq + st)) total=$((u + n + s + i + w + q + sq + st))
+  e=$(<"$rapl") t=$(date +%s%N)
+  util=$(awk -v b=$((busy - prev_busy)) -v t=$((total - prev_total)) 'BEGIN{printf "%.1f", t ? 100 * b / t : 0}')
+  watts=$(awk -v de=$((e - prev_e)) -v wrap="$wrap" -v dt=$((t - prev_t)) 'BEGIN{if (de < 0) de += wrap; printf "%.1f", de / (dt / 1000)}')
+  prev_busy=$busy prev_total=$total prev_e=$e prev_t=$t
+
+  mhz=$(awk '/^cpu MHz/{s += $4; c++} END{printf "%.0f", s / c}' /proc/cpuinfo)
+  sens=$(sensors -j 2>/dev/null | jq -r '[
+    ."k10temp-pci-00c3".Tctl.temp1_input, ."k10temp-pci-00c3".Tccd1.temp3_input,
+    ."nvme-pci-0200".Composite.temp1_input,
+    ."nct6687-isa-0a20".fan1.fan1_input, ."nct6687-isa-0a20".fan5.fan5_input, ."nct6687-isa-0a20".fan6.fan6_input
+  ] | map(if . == null then "" else (. * 10 | round / 10 | tostring) end) | join(",")')
+  IFS=, read -r tctl tccd nvme f1 f5 f6 <<<"$sens"
+  gpu=$(nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,power.draw,memory.used --format=csv,noheader,nounits | tr -d ' ')
+  mem=$(awk '/^MemTotal/{t = $2} /^MemAvailable/{a = $2} END{printf "%.0f", (t - a) / 1024}' /proc/meminfo)
+  load=$(cut -d' ' -f1 /proc/loadavg)
+
+  echo "$(date +%FT%T),$util,$mhz,$watts,$tctl,$tccd,$load,$mem,$gpu,$nvme,$f1,$f5,$f6,\"$top3\"" >>"$out"
+done

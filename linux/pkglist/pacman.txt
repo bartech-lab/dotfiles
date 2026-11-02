@@ -106,3 +106,6 @@ gst-libav
 lib32-libva
 lib32-libpulse
 lib32-gtk3
+ydotool
+ast-grep
+gitleaks

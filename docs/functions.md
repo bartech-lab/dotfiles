@@ -573,6 +573,22 @@ filen-fix-sync-retry [--check]
 
 Applies performance-focused defaults: disables animations, enables fast key repeat, configures Dolphin with full paths and hidden files, sets tap-to-click, and disables launch feedback. Run once after installing dotfiles on a fresh Linux machine, then `kde-settings` and `kde-panel`. After changing a setting in System Settings, add its key to `settings.tsv` so a reinstall keeps it.
 
+## Linux scripts (linux/bin, linked into ~/.local/bin)
+
+| Command | Description |
+|---------|-------------|
+| `ark-extract-delete <archive>...` | Extract each archive into its own folder with Ark, then delete the archive |
+| `check-browser-logout-hook` | One-shot login check that the last logout quit Brave and Chromium cleanly |
+| `chromium-launch` | Start Chromium with the open-file limit raised to the hard limit |
+| `cpu-uv-check` | After a Curve Optimizer change: report CPU hardware errors and unclean shutdowns |
+| `cpu-uv-test` | Per-core stability test for Ryzen Curve Optimizer undervolts |
+| `hw-log [file]` | Log CPU, GPU, temperatures, fans and power to CSV every 10 s |
+| `llama-prof-watch <pid>` | Profile llama-server when it burns CPU power with an idle GPU |
+| `sgsearch` | Code search across public repositories through Sourcegraph's public API |
+| `ydotool-autoclick-toggle` | Start or stop the left-button autoclicker (`autoclicker.service`); bound to Ctrl+. |
+
+`demo-wake-ping.timer` keeps the free Render e2e-casebook demo awake.
+
 ## Optional Tools
 
 These tools are installed but **not activated** for interactive use:

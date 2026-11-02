@@ -808,6 +808,24 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/systemd/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "$HOME/.config/systemd/user/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "DrKonqi runtime limit"
     config_symlinks "$DOTFILES_DIR/linux/bin/drkonqi-launcher-filter" "$HOME/.local/bin/drkonqi-launcher-filter" "DrKonqi Playwright filter"
 
+    # Autoclicker (Ctrl+. toggles it through the desktop entry)
+    config_symlinks "$DOTFILES_DIR/linux/systemd/autoclicker.service" "$HOME/.config/systemd/user/autoclicker.service" "Autoclicker unit"
+    config_symlinks "$DOTFILES_DIR/linux/bin/ydotool-autoclick-toggle" "$HOME/.local/bin/ydotool-autoclick-toggle" "Autoclicker toggle"
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/autoclicker-toggle.desktop" "$HOME/.local/share/applications/autoclicker-toggle.desktop" "Autoclicker desktop entry"
+
+    # Keep the free Render e2e-casebook demo awake
+    config_symlinks "$DOTFILES_DIR/linux/systemd/demo-wake-ping.service" "$HOME/.config/systemd/user/demo-wake-ping.service" "Demo wake ping unit"
+    config_symlinks "$DOTFILES_DIR/linux/systemd/demo-wake-ping.timer" "$HOME/.config/systemd/user/demo-wake-ping.timer" "Demo wake ping timer"
+    if [[ "$DRY_RUN" != true ]]; then
+        systemctl --user daemon-reload
+        systemctl --user enable --now demo-wake-ping.timer
+    fi
+
+    # Personal scripts
+    for script in ark-extract-delete check-browser-logout-hook chromium-launch cpu-uv-check cpu-uv-test hw-log llama-prof-watch sgsearch; do
+        config_symlinks "$DOTFILES_DIR/linux/bin/$script" "$HOME/.local/bin/$script" "$script"
+    done
+
     # Logout hook: SIGTERM browsers before Plasma closes their windows (KDE bug 514571)
     config_symlinks "$DOTFILES_DIR/linux/bin/plasma-shutdown-browsers" "$HOME/.local/bin/plasma-shutdown-browsers" "Browser logout hook"
     config_symlinks "$DOTFILES_DIR/linux/dbus/org.kde.Shutdown.service" "$HOME/.local/share/dbus-1/services/org.kde.Shutdown.service" "org.kde.Shutdown override"

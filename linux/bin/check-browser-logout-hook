@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# One-shot login check for plasma-shutdown-browsers: reports whether the last logout
+# quit Brave and Chromium cleanly, then removes its own autostart entry, so it runs only once.
+set -u
+
+AUTOSTART="$HOME/.config/autostart/check-browser-logout-hook.desktop"
+log=$(journalctl --user -b -1 -t plasma-shutdown-browsers -o cat --no-pager 2>/dev/null)
+
+if [[ -z $log ]]; then
+	notify-send -a "Browser session check" -i dialog-warning "Browser session hook did not run" \
+		"The last shutdown left no plasma-shutdown-browsers log. If your tabs are missing, tell Claude."
+elif grep -q 'still running after 15 s' <<<"$log"; then
+	notify-send -a "Browser session check" -i dialog-warning "Browsers did not quit in time" \
+		"The hook ran, but a browser was still running after 15 s. Check your tabs and tell Claude if any are missing."
+else
+	notify-send -a "Browser session check" -i dialog-ok "Browser session hook worked" \
+		"Brave and Chromium quit cleanly at the last shutdown. Your tabs should be back."
+fi
+rm -f "$AUTOSTART"

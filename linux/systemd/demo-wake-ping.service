@@ -1,0 +1,6 @@
+[Unit]
+Description=Keep the free Render e2e-casebook demo awake (HTTP GET)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -fsS -o /dev/null --max-time 90 -w "%%{http_code} %%{time_total}s\n" https://e2e-proving-ground.onrender.com/

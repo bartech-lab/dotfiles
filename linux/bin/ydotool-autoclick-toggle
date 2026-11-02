@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+runtime_dir="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}"
+lock_file="$runtime_dir/ydotool-autoclick-toggle.lock"
+
+exec 9>"$lock_file"
+/usr/bin/flock -x 9
+
+if /usr/bin/systemctl --user is-active --quiet autoclicker.service; then
+    /usr/bin/systemctl --user stop autoclicker.service
+else
+    /usr/bin/systemctl --user start autoclicker.service
+fi
