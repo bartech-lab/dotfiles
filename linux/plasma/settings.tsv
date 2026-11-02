@@ -1,0 +1,59 @@
+kxkbrc	Layout	LayoutList	pl
+kxkbrc	Layout	Model	pc105
+kxkbrc	Layout	Options	lv3:switch
+kxkbrc	Layout	ResetOldOptions	true
+kxkbrc	Layout	Use	true
+kcminputrc	Libinput>7511>64096>2.4G Wireless Device	PointerAccelerationProfile	1
+plasma-localerc	Formats	LANG	en_US.UTF-8
+plasma-localerc	Sounds	Enable	false
+ksmserverrc	General	confirmLogout	false
+ksmserverrc	General	loginMode	emptySession
+powerdevilrc	AC>Display	DimDisplayIdleTimeoutSec	300
+powerdevilrc	AC>Display	DimDisplayWhenIdle	false
+powerdevilrc	AC>Display	TurnOffDisplayIdleTimeoutSec	600
+powerdevilrc	AC>Display	TurnOffDisplayWhenIdle	true
+powerdevilrc	AC>SuspendAndShutdown	AutoSuspendAction	0
+powerdevilrc	AC>SuspendAndShutdown	AutoSuspendIdleTimeoutSec	1800
+kaccessrc	Bell	SystemBell	false
+kiorc	Confirmations	ConfirmDelete	true
+kiorc	Confirmations	ConfirmEmptyTrash	false
+kiorc	Confirmations	ConfirmTrash	false
+kiorc	Executable scripts	behaviourOnLaunch	alwaysAsk
+krunnerrc	Plugins	browserhistoryEnabled	false
+krunnerrc	Plugins>Favorites	plugins	krunner_sessions,krunner_powerdevil,krunner_services,krunner_systemsettings
+kwinrc	NightColor	Active	true
+kwinrc	Desktops	Number	1
+kwinrc	Desktops	Rows	1
+kdeglobals	General	BrowserApplication	brave-browser.desktop
+kdeglobals	General	TerminalApplication	/usr/bin/ghostty --gtk-single-instance=true
+kdeglobals	General	TerminalService	com.mitchellh.ghostty.desktop
+kdeglobals	KDE	DndBehavior	MoveIfSameDevice
+kdeglobals	KDE	LookAndFeelPackage	org.kde.breezedark.desktop
+kdeglobals	KDE	ShowDeleteCommand	false
+kdeglobals	KDE	SmoothScroll	false
+dolphinrc	General	EditableUrl	true
+dolphinrc	General	ShowZoomSlider	true
+dolphinrc	IconsMode	PreviewSize	48
+dolphinrc	KFileDialog Settings	Places Icons Auto-resize	false
+dolphinrc	KFileDialog Settings	Places Icons Static Size	22
+dolphinrc	Notification Messages	ConfirmOpenManyFolders	false
+dolphinrc	PreviewSettings	Plugins	appimagethumbnail,audiothumbnail,glycin-heif,blenderthumbnail,comicbookthumbnail,cursorthumbnail,djvuthumbnail,ebookthumbnail,exrthumbnail,directorythumbnail,fontthumbnail,imagethumbnail,glycin-image-rs,jpegthumbnail,glycin-jxl,kraorathumbnail,windowsexethumbnail,windowsimagethumbnail,mobithumbnail,opendocumentthumbnail,gsthumbnail,rawthumbnail,glycin-svg,svgthumbnail,ffmpegthumbs,gsf-office
+dolphinrc	Search	Location	Everywhere
+dolphinrc	Shortcuts	go_up	Meta+Up
+spectaclerc	General	clipboardGroup	PostScreenshotCopyImage
+spectaclerc	ImageSave	imageSaveLocation	file://$HOME/Downloads
+spectaclerc	ImageSave	preferredImageFormat	PNG
+spectaclerc	VideoSave	preferredVideoFormat	2
+spectaclerc	VideoSave	videoSaveLocation	file://$HOME/Downloads
+kglobalshortcutsrc	kwin	Window Close	Meta+Q,Alt+F4,Close Window
+kglobalshortcutsrc	kwin	Window Quick Tile Bottom	none,Meta+Down,Quick Tile Window to the Bottom
+kglobalshortcutsrc	kwin	Window Quick Tile Left	none,Meta+Left,Quick Tile Window to the Left
+kglobalshortcutsrc	kwin	Window Quick Tile Right	none,Meta+Right,Quick Tile Window to the Right
+kglobalshortcutsrc	kwin	Window Quick Tile Top	none,Meta+Up,Quick Tile Window to the Top
+kglobalshortcutsrc	plasmashell	manage activities	none,Meta+Q,Show Activity Switcher
+kglobalshortcutsrc	plasmashell	next activity	Meta+A,none,Walk through activities
+kglobalshortcutsrc	plasmashell	previous activity	Meta+Shift+A,none,Walk through activities (Reverse)
+kglobalshortcutsrc	services>autoclicker-toggle.desktop	_launch	Ctrl+.
+kglobalshortcutsrc	services>com.mitchellh.ghostty.desktop	_launch	none
+kglobalshortcutsrc	services>org.kde.spectacle.desktop	RecordRegion	Ctrl+%
+kglobalshortcutsrc	services>org.kde.spectacle.desktop	RectangularRegionScreenShot	Ctrl+$

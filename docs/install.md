@@ -61,6 +61,7 @@ The Linux installer will:
 After install, apply KDE preferences and the panel layout:
 ```bash
 kde-defaults
+kde-settings
 kde-panel
 ```
 

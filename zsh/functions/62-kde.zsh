@@ -175,6 +175,34 @@ kde-defaults() {
     echo "Some changes may require logout/login to take full effect."
 }
 
+kde-settings() {
+    local table="$HOME/dotfiles/linux/plasma/settings.tsv"
+    local mode=apply drift=0 file group key value have
+    case "${1:-}" in
+        --check) mode=check ;;
+        "") ;;
+        *) echo "usage: kde-settings [--check]" >&2; return 2 ;;
+    esac
+    while IFS=$'\t' read -r file group key value; do
+        [[ -z "$file" ]] && continue
+        value="${value//\$HOME/$HOME}"
+        local -a groups=()
+        for g in "${(@s:>:)group}"; do groups+=(--group "$g"); done
+        have="$(kreadconfig6 --file "$file" "${groups[@]}" --key "$key")"
+        [[ "$have" == "$value" ]] && continue
+        drift=1
+        if [[ $mode == check ]]; then
+            echo "$file [$group] $key: have '$have', want '$value'"
+        else
+            kwriteconfig6 --file "$file" "${groups[@]}" --key "$key" "$value"
+            echo "  ✓ $file [$group] $key"
+        fi
+    done < "$table"
+    [[ $mode == check ]] && return $drift
+    qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
+    return 0
+}
+
 kde-panel() {
     local script="$HOME/dotfiles/linux/plasma/panel-layout.js"
     local prefix=""
