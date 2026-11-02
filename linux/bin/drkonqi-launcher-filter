@@ -63,7 +63,7 @@ def main():
     m = CMDLINE.search(data)
     if not m:
         return drift("no COREDUMP_CMDLINE in the first packet")
-    if IGNORED.search(m.group(1).lstrip(b"$'")):
+    if IGNORED.search(m.group(1)):
         print("ignored a Playwright browser crash", file=sys.stderr)
         sys.exit(0)
 
