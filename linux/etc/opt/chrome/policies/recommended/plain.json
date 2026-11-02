@@ -23,5 +23,6 @@
   "SpellCheckServiceEnabled": false,
   "MetricsReportingEnabled": false,
   "BlockThirdPartyCookies": true,
-  "PasswordManagerEnabled": false
+  "PasswordManagerEnabled": false,
+  "RestoreOnStartup": 1
 }

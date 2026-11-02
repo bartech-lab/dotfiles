@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# D-Bus activation wrapper for org.kde.Shutdown (see ~/.local/share/dbus-1/services/org.kde.Shutdown.service).
+#
+# On Wayland, Plasma's logout asks KWin to close every window one at a time. Chromium-based
+# browsers treat that as the user closing windows, so the saved session keeps only the last
+# window (KDE bug 514571). SIGTERM makes them save the whole session and exit with
+# exit_type=SessionEnded instead. Quit them first, then hand over to plasma-shutdown.
+#
+# PLASMA_SHUTDOWN_BROWSERS_DRY_RUN=1 lists the targets without signalling or exec'ing.
+
+set -u
+
+main_pids() {
+	local pid
+	for pid in $(pgrep -u "$UID" -x 'brave|chromium|chrome'); do
+		# Main process only: every child carries --type=. Children rewrite argv into one
+		# space-joined string, so match on the flattened command line.
+		tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q -- ' --type=' || echo "$pid"
+	done
+}
+
+pids=$(main_pids)
+
+if [[ -n ${PLASMA_SHUTDOWN_BROWSERS_DRY_RUN:-} ]]; then
+	for pid in $pids; do echo "would SIGTERM $pid $(tr '\0' ' ' <"/proc/$pid/cmdline")"; done
+	exit 0
+fi
+
+if [[ -n $pids ]]; then
+	logger -t plasma-shutdown-browsers "SIGTERM to browser main processes: $pids"
+	kill -TERM $pids 2>/dev/null
+	# Wait up to 15 s, well inside the 25 s D-Bus activation timeout.
+	for _ in $(seq 1 75); do
+		alive=0
+		for pid in $pids; do kill -0 "$pid" 2>/dev/null && alive=1; done
+		((alive)) || break
+		sleep 0.2
+	done
+	((alive)) && logger -t plasma-shutdown-browsers "browsers still running after 15 s, continuing logout"
+fi
+
+exec /usr/bin/plasma-shutdown "$@"

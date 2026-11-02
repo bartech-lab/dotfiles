@@ -800,6 +800,10 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai-cc-proxy.service" "$HOME/.config/systemd/user/bonsai-cc-proxy.service" "Bonsai proxy unit"
     config_symlinks "$DOTFILES_DIR/linux/bin/bonsai-cc-proxy.py" "$HOME/.local/bin/bonsai-cc-proxy.py" "Bonsai proxy script"
 
+    # Logout hook: SIGTERM browsers before Plasma closes their windows (KDE bug 514571)
+    config_symlinks "$DOTFILES_DIR/linux/bin/plasma-shutdown-browsers" "$HOME/.local/bin/plasma-shutdown-browsers" "Browser logout hook"
+    config_symlinks "$DOTFILES_DIR/linux/dbus/org.kde.Shutdown.service" "$HOME/.local/share/dbus-1/services/org.kde.Shutdown.service" "org.kde.Shutdown override"
+
     # Desktop overrides (Wayland for Electron apps)
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code-oss.desktop" "$HOME/.local/share/applications/code-oss.desktop" "Code - OSS desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standard-notes.desktop" "$HOME/.local/share/applications/standard-notes.desktop" "Standard Notes desktop"
