@@ -7,7 +7,7 @@ boots=${1:-10}
 problems=0
 
 echo "== CPU hardware errors (MCE) per boot, last $boots boots =="
-journalctl --list-boots --no-pager -q | tail -n "$boots" | while read -r idx _id rest; do
+while read -r idx _id rest; do
   n=$(journalctl -k -b "$idx" --no-pager -q 2>/dev/null |
     grep -ciE 'machine check events logged|mce: \[hardware error\]')
   clean=yes
@@ -18,15 +18,14 @@ journalctl --list-boots --no-pager -q | tail -n "$boots" | while read -r idx _id
     clean="(running)"
   fi
   flag=""
-  [[ $n -gt 0 || $clean == NO ]] && flag="  <-- check"
+  [[ $n -gt 0 || $clean == NO ]] && flag="  <-- check" && problems=1
   printf 'boot %4s  %s  mce=%s  clean-shutdown=%s%s\n' "$idx" "${rest:0:40}" "$n" "$clean" "$flag"
-done
+done < <(journalctl --list-boots --no-pager -q | tail -n "$boots")
 
 echo
 echo "== latest MCE lines (all boots) =="
 journalctl -k --no-pager -q 2>/dev/null | grep -iE 'mce: \[hardware error\]' | tail -8 || true
 if journalctl -k --no-pager -q 2>/dev/null | grep -qiE 'mce: \[hardware error\]'; then
-  problems=1
   echo "-> 'CPU N' in these lines names the logical CPU; cpu N and N+8 are the same core."
 else
   echo "(none)"

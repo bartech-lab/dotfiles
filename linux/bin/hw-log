@@ -31,6 +31,7 @@ while :; do
   ] | map(if . == null then "" else (. * 10 | round / 10 | tostring) end) | join(",")')
   IFS=, read -r tctl tccd nvme f1 f5 f6 <<<"$sens"
   gpu=$(nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,power.draw,memory.used --format=csv,noheader,nounits | tr -d ' ')
+  [[ $gpu == *,*,*,* ]] || gpu=",,,"
   mem=$(awk '/^MemTotal/{t = $2} /^MemAvailable/{a = $2} END{printf "%.0f", (t - a) / 1024}' /proc/meminfo)
   load=$(cut -d' ' -f1 /proc/loadavg)
 

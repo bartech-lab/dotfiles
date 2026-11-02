@@ -19,6 +19,7 @@ while ((taken < max)) && kill -0 "$pid" 2>/dev/null; do
   watts=$(awk -v de=$((e - prev_e)) -v wrap="$wrap" -v dt=$((t - prev_t)) 'BEGIN{if (de < 0) de += wrap; printf "%.0f", de / (dt / 1000)}')
   prev_e=$e prev_t=$t
   gpu=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits | tr -d ' ')
+  [[ $gpu =~ ^[0-9]+$ ]] || { hits=0; continue; }
   if ((watts > min_w && gpu < max_gpu)); then hits=$((hits + 1)); else hits=0; fi
   ((hits < 2)) && continue
 

@@ -1,7 +1,13 @@
 #!/bin/bash
+status=0
 for archive in "$@"; do
-    ark --batch --autodestination --autosubfolder "$archive"
-    if [ $? -eq 0 ]; then
-        rm -f "$archive"
+    dir=$(dirname -- "$archive")
+    before=$(ls -A -- "$dir")
+    if ark --batch --autodestination --autosubfolder -- "$archive" && [[ $(ls -A -- "$dir") != "$before" ]]; then
+        rm -f -- "$archive"
+    else
+        echo "ark-extract-delete: kept $archive (extraction failed or produced nothing)" >&2
+        status=1
     fi
 done
+exit $status
