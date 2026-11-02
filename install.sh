@@ -808,6 +808,9 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/systemd/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "$HOME/.config/systemd/user/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "DrKonqi runtime limit"
     config_symlinks "$DOTFILES_DIR/linux/bin/drkonqi-launcher-filter" "$HOME/.local/bin/drkonqi-launcher-filter" "DrKonqi Playwright filter"
 
+    # lsfg-vk frame generation profiles
+    config_symlinks "$DOTFILES_DIR/config/lsfg-vk/conf.toml" "$HOME/.config/lsfg-vk/conf.toml" "lsfg-vk config"
+
     # Autoclicker (Ctrl+. toggles it through the desktop entry)
     config_symlinks "$DOTFILES_DIR/linux/systemd/autoclicker.service" "$HOME/.config/systemd/user/autoclicker.service" "Autoclicker unit"
     config_symlinks "$DOTFILES_DIR/linux/bin/ydotool-autoclick-toggle" "$HOME/.local/bin/ydotool-autoclick-toggle" "Autoclicker toggle"

@@ -29,6 +29,7 @@ dotfiles/
 │   ├── git/gitconfig
 │   ├── git/gitignore_global  # Global Git ignore rules
 │   ├── iina/mpv.conf
+│   ├── lsfg-vk/conf.toml     # Frame generation profiles (Linux)
 │   ├── ripgrep/ripgreprc
 │   ├── spicetify/Extensions/
 │   ├── ssh/config
