@@ -18,5 +18,10 @@
   "ShoppingListEnabled": false,
   "HelpMeWriteSettings": 2,
   "CreateThemesSettings": 2,
-  "TabCompareSettings": 2
+  "TabCompareSettings": 2,
+  "TranslateEnabled": false,
+  "SpellCheckServiceEnabled": false,
+  "MetricsReportingEnabled": false,
+  "BlockThirdPartyCookies": true,
+  "PasswordManagerEnabled": false
 }
