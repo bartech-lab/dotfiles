@@ -1,0 +1,22 @@
+{
+  "NTPCardsVisible": false,
+  "NTPCustomBackgroundEnabled": false,
+  "DefaultSearchProviderEnabled": true,
+  "DefaultSearchProviderName": "Brave",
+  "DefaultSearchProviderKeyword": "brave",
+  "DefaultSearchProviderSearchURL": "https://search.brave.com/search?q={searchTerms}",
+  "DefaultSearchProviderSuggestURL": "https://search.brave.com/api/suggest?q={searchTerms}",
+  "BookmarkBarEnabled": true,
+  "PromptForDownloadLocation": false,
+  "ShowHomeButton": false,
+  "SpellcheckLanguage": [
+    "en-US"
+  ],
+  "BackgroundModeEnabled": false,
+  "GenAILocalFoundationalModelSettings": 1,
+  "HistoryClustersVisible": false,
+  "ShoppingListEnabled": false,
+  "HelpMeWriteSettings": 2,
+  "CreateThemesSettings": 2,
+  "TabCompareSettings": 2
+}
