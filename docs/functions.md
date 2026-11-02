@@ -566,8 +566,10 @@ filen-fix-sync-retry [--check]
 | Command | Description |
 |---------|-------------|
 | `kde-defaults` | Apply KDE Plasma system preferences |
+| `kde-panel` | Replace all panels with the archpc bottom panel from `linux/plasma/panel-layout.js` |
+| `kde-panel --test` | Build the same panel at the top and keep the existing ones |
 
-Applies performance-focused defaults: disables animations, enables fast key repeat, configures Dolphin with full paths and hidden files, sets tap-to-click, and disables launch feedback. Run once after installing dotfiles on a fresh Linux machine.
+Applies performance-focused defaults: disables animations, enables fast key repeat, configures Dolphin with full paths and hidden files, sets tap-to-click, and disables launch feedback. Run once after installing dotfiles on a fresh Linux machine, then `kde-panel` for the panel layout.
 
 ## Optional Tools
 

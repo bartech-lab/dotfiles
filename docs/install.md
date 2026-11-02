@@ -58,9 +58,10 @@ The Linux installer will:
 - Set zsh as your default shell
 - Set up systemd user timers for git auto-pull and heartbeat
 
-After install, apply KDE preferences:
+After install, apply KDE preferences and the panel layout:
 ```bash
 kde-defaults
+kde-panel
 ```
 
 Update all packages:

@@ -7,3 +7,4 @@ spotify
 spicetify-cli
 filen-desktop-bin
 standardnotes-desktop
+plasma6-applets-netspeed

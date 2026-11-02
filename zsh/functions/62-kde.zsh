@@ -175,6 +175,21 @@ kde-defaults() {
     echo "Some changes may require logout/login to take full effect."
 }
 
+kde-panel() {
+    local script="$HOME/dotfiles/linux/plasma/panel-layout.js"
+    local prefix=""
+    case "${1:-}" in
+        --test) prefix="var KDE_PANEL_TEST=1;" ;;
+        "") ;;
+        *) echo "usage: kde-panel [--test]" >&2; return 2 ;;
+    esac
+    if ! command -v qdbus6 &>/dev/null; then
+        echo "qdbus6 not found (not in a Plasma 6 session?)" >&2
+        return 1
+    fi
+    qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "${prefix}$(<"$script")"
+}
+
 kde-audit-effects() {
     if ! command -v qdbus6 &>/dev/null; then
         echo "qdbus6 not found (not in a Plasma 6 session?)"
