@@ -10,6 +10,7 @@
 # unless excluded; top-level files only when listed in SHARED_FILES, because
 # Claude Code saves state files by rename, which replaces a symlink. User and project MCP
 # servers, trust and allowed tools are copied from ~/.claude.json on every launch.
+# claudeInChromeDefaultEnabled is not copied: Chrome can be on for pclaude only.
 #
 # Usage: pclaude [claude args...]
 #   pclaude                 first run: type /login and sign in to the private account
@@ -114,7 +115,6 @@ GLOBAL_KEYS = (
     "autoUpdates",
     "autoUpdatesProtectedForNative",
     "installMethod",
-    "claudeInChromeDefaultEnabled",
     "hasCompletedClaudeInChromeOnboarding",
     "cachedChromeExtensionInstalled",
     "deepLinkTerminal",
