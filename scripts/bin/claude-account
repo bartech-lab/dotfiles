@@ -1,21 +1,29 @@
 #!/usr/bin/env bash
-# Run Claude Code signed in to the private subscription account, side by side
-# with the default (work) one. Works on macOS and Linux.
+# Run Claude Code on one of two subscription accounts, side by side. Invoked
+# through its links: `claude` (scripts/shims, ahead of ~/.local/bin in PATH) and
+# `wclaude` (scripts/bin). The case block below maps each name to an account;
+# swap its two account values to swap which account plain `claude` uses.
 #
-# The private account is its own CLAUDE_CONFIG_DIR at ~/.claude-private, so its
-# login is separate: macOS keeps it in a Keychain item keyed by the directory
-# path, Linux in ~/.claude-private/.credentials.json. Everything else is shared
-# with ~/.claude through symlinks refreshed on every launch: settings, hooks,
-# skills, plugins, sessions, history and project memory. Directories are shared
-# unless excluded; top-level files only when listed in SHARED_FILES, because
-# Claude Code saves state files by rename, which replaces a symlink. User and project MCP
-# servers, trust and allowed tools are copied from ~/.claude.json on every launch.
-# claudeInChromeDefaultEnabled is not copied: Chrome can be on for pclaude only.
+# work    the default config: ~/.claude and ~/.claude.json.
+# private its own CLAUDE_CONFIG_DIR at ~/.claude-private, so its login is
+#         separate: macOS keeps it in a Keychain item keyed by the directory
+#         path, Linux in ~/.claude-private/.credentials.json. Everything else is
+#         shared with ~/.claude through symlinks refreshed on every launch:
+#         settings, hooks, skills, plugins, sessions, history and project memory.
+#         Directories are shared unless excluded; top-level files only when
+#         listed in SHARED_FILES, because Claude Code saves state files by
+#         rename, which replaces a symlink. User and project MCP servers, trust
+#         and allowed tools are copied from ~/.claude.json on every launch.
+#         claudeInChromeDefaultEnabled is not copied: Chrome can be on for the
+#         private account only.
 #
-# Usage: pclaude [claude args...]
-#   pclaude                 first run: type /login and sign in to the private account
-#   pclaude -c              any claude flags pass through
-#   pclaude mcp add ...     MCP changes go to the shared ~/.claude.json
+# A plain `claude` started under a session (cc-relay, tfg-run, `!` commands)
+# keeps that session's account through CLAUDE_ACCOUNT. Export
+# CLAUDE_ACCOUNT=work|private to pick the account of plain `claude` in a shell.
+#
+# Usage: claude [claude args...]     wclaude [claude args...]
+#   first run on an account: type /login and sign in
+#   claude mcp add ...      MCP changes go to the shared ~/.claude.json
 
 set -euo pipefail
 
@@ -51,15 +59,31 @@ SHARED_FILES=(
     history.jsonl
 )
 
-if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-    sed -n '/^# Usage/,/^#   pclaude mcp add/p' "$0" | sed 's/^# \{0,1\}//'
-    echo "Run 'claude --help' for claude flags."
-    exit 0
-fi
+case ${0##*/} in
+    claude) account=${CLAUDE_ACCOUNT:-private} ;;
+    wclaude) account=work ;;
+    *) echo "claude-account: run it as claude or wclaude" >&2; exit 2 ;;
+esac
+[[ $account == work || $account == private ]] \
+    || { echo "claude-account: CLAUDE_ACCOUNT must be work or private, not '$account'" >&2; exit 2; }
 
-if [[ ${1:-} == mcp ]]; then
+# The first claude in PATH that is not this script.
+self=$(readlink -f "$0")
+real=
+IFS=: read -ra path_dirs <<< "$PATH"
+for d in "${path_dirs[@]}"; do
+    c="${d:-.}/claude"
+    if [[ -f $c && -x $c && $(readlink -f "$c") != "$self" ]]; then
+        real=$c
+        break
+    fi
+done
+[[ -n $real ]] || { echo "claude-account: no claude binary in PATH" >&2; exit 127; }
+
+export CLAUDE_ACCOUNT=$account
+if [[ $account == work || ${1:-} == mcp ]]; then
     unset CLAUDE_CONFIG_DIR
-    exec claude "$@"
+    exec "$real" "$@"
 fi
 
 shopt -s nullglob
@@ -101,7 +125,7 @@ for src in "$base"/* "$base"/.[!.]*; do
     if [[ -L $dst ]]; then
         continue
     elif [[ -e $dst ]]; then
-        echo "pclaude: $dst is a local copy, not a link to $src; delete it to share again" >&2
+        echo "claude: $dst is a local copy, not a link to $src; delete it to share again" >&2
     else
         ln -s "$src" "$dst"
     fi
@@ -176,4 +200,4 @@ os.replace(tmp, dst_path)
 PY
 
 export CLAUDE_CONFIG_DIR="$profile"
-exec claude "$@"
+exec "$real" "$@"

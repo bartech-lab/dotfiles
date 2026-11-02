@@ -5,7 +5,7 @@ TEST_ROOT=$(mktemp -d)
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-TOOL="$REPO_ROOT/scripts/bin/pclaude"
+TOOL="$REPO_ROOT/scripts/shims/claude"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -19,6 +19,7 @@ SH
 chmod +x "$BIN/claude"
 export PATH="$BIN:$PATH"
 export CLAUDE_CONFIG_DIR=/elsewhere
+unset CLAUDE_ACCOUNT
 
 P="$HOME/.claude-private"
 echo '{}' > "$HOME/.claude/settings.json"
@@ -58,7 +59,7 @@ PY
 
 [[ -d $EXISTING && ! -e $MISSING_PRIVATE && ! -e $MISSING_WORK ]] || fail "fixture directories are wrong"
 
-"$TOOL" 2>"$TEST_ROOT/err" || fail "pclaude exited non-zero: $(cat "$TEST_ROOT/err")"
+"$TOOL" 2>"$TEST_ROOT/err" || fail "claude exited non-zero: $(cat "$TEST_ROOT/err")"
 
 check() {
     python3 - "$P/.claude.json" "$EXISTING" "$MISSING_PRIVATE" "$MISSING_WORK" "$EXISTING_WORK" <<'PY'

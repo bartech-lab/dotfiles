@@ -5,7 +5,7 @@ TEST_ROOT=$(mktemp -d)
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-TOOL="$REPO_ROOT/scripts/bin/pclaude"
+TOOL="$REPO_ROOT/scripts/shims/claude"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -19,6 +19,7 @@ SH
 chmod +x "$BIN/claude"
 export PATH="$BIN:$PATH"
 export CLAUDE_CONFIG_DIR=/elsewhere
+unset CLAUDE_ACCOUNT
 
 B="$HOME/.claude"
 P="$HOME/.claude-private"
@@ -27,7 +28,7 @@ mode() {
     if [[ $(uname) == Darwin ]]; then stat -f %Lp "$1"; else stat -c %a "$1"; fi
 }
 
-launch() { "$TOOL" 2>"$TEST_ROOT/err" || fail "pclaude exited non-zero: $(cat "$TEST_ROOT/err")"; }
+launch() { "$TOOL" 2>"$TEST_ROOT/err" || fail "claude exited non-zero: $(cat "$TEST_ROOT/err")"; }
 
 jsonget() {
     python3 - "$1" "$2" <<'PY'
@@ -159,6 +160,6 @@ launch
 
 rm -f "$HOME/.claude.json" "$HOME/claude-call"
 launch
-[[ $(head -n 1 "$HOME/claude-call") == "$P" ]] || fail "pclaude did not start claude without ~/.claude.json"
+[[ $(head -n 1 "$HOME/claude-call") == "$P" ]] || fail "claude did not start claude without ~/.claude.json"
 
-echo "PASS: pclaude edge tests"
+echo "PASS: claude-account edge tests"

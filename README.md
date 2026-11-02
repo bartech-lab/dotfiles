@@ -85,7 +85,7 @@ sh -n path/to/changed-posix-file.sh
 zsh -n path/to/changed-zsh-file.zsh
 bash ~/dotfiles/scripts/tests/test-git-autoswitch.sh
 bash ~/dotfiles/scripts/tests/test-git-local-patch.sh
-bash ~/dotfiles/scripts/tests/test-pclaude.sh
+bash ~/dotfiles/scripts/tests/test-claude-account.sh
 bash ~/dotfiles/scripts/tests/test-install-ntfy.sh
 bash ~/dotfiles/git-auto-pull/tests/test.sh
 bash ~/dotfiles/scripts/gitlab-stats/tests/test.sh
@@ -144,7 +144,7 @@ dotfiles-doctor
 - `repo-check` - Pre-archive sanity checker
 - `dotfiles-doctor` - Environment health check
 - `gitlab-stats [options]` - GitLab merge request statistics
-- `pclaude [claude args]` - Claude Code on the private subscription account, same config as `claude` (see [Functions Reference](docs/functions.md#pclaude))
+- `claude` / `wclaude [claude args]` - Claude Code on the private / work subscription account, same config for both (see [Functions Reference](docs/functions.md#claude-and-wclaude))
 - `discord-openasar-apply [flags]` - Apply OpenAsar and the theme CSS, then smoke-test Discord (opt-in)
 - `discord-openasar-recover [--launch] [backup]` - Restore Discord's stock app.asar from a backup
 - `discord-openasar-status` - Show the current OpenAsar state

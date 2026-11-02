@@ -454,23 +454,34 @@ Pre-archive sanity checker (see [dev.md](dev.md)).
 repo-check              # Check for issues before archiving
 ```
 
-### pclaude
+### claude and wclaude
 
-`scripts/bin/pclaude` runs Claude Code signed in to the private subscription
-account. Plain `claude` stays on the default account. Both can run at the same
-time in different terminals, on macOS and Linux.
+`scripts/bin/claude-account` runs Claude Code on one of two subscription
+accounts. It is called through two links: `claude` in `scripts/shims`, which
+comes before `~/.local/bin` in `PATH`, runs the private account, and `wclaude`
+runs the work account. Both can run at the same time in different terminals,
+on macOS and Linux. To swap which account plain `claude` uses, swap the two
+account values in the `case` block at the top of the script.
 
 ```bash
-pclaude                 # first run: type /login and sign in to the private account
-pclaude -c              # any claude flags pass through
-pclaude mcp add ...     # MCP changes go to the shared ~/.claude.json
+claude                  # first run: type /login and sign in to the private account
+wclaude -c              # work account; any claude flags pass through
+claude mcp add ...      # MCP changes go to the shared ~/.claude.json
 ```
 
+The work account uses the default config, `~/.claude` and `~/.claude.json`.
 The private account uses `CLAUDE_CONFIG_DIR=~/.claude-private`, so its login is
 separate: macOS keeps it in a Keychain item keyed by the directory path, Linux
 in `~/.claude-private/.credentials.json`.
 
-Every directory in `~/.claude` is symlinked in on each launch, including
+Each launch exports `CLAUDE_ACCOUNT`. A plain `claude` started inside a session
+(`cc-relay`, `tfg-run`, a `!` command) keeps that session's account. Export
+`CLAUDE_ACCOUNT=work` to make plain `claude` the work account in one shell.
+`wclaude` always runs the work account. Anything that calls
+`~/.local/bin/claude` by its full path bypasses the shim and gets the work
+account.
+
+Every directory in `~/.claude` is symlinked in on each private launch, including
 hooks, skills, plugins and `projects` (sessions and memory). `--resume`
 therefore sees sessions from both accounts. Login, org policy and daemon state
 stay per account (see `EXCLUDE` in the script). Top-level files are linked only
@@ -479,16 +490,16 @@ when listed in `SHARED_FILES` (settings, `CLAUDE.md`, the status line script and
 symlink, so every other file stays per account.
 
 `~/.claude.json` is not shared, because it holds the account identity. On each
-launch `pclaude` copies user MCP servers, update settings, a few UI choices
+private launch the script copies user MCP servers, update settings, a few UI choices
 (`/code-review` level, diff panel, expanded todos), and per-project MCP
 servers, trust and allowed tools from it, and drops a private project entry
-whose folder no longer exists. MCP changes made inside a `pclaude`
-session are overwritten on the next launch; use `pclaude mcp ...` or `claude
+whose folder no longer exists. MCP changes made inside a private
+session are overwritten on the next launch; use `claude mcp ...` or `wclaude
 mcp ...` instead. Connectors added on claude.ai follow the account.
 
 If Claude replaces a shared file's link with a real file, the next launch warns and leaves the
 copy alone. Delete it to share again. Claude Desktop and IDE extensions ignore
-`CLAUDE_CONFIG_DIR`.
+`CLAUDE_CONFIG_DIR` and the shim, so they run the work account.
 
 ## Download Utilities
 
@@ -634,7 +645,7 @@ See [dev.md](dev.md) for full documentation.
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
-| Claude private | `scripts/bin/pclaude` | Claude Code on the private subscription account |
+| Claude accounts | `scripts/bin/claude-account` | `claude` (private) and `wclaude` (work) Claude Code accounts |
 
 ## Browser Utilities
 

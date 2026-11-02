@@ -5,7 +5,7 @@ TEST_ROOT=$(mktemp -d)
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-TOOL="$REPO_ROOT/scripts/bin/pclaude"
+TOOL="$REPO_ROOT/scripts/shims/claude"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -19,6 +19,7 @@ SH
 chmod +x "$BIN/claude"
 export PATH="$BIN:$PATH"
 export CLAUDE_CONFIG_DIR=/elsewhere
+unset CLAUDE_ACCOUNT
 
 B="$HOME/.claude"
 P="$HOME/.claude-private"
@@ -111,5 +112,40 @@ mkdir "$B/agents"
 "$TOOL" mcp add foo
 call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 [[ ${call[0]} == unset ]] || fail "mcp ran with CLAUDE_CONFIG_DIR=${call[0]}"
+
+# --help is a claude flag, not the wrapper's.
+"$TOOL" --help
+call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
+[[ ${call[0]} == "$P" && ${call[1]} == --help ]] || fail "--help did not reach claude: ${call[*]}"
+
+# wclaude runs the default config and marks the account.
+cat > "$BIN/claude" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "${CLAUDE_CONFIG_DIR:-unset}" "${CLAUDE_ACCOUNT:-unset}" "$@" > "$HOME/claude-call"
+SH
+"$REPO_ROOT/scripts/bin/wclaude" -c
+call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
+[[ "${call[*]}" == "unset work -c" ]] || fail "wclaude call is ${call[*]}"
+
+# A claude started under a work session stays on the work account.
+CLAUDE_ACCOUNT=work CLAUDE_CONFIG_DIR=/elsewhere "$TOOL" -p x
+call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
+[[ "${call[*]}" == "unset work -p x" ]] || fail "nested claude call is ${call[*]}"
+
+# wclaude ignores an inherited private account.
+CLAUDE_ACCOUNT=private "$REPO_ROOT/scripts/bin/wclaude"
+call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
+[[ ${call[1]} == work ]] || fail "wclaude ran as ${call[1]}"
+
+"$TOOL" -c
+call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
+[[ "${call[*]}" == "$P private -c" ]] || fail "claude call is ${call[*]}"
+
+if CLAUDE_ACCOUNT=bogus "$TOOL" 2>/dev/null; then fail "bad CLAUDE_ACCOUNT was accepted"; fi
+
+# The shim skips itself when its own directory comes first in PATH.
+PATH="$REPO_ROOT/scripts/shims:$PATH" "$TOOL" -c
+call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
+[[ "${call[*]}" == "$P private -c" ]] || fail "shim did not reach the real claude: ${call[*]}"
 
 echo "ok"
