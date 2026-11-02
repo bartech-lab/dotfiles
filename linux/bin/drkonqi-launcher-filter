@@ -1,0 +1,76 @@
+#!/usr/bin/python3 -I
+"""Drop DrKonqi crash notifications for Playwright test browsers, pass every other crash on.
+
+systemd hands the accepted socket over as fd 3 (LISTEN_FDS). The crash record (journal JSON, sorted keys) is
+peeked, not read, so the real launcher still receives it unchanged after exec (same PID, so LISTEN_PID holds).
+The first packet ends before COREDUMP_EXE, so the match uses the first word of COREDUMP_CMDLINE.
+If DrKonqi changes how it passes the record, every crash still reaches DrKonqi, and an ops alert says so.
+"""
+import os
+import re
+import socket
+import subprocess
+import sys
+import time
+
+LAUNCHER = "/usr/lib/drkonqi-coredump-launcher"
+VENDOR_UNIT = "/usr/lib/systemd/user/drkonqi-coredump-launcher@.service"
+CMDLINE = re.compile(rb'"COREDUMP_CMDLINE"\s*:\s*"([^"]*)"')
+IGNORED = re.compile(rb'^[^ ]*/ms-playwright/chromium(_headless_shell)?-\d+/')
+STAMP = os.path.expanduser("~/.local/state/drkonqi-launcher-filter.alerted")
+
+
+def drift(reason):
+    print("filter cannot inspect the crash record:", reason, file=sys.stderr)
+    try:
+        if time.time() - os.path.getmtime(STAMP) < 86400:
+            return
+    except OSError:
+        pass
+    os.makedirs(os.path.dirname(STAMP), exist_ok=True)
+    open(STAMP, "w").close()
+    try:
+        subprocess.run([os.path.expanduser("~/.local/bin/ops"), "notify", "DrKonqi filter needs a look",
+                        f"drkonqi-launcher-filter: {reason}. Playwright crashes notify again; see ~/.local/bin/drkonqi-launcher-filter."],
+                       timeout=20, check=False)
+    except (OSError, subprocess.SubprocessError) as e:
+        print("ops notify failed:", e, file=sys.stderr)
+
+
+def vendor_changed():
+    try:
+        with open(VENDOR_UNIT) as f:
+            starts = [l.strip() for l in f if l.startswith("ExecStart=")]
+    except OSError as e:
+        return f"cannot read {VENDOR_UNIT}: {e}"
+    if starts != [f"ExecStart={LAUNCHER}"]:
+        return f"DrKonqi's unit now has {starts}; the override replaces it"
+    return None
+
+
+def main():
+    changed = vendor_changed()
+    if changed:
+        drift(changed)
+    if os.environ.get("LISTEN_FDS") != "1":
+        return drift(f"LISTEN_FDS={os.environ.get('LISTEN_FDS')!r}, expected '1'")
+    try:
+        sock = socket.socket(fileno=3)
+        data = sock.recv(1 << 16, socket.MSG_PEEK)
+        sock.detach()
+    except OSError as e:
+        return drift(f"peek failed: {e}")
+    m = CMDLINE.search(data)
+    if not m:
+        return drift("no COREDUMP_CMDLINE in the first packet")
+    if IGNORED.search(m.group(1).lstrip(b"$'")):
+        print("ignored a Playwright browser crash", file=sys.stderr)
+        sys.exit(0)
+
+
+main()
+try:
+    os.execv(LAUNCHER, [LAUNCHER, *sys.argv[1:]])
+except OSError as e:
+    drift(f"cannot run {LAUNCHER}: {e}")
+    sys.exit(1)

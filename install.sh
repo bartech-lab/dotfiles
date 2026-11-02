@@ -800,6 +800,14 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai-cc-proxy.service" "$HOME/.config/systemd/user/bonsai-cc-proxy.service" "Bonsai proxy unit"
     config_symlinks "$DOTFILES_DIR/linux/bin/bonsai-cc-proxy.py" "$HOME/.local/bin/bonsai-cc-proxy.py" "Bonsai proxy script"
 
+    # Portal only starts once the session has WAYLAND_DISPLAY (else it picks gtk.portal and Dolphin aborts)
+    config_symlinks "$DOTFILES_DIR/linux/systemd/xdg-desktop-portal.service.d/require-session.conf" "$HOME/.config/systemd/user/xdg-desktop-portal.service.d/require-session.conf" "Portal session condition"
+
+    # DrKonqi: drop Playwright browser crash notifications, cap each launcher at 10 min
+    config_symlinks "$DOTFILES_DIR/linux/systemd/drkonqi-coredump-launcher@.service.d/playwright-filter.conf" "$HOME/.config/systemd/user/drkonqi-coredump-launcher@.service.d/playwright-filter.conf" "DrKonqi Playwright filter unit"
+    config_symlinks "$DOTFILES_DIR/linux/systemd/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "$HOME/.config/systemd/user/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "DrKonqi runtime limit"
+    config_symlinks "$DOTFILES_DIR/linux/bin/drkonqi-launcher-filter" "$HOME/.local/bin/drkonqi-launcher-filter" "DrKonqi Playwright filter"
+
     # Logout hook: SIGTERM browsers before Plasma closes their windows (KDE bug 514571)
     config_symlinks "$DOTFILES_DIR/linux/bin/plasma-shutdown-browsers" "$HOME/.local/bin/plasma-shutdown-browsers" "Browser logout hook"
     config_symlinks "$DOTFILES_DIR/linux/dbus/org.kde.Shutdown.service" "$HOME/.local/share/dbus-1/services/org.kde.Shutdown.service" "org.kde.Shutdown override"
