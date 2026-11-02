@@ -696,7 +696,7 @@ config_symlinks() {
         fi
     else
         mkdir -p "$dest_dir"
-        ln -sf "$src" "$dest"
+        ln -sfn "$src" "$dest"
         echo "✓ Linked $label"
     fi
 }
@@ -809,7 +809,11 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/bin/drkonqi-launcher-filter" "$HOME/.local/bin/drkonqi-launcher-filter" "DrKonqi Playwright filter"
 
     # lsfg-vk frame generation profiles
-    config_symlinks "$DOTFILES_DIR/config/lsfg-vk/conf.toml" "$HOME/.config/lsfg-vk/conf.toml" "lsfg-vk config"
+    if [[ -d "$HOME/.config/lsfg-vk" && ! -L "$HOME/.config/lsfg-vk" ]]; then
+        echo "⚠ Kept existing directory ~/.config/lsfg-vk; move it away and rerun to link it"
+    else
+        config_symlinks "$DOTFILES_DIR/config/lsfg-vk" "$HOME/.config/lsfg-vk" "lsfg-vk config"
+    fi
 
     # Autoclicker (Ctrl+. toggles it through the desktop entry)
     config_symlinks "$DOTFILES_DIR/linux/systemd/autoclicker.service" "$HOME/.config/systemd/user/autoclicker.service" "Autoclicker unit"
