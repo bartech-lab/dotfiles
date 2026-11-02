@@ -57,3 +57,5 @@ kglobalshortcutsrc	services>autoclicker-toggle.desktop	_launch	Ctrl+.
 kglobalshortcutsrc	services>com.mitchellh.ghostty.desktop	_launch	none
 kglobalshortcutsrc	services>org.kde.spectacle.desktop	RecordRegion	Ctrl+%
 kglobalshortcutsrc	services>org.kde.spectacle.desktop	RectangularRegionScreenShot	Ctrl+$
+dolphinrc	Shortcuts	open_terminal	none
+dolphinrc	Shortcuts	open_terminal_here	none
