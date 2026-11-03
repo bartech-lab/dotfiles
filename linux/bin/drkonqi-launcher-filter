@@ -1,9 +1,11 @@
 #!/usr/bin/python3 -I
-"""Drop DrKonqi crash notifications for Playwright test browsers, pass every other crash on.
+"""Drop DrKonqi crash notifications for Playwright test browsers and /spare Stryker runs, pass every other crash on.
 
 systemd hands the accepted socket over as fd 3 (LISTEN_FDS). The crash record (journal JSON, sorted keys) is
 peeked, not read, so the real launcher still receives it unchanged after exec (same PID, so LISTEN_PID holds).
 The first packet ends before COREDUMP_EXE, so the match uses the first word of COREDUMP_CMDLINE.
+Stryker breaks code on purpose, so its node test runs abort by design; they run in the spare-stryker.scope
+cgroup (COREDUMP_CGROUP sorts before COREDUMP_CMDLINE, so it is in the first packet).
 If DrKonqi changes how it passes the record, every crash still reaches DrKonqi, and an ops alert says so.
 """
 import os
@@ -17,6 +19,7 @@ LAUNCHER = "/usr/lib/drkonqi-coredump-launcher"
 VENDOR_UNIT = "/usr/lib/systemd/user/drkonqi-coredump-launcher@.service"
 CMDLINE = re.compile(rb'"COREDUMP_CMDLINE"\s*:\s*"([^"]*)"')
 IGNORED = re.compile(rb'^[^ ]*/ms-playwright/chromium(_headless_shell)?-\d+/')
+IGNORED_CGROUP = re.compile(rb'"COREDUMP_CGROUP"\s*:\s*"[^"]*/spare-stryker\.scope"')
 STAMP = os.path.expanduser("~/.local/state/drkonqi-launcher-filter.alerted")
 
 
@@ -65,6 +68,9 @@ def main():
         return drift("no COREDUMP_CMDLINE in the first packet")
     if IGNORED.search(m.group(1)):
         print("ignored a Playwright browser crash", file=sys.stderr)
+        sys.exit(0)
+    if IGNORED_CGROUP.search(data):
+        print("ignored a Stryker test-run crash", file=sys.stderr)
         sys.exit(0)
 
 

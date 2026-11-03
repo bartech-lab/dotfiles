@@ -95,6 +95,16 @@ class FilterTest(unittest.TestCase):
     def test_systemd_quoted_cmdline_is_dropped(self):
         self.assert_dropped("$'" + HEADLESS + "\\x01'")
 
+    def test_node_crash_in_the_stryker_scope_is_dropped(self):
+        cgroup = "/user.slice/user-1000.slice/user@1000.service/app.slice/spare-stryker.scope"
+        proc = self.run_filter(record("/usr/bin/node --test x.test.js", COREDUMP_CGROUP=cgroup))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIsNone(self.launched_with(), "a Stryker crash reached DrKonqi")
+
+    def test_node_crash_outside_the_stryker_scope_reaches_drkonqi(self):
+        cgroup = "/user.slice/user-1000.slice/user@1000.service/app.slice/app-spare-stryker.scope.d.scope"
+        self.assert_passed_unchanged(record("/usr/bin/node --test x.test.js", COREDUMP_CGROUP=cgroup), notified=False)
+
     def test_other_app_reaches_drkonqi_with_the_record_intact(self):
         self.assert_passed_unchanged(record("/usr/bin/dolphin --new-window"), notified=False)
 
