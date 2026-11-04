@@ -844,6 +844,11 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/filen-desktop.desktop" "$HOME/.local/share/applications/filen-desktop.desktop" "Filen Desktop desktop"
 
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/org.wezfurlong.wezterm.desktop" "$HOME/.local/share/applications/org.wezfurlong.wezterm.desktop" "WezTerm reconnect launcher"
+
+    # tg:// links open in the Telegram Web A Brave app
+    config_symlinks "$DOTFILES_DIR/linux/bin/tg-open" "$HOME/.local/bin/tg-open" "Telegram link handler"
+    config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/tg-open.desktop" "$HOME/.local/share/applications/tg-open.desktop" "Telegram link handler desktop"
+    xdg-mime default tg-open.desktop x-scheme-handler/tg
 fi
 
 # p10k prompt theme

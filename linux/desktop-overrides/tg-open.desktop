@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Telegram Web link handler
+Exec=/home/bartech/.local/bin/tg-open %u
+Icon=/home/bartech/.local/share/icons/hicolor/512x512/apps/brave-ibblmnobmgdmpoeblocemifbpglakpoi-Default.png
+Terminal=false
+NoDisplay=true
+MimeType=x-scheme-handler/tg;
