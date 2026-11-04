@@ -446,14 +446,16 @@ HEARTBEATCONF
         echo "  → /etc/sysctl.d/99-performance.conf (vm.swappiness=10, vm.max_map_count)"
         echo "  → /etc/modprobe.d/nvidia.conf (blacklist nouveau/nova_core, DRM modeset)"
         echo "  → /etc/opt/chrome/policies/recommended/plain.json (Google Chrome defaults)"
+        echo "  → /etc/udev/rules.d/99-brio500.rules (Brio 500 keeps 30 fps in low light)"
     else
         echo ""
         echo "⚙️  Deploying system performance configs..."
         sudo cp "$DOTFILES_DIR/linux/etc/sysctl.d/99-performance.conf" /etc/sysctl.d/
         sudo cp "$DOTFILES_DIR/linux/etc/modprobe.d/nvidia.conf" /etc/modprobe.d/
         sudo install -Dm644 "$DOTFILES_DIR/linux/etc/opt/chrome/policies/recommended/plain.json" /etc/opt/chrome/policies/recommended/plain.json
+        sudo install -Dm644 "$DOTFILES_DIR/linux/etc/udev/rules.d/99-brio500.rules" /etc/udev/rules.d/99-brio500.rules
         sudo sysctl --system >/dev/null 2>&1
-        echo "✓ System configs deployed (sysctl, modprobe, Chrome policies)"
+        echo "✓ System configs deployed (sysctl, modprobe, Chrome policies, udev)"
     fi
 
     # --- GameMode config ---
