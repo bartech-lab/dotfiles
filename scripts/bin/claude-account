@@ -200,4 +200,10 @@ os.replace(tmp, dst_path)
 PY
 
 export CLAUDE_CONFIG_DIR="$profile"
-exec "$real" "$@"
+
+# ~/.claude-private/projects is a symlink, and Claude Code asks before writing
+# through one, even in auto mode and with allow rules or an allow hook. Naming
+# the real memory folder removes the prompt. It takes one path, so set it here
+# per project, with the same folder name Claude Code derives.
+root=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && root=${root%/.git} || root=$PWD
+exec "$real" --settings "{\"autoMemoryDirectory\":\"$base/projects/${root//[^[:alnum:]]/-}/memory\"}" "$@"
