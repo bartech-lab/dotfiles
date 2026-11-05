@@ -1,0 +1,3 @@
+#!/bin/bash
+ulimit -Sn "$(ulimit -Hn)"
+exec /usr/bin/chromium "$@"
