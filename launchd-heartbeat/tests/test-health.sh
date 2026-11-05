@@ -67,7 +67,7 @@ write_record() {
 }
 
 reset() {
-    rm -rf "$CONF_DIR" "$JOB_DIR" "$NOTIFY_LOG"
+    rm -rf "$CONF_DIR" "$JOB_DIR" "$NOTIFY_LOG" "$TEST_ROOT"/failed-units*
     mkdir -p "$CONF_DIR" "$JOB_DIR"
     printf '# no services\n' > "$CONF_DIR/monitored-labels.conf"
     : > "$PROBES"
@@ -85,6 +85,16 @@ echo Linux
 EOF
 cat > "$MOCK_BIN/systemctl" <<'EOF'
 #!/bin/bash
+case "$*" in
+    *--failed*)
+        [[ -e "$FAILED_UNITS.error" ]] && exit 1
+        case "$*" in
+            *--user*) cat "$FAILED_UNITS.user" 2>/dev/null ;;
+            *) cat "$FAILED_UNITS.system" 2>/dev/null ;;
+        esac
+        exit 0
+        ;;
+esac
 exit 1
 EOF
 cat > "$MOCK_BIN/notify-send" <<'EOF'
@@ -94,6 +104,7 @@ printf '%s\n' "$*" >> "$NOTIFY_LOG"
 EOF
 chmod +x "$MOCK_BIN/uname" "$MOCK_BIN/systemctl" "$MOCK_BIN/notify-send"
 
+export FAILED_UNITS="$TEST_ROOT/failed-units"
 export NOTIFY_LOG JOB_STATUS_DIR="$JOB_DIR"
 export HOME="$TEST_HOME"
 export PATH="$MOCK_BIN:$PATH"
@@ -395,5 +406,82 @@ rc=0
 out=$(hb --status) || rc=$?
 assert_eq "$rc" 2 'pause uses its own max_age_hours'
 assert_line "$out" '^FAIL .*pause-other.*stale' 'owner name must appear in pause-<owner>'
+
+unit_line() { printf '%s loaded failed failed x\n' "$1"; }
+rm -f "$PAUSE_FILE"
+
+echo "== failed units: system and user scope are named in the alert"
+reset
+unit_line docker.service > "$FAILED_UNITS.system"
+unit_line wireplumber.service > "$FAILED_UNITS.user"
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'a failed unit must make --status exit 2'
+assert_line "$out" '^FAIL docker.service failed' 'failed system unit not named'
+assert_line "$out" '^FAIL wireplumber.service failed' 'failed user unit not named'
+hb
+assert_contains "$NOTIFY_LOG" 'docker.service (failed)' 'failed system unit not in notification'
+assert_contains "$NOTIFY_LOG" 'wireplumber.service (failed)' 'failed user unit not in notification'
+
+echo "== failed units: the same set stays quiet, a second unit alerts again"
+hb
+assert_eq "$(notify_count)" 1 'unchanged failed units must not notify again'
+unit_line tailscaled.service >> "$FAILED_UNITS.system"
+hb
+assert_eq "$(notify_count)" 2 'a second failed unit must notify'
+tail -n 1 "$NOTIFY_LOG" > "$TEST_ROOT/last-notification"
+assert_contains "$TEST_ROOT/last-notification" 'tailscaled.service (failed)' 'second failed unit not named'
+
+echo "== failed units: desktop apps are ignored, in both scopes"
+reset
+unit_line 'app-discord@1bdbedf0.service' > "$FAILED_UNITS.user"
+unit_line 'app-other.service' > "$FAILED_UNITS.system"
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 0 'a failed desktop app must stay healthy'
+assert_line "$out" '^ok failed-units-system' 'clean system scope must print ok'
+assert_line "$out" '^ok failed-units-user' 'clean user scope must print ok'
+
+echo "== failed units: only the app- prefix is ignored"
+reset
+unit_line 'my-app-sync.service' > "$FAILED_UNITS.user"
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'a unit with app- inside its name is not a desktop app'
+
+echo "== failed units: a unit in the label list is not reported twice"
+reset
+printf 'down.service\n' > "$CONF_DIR/monitored-labels.conf"
+unit_line down.service > "$FAILED_UNITS.user"
+out=$(hb --status) || true
+assert_eq "$(printf '%s\n' "$out" | grep -c '^FAIL down.service')" 1 'monitored unit reported twice'
+
+echo "== failed units: a paused label is not reported by this check"
+reset
+printf 'down.service\n' > "$CONF_DIR/monitored-labels.conf"
+unit_line down.service > "$FAILED_UNITS.user"
+write_pause "$now" 12 gaming down.service
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 0 'paused label must not fail through the failed-units check'
+rm -f "$PAUSE_FILE"
+
+echo "== failed units: no answer from systemctl is a problem, not a clean result"
+reset
+touch "$FAILED_UNITS.error"
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'unknown failed units must not read as healthy'
+assert_line "$out" '^FAIL failed-units-system unknown' 'system scope must report unknown'
+assert_line "$out" '^FAIL failed-units-user unknown' 'user scope must report unknown'
+
+echo "== failed units: macOS has no systemd, so the check is skipped"
+reset
+touch "$FAILED_UNITS.error"
+printf '#!/bin/sh\necho Darwin\n' > "$MOCK_BIN/uname"
+rc=0
+out=$(hb --status) || rc=$?
+printf '#!/bin/sh\necho Linux\n' > "$MOCK_BIN/uname"
+assert_eq "$rc" 0 'Darwin must skip the failed-units check'
 
 echo 'PASS: launchd-heartbeat probes, job records, status, rotation and pause'

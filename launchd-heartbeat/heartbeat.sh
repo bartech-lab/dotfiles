@@ -283,6 +283,32 @@ if (( ! STATUS_MODE )) && [[ "$BOOT_GRACE" =~ ^[0-9]+$ ]] && (( BOOT_GRACE > 0 )
     fi
 fi
 
+# Covers units outside the label list, such as system services. app-* are desktop
+# apps: `gaming on` stops them, and Discord crashes on the way out.
+check_failed_units() {
+    local scope name unit output found args
+    for scope in system user; do
+        name="failed-units-$scope"
+        args=(--failed --no-legend --plain)
+        [[ "$scope" == user ]] && args=(--user "${args[@]}")
+        monitored=$((monitored + 1))
+        if ! output=$(systemctl "${args[@]}" 2>/dev/null); then
+            record_problem "$name" unknown "systemctl --failed did not answer"
+            continue
+        fi
+        found=0
+        while read -r unit _; do
+            [[ -z "$unit" || "$unit" == app-* ]] && continue
+            grep -qxF -- "$unit" "$LABELS_FILE" && continue
+            record_problem "$unit" failed "scope=$scope"
+            found=1
+        done <<< "$output"
+        (( found )) && continue
+        loaded=$((loaded + 1))
+        record_ok "$name" "none"
+    done
+}
+
 monitored=0
 loaded=0
 
@@ -347,6 +373,8 @@ if [[ -d "$JOBS_DIR" ]]; then
         esac
     done
 fi
+
+[[ "$(uname -s)" == Darwin ]] || check_failed_units
 
 if [[ -f "$PAUSE_FILE" ]]; then
     monitored=$((monitored + 1))

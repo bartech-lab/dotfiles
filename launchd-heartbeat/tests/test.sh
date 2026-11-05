@@ -49,6 +49,8 @@ set -euo pipefail
 
 printf '%s\n' "$*" >> "$CALL_LOG"
 
+[[ "$*" == *--failed* ]] && exit 0
+
 if [[ "${1:-}" != --user ]]; then
     exit 2
 fi
@@ -150,7 +152,7 @@ assert_contains "$ERROR_LOG" \
 assert_contains "$LOG_FILE" \
     'Label=active.service status=active state=active result=success timer=inactive' \
     'active service was not reported as healthy'
-assert_contains "$LOG_FILE" 'Run finished monitored=4 loaded=2' \
+assert_contains "$LOG_FILE" 'Run finished monitored=6 loaded=4' \
     'heartbeat summary did not count healthy services'
 assert_contains "$NOTIFY_LOG" 'launchd heartbeat Failed or missing: failed.service (failed), missing.service (missing)' \
     'notification did not include failed and missing services'

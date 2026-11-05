@@ -45,6 +45,7 @@ status() {
 os Linux
 cat > "$MOCK_BIN/systemctl" <<'SH'
 #!/bin/sh
+case "$*" in *--failed*) exit 0 ;; esac
 exit 1
 SH
 chmod +x "$MOCK_BIN/systemctl"
@@ -205,6 +206,7 @@ grep -q '^ops notify' "$CALLS" && grep -q '^desktop' "$CALLS" || fail "a failing
 os Linux
 cat > "$MOCK_BIN/systemctl" <<'SH'
 #!/bin/sh
+case "$*" in *--failed*) exit 0 ;; esac
 exit 1
 SH
 chmod +x "$MOCK_BIN/systemctl"
@@ -243,6 +245,7 @@ grep -q '^ops notify' "$CALLS" 2>/dev/null || fail "an unreadable uptime runs th
 os Darwin
 cat > "$MOCK_BIN/launchctl" <<'SH'
 #!/bin/sh
+case "$*" in *--failed*) exit 0 ;; esac
 exit 1
 SH
 cat > "$MOCK_BIN/sysctl" <<'SH'
