@@ -10,8 +10,8 @@ until `--ack`. Any other new item is announced and the update proceeds. An unrea
 feed is announced as "unchecked" and the update proceeds.
 
 After a successful update each finding is its own notification and never changes the exit
-code: failed units, new .pacnew files, a running kernel whose modules are gone, a loaded
-nvidia module older than the installed package.
+code: units that failed since the update started, new .pacnew files, a running kernel
+whose modules are gone, a loaded nvidia module older than the installed package.
 """
 import email.utils
 import glob
@@ -100,10 +100,16 @@ def filesystem_now():
         return os.fstat(handle.fileno()).st_ctime
 
 
+def failed_before(scope, unit, started):
+    value = run(["systemctl", *scope, "show", "--timestamp=unix", "-p", "StateChangeTimestamp", "--value", unit]).strip()
+    return bool(re.fullmatch(r"@\d+", value)) and int(value[1:]) < int(started)
+
+
 def post_checks(started):
     findings = []
     failed = [line.split()[0] for scope in ([], ["--user"])
-              for line in run(["systemctl", *scope, "--failed", "--no-legend", "--plain"]).splitlines() if line.strip()]
+              for line in run(["systemctl", *scope, "--failed", "--no-legend", "--plain"]).splitlines()
+              if line.strip() and not failed_before(scope, line.split()[0], started)]
     if failed:
         findings.append(("failed units after update", ", ".join(failed)))
     pacnew = [p for p in glob.glob(os.path.join(ETC_DIR, "**", "*.pacnew"), recursive=True) if os.stat(p).st_ctime >= started]

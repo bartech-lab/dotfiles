@@ -213,6 +213,36 @@ class GuardTest(unittest.TestCase):
         self.assertIn("sys-unit.service", text)
         self.assertIn("user-unit.service", text)
 
+    def test_only_units_that_failed_since_the_update_started_are_reported(self):
+        bindir = self.stub_bin("systemctl", """case "$*" in
+  *--failed*) case "$*" in *--user*) ;; *)
+    echo "before.service loaded failed failed x"
+    echo "during.service loaded failed failed y"
+    echo "unreadable.service loaded failed failed z";; esac;;
+  *before.service*) echo @1000;;
+  *during.service*) echo @9999999999;;
+  *unreadable.service*) echo n/a;;
+esac
+""")
+        env = dict(self.env, PATH=bindir + os.pathsep + os.environ["PATH"])
+        self.seed(env)
+        self.assertEqual(self.guard(env=env).returncode, 0)
+        text = self.alerts_text()
+        self.assertNotIn("before.service", text)
+        self.assertIn("during.service", text)
+        self.assertIn("unreadable.service", text)
+
+    def test_only_old_failures_send_no_failed_units_alert(self):
+        bindir = self.stub_bin("systemctl", """case "$*" in
+  *--failed*) case "$*" in *--user*) ;; *) echo "before.service loaded failed failed x";; esac;;
+  *before.service*) echo @1000;;
+esac
+""")
+        env = dict(self.env, PATH=bindir + os.pathsep + os.environ["PATH"])
+        self.seed(env)
+        self.assertEqual(self.guard(env=env).returncode, 0)
+        self.assertNotIn("failed units", self.alerts_text())
+
 
 class NvidiaTest(unittest.TestCase):
     def findings(self, loaded, installed):
