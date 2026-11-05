@@ -258,6 +258,16 @@ assert_has "$line" 'toolsmith.timer' 'failed unit not named after Not started:'
 assert_lacks "$line" 'bonsai' 'Not started lists a unit that started'
 assert_eq "$(calls start | sorted)" "$(printf '%s\n' "${ALL_UNITS[@]}" | sorted)" 'start failure stopped the loop early'
 
+echo "== app patterns: an app that crashes while stopping leaves no failed unit"
+reset
+printf 'app-discord@*.service\n' > "$APPS_FILE"
+run_gaming on
+stop_line=$(grep -n -F 'systemctl --user stop app-discord@*.service' "$EVENTS" | cut -d: -f1)
+reset_line=$({ grep -n -F 'systemctl --user reset-failed app-discord@*.service' "$EVENTS" || true; } | cut -d: -f1)
+[[ -n "$reset_line" ]] || fail 'on did not reset-failed the app pattern'
+(( reset_line > stop_line )) || fail 'reset-failed ran before the app was stopped'
+run_gaming off
+
 echo "== app patterns"
 reset
 printf '# comment line\n\nsteam_app_*.scope\n  \nlutris-*\n' > "$APPS_FILE"

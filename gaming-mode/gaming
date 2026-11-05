@@ -117,6 +117,7 @@ cmd_on() {
     local pattern
     while IFS= read -r pattern; do
         systemctl --user stop "$pattern" >/dev/null 2>&1 || true
+        systemctl --user reset-failed "$pattern" >/dev/null 2>&1 || true
     done < <(app_patterns)
 
     local msg
