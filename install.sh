@@ -831,7 +831,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     fi
 
     # Personal scripts
-    for script in ark-extract-delete check-browser-logout-hook chrome-launch chromium-launch cpu-uv-check cpu-uv-test hw-log llama-prof-watch sgsearch; do
+    for script in ark-extract-delete check-browser-logout-hook chrome-launch cpu-uv-check cpu-uv-test hw-log llama-prof-watch sgsearch; do
         config_symlinks "$DOTFILES_DIR/linux/bin/$script" "$HOME/.local/bin/$script" "$script"
     done
 
