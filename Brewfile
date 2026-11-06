@@ -76,6 +76,8 @@ brew "docker"           # Docker CLI (daemon provided by colima)
 brew "docker-compose"   # Compose plugin (wired via ~/.docker/config.json cliPluginsExtraDirs)
 brew "docker-credential-helper"  # docker-credential-osxkeychain (was bundled with Docker Desktop)
 brew "shellcheck"       # Static analysis for Bash and POSIX sh scripts
+brew "bitwarden-cli"    # Bitwarden vault CLI
+brew "htop"             # Interactive process viewer
 # pipx removed 2026-07 — uv (installed) covers isolated Python CLI tools via `uv tool`/uvx
 
 # ============================================================================
@@ -95,6 +97,22 @@ cask "stats"                    # System monitor in menu bar
 # cask "tg-pro"                 # Temperature monitoring for Mac -> commenting this one out, causing checksum issue
 cask "visual-studio-code"       # Code editor
 cask "localsend"                # Cross-platform file sharing
+cask "bitwarden"                # Password manager
+cask "bruno"                    # API client
+cask "coteditor"                # Plain-text editor
+cask "dbeaver-community"        # Database client
+cask "filen"                    # Encrypted cloud sync
+cask "google-chrome"            # Browser for testing
+cask "imageoptim"               # Image optimizer GUI
+cask "pinta"                    # Image editor
+cask "proton-mail"              # Mail client
+cask "protonvpn"                # VPN client
+cask "shutter-encoder"          # Media converter GUI
+cask "slack"                    # Team chat
+cask "spotify"                  # Music player
+cask "standard-notes"           # Encrypted notes
+cask "webcatalog"               # Web apps as desktop apps
+cask "whatsapp"                 # Messenger
 
 # ============================================================================
 # VS Code Extensions
@@ -104,3 +122,5 @@ cask "localsend"                # Cross-platform file sharing
 vscode "davidanson.vscode-markdownlint"   # Markdown linting
 vscode "tombi-toml.tombi"                 # TOML support (successor of unmaintained even-better-toml)
 vscode "ms-playwright.playwright"         # Playwright test support
+vscode "eamodio.gitlens"                  # Git history and blame
+vscode "ms-azuretools.vscode-containers"  # Container tooling
