@@ -48,6 +48,7 @@ EXCLUDE=(
     jobs
     bridge-spawn
     seed-admin
+    .cc-writes
 )
 
 # Top-level files to share. Any other file is per-account state.
