@@ -20,6 +20,12 @@ cp "$SRC_DIR/gaming" "$HOME/.local/bin/gaming.tmp"
 chmod +x "$HOME/.local/bin/gaming.tmp"
 mv -f "$HOME/.local/bin/gaming.tmp" "$HOME/.local/bin/gaming"
 
+ln -sfn "$SRC_DIR/game-quirks" "$HOME/.local/bin/game-quirks"
+mkdir -p "$HOME/.config/systemd/user"
+cp "$SRC_DIR/game-quirks.path" "$SRC_DIR/game-quirks.service" "$HOME/.config/systemd/user/"
+systemctl --user daemon-reload
+systemctl --user enable --now game-quirks.path
+
 if [[ ! -f "$HOME/.config/gaming/apps.conf" ]]; then
     cp "$SRC_DIR/apps.conf" "$HOME/.config/gaming/apps.conf"
 fi

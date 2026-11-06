@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""List installed games and whether each has a frame generation decision.
+
+  game-quirks                  show every installed game; exit 1 if any needs attention
+  game-quirks --notify         same, and send one `ops notify` for what is new
+  game-quirks afmf GAME        turn afmf-linux on for GAME and record it
+  game-quirks skip GAME WHY    record that GAME stays without it
+
+GAME is an id from the list: steam:<appid> or lutris:<slug>.
+"""
+import os
+import re
+import sqlite3
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+STEAM = Path(os.environ.get('GAME_QUIRKS_STEAM', HOME/'.local/share/Steam'))
+LUTRIS_DB = Path(os.environ.get('GAME_QUIRKS_LUTRIS_DB', HOME/'.local/share/lutris/pga.db'))
+LUTRIS_GAMES = Path(os.environ.get('GAME_QUIRKS_LUTRIS_GAMES', HOME/'.config/lutris/games'))
+DECISIONS = Path(os.environ.get('GAME_QUIRKS_DECISIONS', Path(__file__).resolve().parent/'games.conf'))
+NOTIFIED = Path(os.environ.get('GAME_QUIRKS_NOTIFIED', HOME/'.local/state/game-quirks/notified'))
+NOTIFY = os.environ.get('GAME_QUIRKS_NOTIFY', 'ops').split()
+STEAM_TOOLS = re.compile(r'^(Proton|Steam Linux Runtime|Steamworks)')
+AFMF = 'AFMF_ENABLE=1'
+
+
+def installed():
+    games = {}
+    for path in sorted((STEAM/'steamapps').glob('appmanifest_*.acf')):
+        text = path.read_text(errors='replace')
+        appid = re.search(r'"appid"\s+"(\d+)"', text)
+        name = re.search(r'"name"\s+"([^"]+)"', text)
+        if appid and name and not STEAM_TOOLS.match(name.group(1)):
+            games[f'steam:{appid.group(1)}'] = name.group(1)
+    if LUTRIS_DB.exists():
+        db = sqlite3.connect(f'file:{LUTRIS_DB}?mode=ro', uri=True)
+        for slug, name in db.execute('select slug, name from games where installed = 1'):
+            games[f'lutris:{slug}'] = name
+        db.close()
+    return games
+
+
+def decisions():
+    found = {}
+    if DECISIONS.exists():
+        for line in DECISIONS.read_text().splitlines():
+            parts = line.split(None, 2)
+            if len(parts) >= 2 and not line.startswith('#'):
+                found[parts[0]] = (parts[1], parts[2] if len(parts) > 2 else '')
+    return found
+
+
+def record(game, decision, why=''):
+    lines = [l for l in DECISIONS.read_text().splitlines() if l.split(None, 1)[:1] != [game]] if DECISIONS.exists() else []
+    lines.append(f'{game} {decision} {why}'.rstrip())
+    DECISIONS.write_text('\n'.join(lines) + '\n')
+
+
+def steam_configs():
+    return sorted(STEAM.glob('userdata/*/config/localconfig.vdf'))
+
+
+def app_block(lines, appid):
+    start = next((i for i, l in enumerate(lines) if l == f'\t\t\t\t\t"{appid}"' and lines[i + 1] == '\t\t\t\t\t{'), None)
+    if start is None:
+        return None, None
+    return start + 1, next(i for i in range(start, len(lines)) if lines[i] == '\t\t\t\t\t}')
+
+
+def lutris_config(slug):
+    db = sqlite3.connect(f'file:{LUTRIS_DB}?mode=ro', uri=True)
+    row = db.execute('select configpath from games where slug = ? and installed = 1', (slug,)).fetchone()
+    db.close()
+    if not row or not row[0]:
+        raise SystemExit(f'no Lutris config for {slug}')
+    return LUTRIS_GAMES/f'{row[0]}.yml'
+
+
+def has_afmf(game):
+    kind, key = game.split(':', 1)
+    if kind == 'lutris':
+        text = lutris_config(key).read_text()
+        system = re.search(r'^system:\n((?:[ \t].*\n)*)', text, re.M)
+        return bool(system and re.search(r"^\s+AFMF_ENABLE: '?1'?\s*$", system.group(1), re.M))
+    for config in steam_configs():
+        lines = config.read_text(errors='surrogateescape').split('\n')
+        top, end = app_block(lines, key)
+        if top and any('"LaunchOptions"' in l and AFMF in l for l in lines[top:end]):
+            return True
+    return False
+
+
+def enable_lutris(slug):
+    path = lutris_config(slug)
+    text = path.read_text()
+    entry = "    AFMF_ENABLE: '1'\n"
+    system = re.search(r'^system:\n', text, re.M)
+    if not system:
+        text += "system:\n  env:\n" + entry
+    else:
+        env = re.compile(r'^  env:\n', re.M).search(text, system.end())
+        following = re.compile(r'^\S', re.M).search(text, system.end())
+        if env and (not following or env.start() < following.start()):
+            text = text[:env.end()] + entry + text[env.end():]
+        else:
+            text = text[:system.end()] + "  env:\n" + entry + text[system.end():]
+    path.write_text(text)
+
+
+def enable_steam(appid):
+    if subprocess.run(['pgrep', '-x', 'steam'], stdout=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit('Steam is running and would overwrite this: close it and run this again')
+    done = False
+    for config in steam_configs():
+        lines = config.read_text(errors='surrogateescape').split('\n')
+        top, end = app_block(lines, appid)
+        if top is None:
+            continue
+        current = next((i for i in range(top, end) if lines[i].strip().startswith('"LaunchOptions"')), None)
+        if current is None:
+            lines.insert(top + 1, f'\t\t\t\t\t\t"LaunchOptions"\t\t"{AFMF} %command%"')
+        else:
+            value = re.search(r'"LaunchOptions"\s+"(.*)"', lines[current]).group(1)
+            value = value if '%command%' in value else f'%command% {value}'.rstrip()
+            lines[current] = f'\t\t\t\t\t\t"LaunchOptions"\t\t"{AFMF} {value}"'
+        config.write_text('\n'.join(lines), errors='surrogateescape')
+        done = True
+    if not done:
+        raise SystemExit(f'Steam has no settings for {appid} yet: start the game once, then run this again')
+
+
+def attention(games, known):
+    new = [g for g in games if g not in known]
+    missing = [g for g in games if known.get(g, ('',))[0] == 'afmf' and not has_afmf(g)]
+    return new, missing
+
+
+def show(games, known, new, missing):
+    for game, name in sorted(games.items()):
+        decision, why = known.get(game, ('NEW', 'run: game-quirks afmf GAME, or skip GAME WHY'))
+        state = 'SETTING MISSING' if game in missing else decision
+        print(f'{state:<16}{game:<44}{name}  {why}'.rstrip())
+
+
+def notify(games, new, missing):
+    NOTIFIED.parent.mkdir(parents=True, exist_ok=True)
+    seen = set(NOTIFIED.read_text().split('\n')) if NOTIFIED.exists() else set()
+    fresh = [g for g in new + missing if g not in seen]
+    if fresh:
+        names = ', '.join(games[g] for g in fresh)
+        subprocess.run([*NOTIFY, 'notify', 'Game setup', f'Check frame generation for: {names}. Run game-quirks.'], check=True)
+    NOTIFIED.write_text('\n'.join(sorted(new + missing)) + '\n')
+
+
+def main(argv):
+    command = argv[1] if len(argv) > 1 else ''
+    games = installed()
+    if command in ('afmf', 'skip'):
+        if len(argv) < (3 if command == 'afmf' else 4) or argv[2] not in games:
+            raise SystemExit(__doc__)
+        game = argv[2]
+        if command == 'skip':
+            record(game, 'skip', ' '.join(argv[3:]))
+            return 0
+        if not has_afmf(game):
+            kind, key = game.split(':', 1)
+            (enable_lutris if kind == 'lutris' else enable_steam)(key)
+        record(game, 'afmf')
+        return 0
+    if command not in ('', '--notify'):
+        raise SystemExit(__doc__)
+    known = decisions()
+    new, missing = attention(games, known)
+    show(games, known, new, missing)
+    if command == '--notify':
+        notify(games, new, missing)
+    return 1 if new or missing else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

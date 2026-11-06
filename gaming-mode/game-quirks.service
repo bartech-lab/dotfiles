@@ -1,0 +1,8 @@
+[Unit]
+Description=Report installed games that need a frame generation decision
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=%h/.local/bin/game-quirks --notify
+SuccessExitStatus=1

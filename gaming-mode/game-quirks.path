@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for newly installed games
+
+[Path]
+PathChanged=%h/.local/share/Steam/steamapps
+PathChanged=%h/.local/share/lutris/pga.db
+
+[Install]
+WantedBy=default.target

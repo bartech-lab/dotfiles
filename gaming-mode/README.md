@@ -13,6 +13,18 @@ Press **Meta+Shift+G**, or type `gaming`. Press or type it again after the game.
 | `gaming status` | what is stopped, since when, VRAM free |
 | `gaming run -- %command%` | Steam launch option: on before the game, off after it exits |
 
+## New games
+
+`game-quirks` lists every installed Steam and Lutris game with its frame generation decision, kept in `games.conf`. `game-quirks.path` runs it when a game is installed, and `ops notify` names any game without a decision.
+
+| Command | Effect |
+|---|---|
+| `game-quirks` | show every game; exit 1 if one needs attention |
+| `game-quirks afmf steam:<appid>` or `lutris:<slug>` | turn `afmf-linux` on for that game. Steam must be closed |
+| `game-quirks skip <game> <why>` | record that the game stays without it |
+
+Lutris reads environment variables from `system: env:`. It ignores `game: env:`.
+
 ## What `on` stops
 
 Only units that are running are recorded in `$XDG_RUNTIME_DIR/gaming/state`, and `off`
