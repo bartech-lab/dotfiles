@@ -1,8 +1,10 @@
 [Unit]
 Description=Report installed games that need a frame generation decision
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStartPre=/usr/bin/sleep 30
 ExecStart=%h/.local/bin/game-quirks --notify
 SuccessExitStatus=1
