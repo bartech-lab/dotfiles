@@ -126,7 +126,7 @@ for src in "$base"/* "$base"/.[!.]*; do
     if [[ -L $dst ]]; then
         continue
     elif [[ -e $dst ]]; then
-        echo "claude: $dst is a local copy, not a link to $src; delete it to share again" >&2
+        echo "claude: $dst is a local copy, not a link to $src; delete it to share, or add it to EXCLUDE if it is per-account" >&2
     else
         ln -s "$src" "$dst"
     fi
