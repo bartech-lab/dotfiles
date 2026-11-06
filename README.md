@@ -7,7 +7,7 @@ Personal shell functions, aliases, and scripts for macOS 14+ and Linux (Endeavou
 - **Local LLM server (Linux):** systemd units that run Ternary Bonsai 2 27B in llama-server on one consumer GPU, plus [`bonsai-cc-proxy`](linux/bin/bonsai-cc-proxy.py). The proxy adapts Claude Code and OMP requests to the model and gates admission to the server's shared KV cache, so two large sessions cannot crash it. It has [58 tests](linux/tests/test_bonsai_cc_proxy.py).
 - **Background jobs that report their own failures:** an hourly [git auto-pull](git-auto-pull/README.md) with retries, and a [heartbeat](launchd-heartbeat/README.md) that reports failed services even when their timers still look active.
 - **Safe setup:** one idempotent `install.sh` with `--dry-run`, plus `dotfiles-doctor` and `validate-setup.sh` to check a machine.
-- **Tested:** 26 test suites across the scripts, the background jobs and the proxy (see [Validation](#validation)).
+- **Tested:** 34 test suites across the scripts, the background jobs and the proxy (see [Validation](#validation)).
 
 ## Quick Start
 
@@ -77,6 +77,8 @@ After installation, verify everything is working:
 For shell changes, inspect each file's shebang first: run
 `shellcheck --severity=warning` only on Bash/POSIX `sh` files, and use
 `zsh -n` for zsh files (including `.sh` files whose shebang selects zsh).
+`dotfiles-test` runs every suite, about 90 s. A push runs it too, through `.githooks/pre-push`, because this repository has no CI.
+
 Keep the relevant `bash -n`/`sh -n` and integration tests, such as:
 
 ```bash

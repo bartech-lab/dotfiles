@@ -547,6 +547,10 @@ if [[ "$DRY_RUN" == true ]]; then
     if ! git config --global --includes core.excludesfile | grep -q "gitignore_global"; then
         echo "  → Would set: git config --global core.excludesfile ~/.gitignore_global"
     fi
+
+    if [[ "$(git -C "$DOTFILES_DIR" config core.hooksPath)" != ".githooks" ]]; then
+        echo "  → Would set: git core.hooksPath → .githooks (dotfiles repo only)"
+    fi
     if [[ -L ~/.config/zsh-dotfiles-loader.zsh ]]; then
         echo "  → Would update: ~/.config/zsh-dotfiles-loader.zsh → $DOTFILES_DIR/zsh/functions.zsh"
     else
@@ -581,6 +585,11 @@ else
     if ! git config --global --includes core.excludesfile | grep -q "gitignore_global"; then
         git config --global core.excludesfile ~/.gitignore_global
         echo "✓ Set git core.excludesfile → ~/.gitignore_global"
+    fi
+
+    if [[ "$(git -C "$DOTFILES_DIR" config core.hooksPath)" != ".githooks" ]]; then
+        git -C "$DOTFILES_DIR" config core.hooksPath .githooks
+        echo "✓ Set git core.hooksPath → .githooks (dotfiles repo only)"
     fi
 
     if [[ -L ~/.config/zsh-dotfiles-loader.zsh ]]; then

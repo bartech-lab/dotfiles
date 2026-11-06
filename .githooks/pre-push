@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# No CI runs here, so a failing test blocks the push instead of waiting on main.
+exec "$(git rev-parse --show-toplevel)/scripts/bin/dotfiles-test"

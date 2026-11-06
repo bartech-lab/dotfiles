@@ -74,6 +74,7 @@ Run the smallest relevant checks before finishing:
 - Bash/POSIX sh changes: run `shellcheck --severity=warning` on changed files selected by their shebang, then keep the relevant `bash -n` or `sh -n` check
 - zsh changes: run `zsh -n`; do not pass zsh scripts to ShellCheck, even when they use a `.sh` suffix
 - script changes: run `--help` and one realistic invocation
+- `scripts/bin/dotfiles-test` runs every tracked suite (about 90 s). `.githooks/pre-push` runs it, so a failing suite blocks the push; a new test file named `test.sh`, `test-*.sh`, `test_*.py`, or `*.test.mjs` joins it without any edit
 - Keep the relevant integration tests, including `git-auto-pull/tests/test.sh`, `scripts/gitlab-stats/tests/test.sh`, `scripts/gitlab-stats/tests/test-lib.sh`, `scripts/gitlab-stats/tests/test-stats.sh`, `zsh zsh/tests/run.zsh [test-name...]` (never `zsh zsh/tests/test-*.zsh` directly: the runner adds the timeout), and `node --test scripts/gitlab-reviews/humanReviews.test.mjs` when affected
 - Tests must pass with no local config present. Run `HR_CONFIG=/nonexistent node --test scripts/gitlab-reviews/humanReviews.test.mjs` for the gitlab-reviews suite
 - Brewfile changes: `brew bundle check --file=~/dotfiles/Brewfile` when practical

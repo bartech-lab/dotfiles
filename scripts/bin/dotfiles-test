@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Run every tracked test suite in this repository. Exit 1 if any fails.
+set -uo pipefail
+
+root="$(git -C "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" rev-parse --show-toplevel)" || exit 2
+cd "$root" || exit 2
+
+# A push hook exports these, and they would redirect the git calls inside tests.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
+
+limit="${TEST_TIMEOUT:-300}"
+log="$(mktemp)"
+trap 'rm -f "$log"' EXIT
+failed=()
+total=0
+
+run() {
+  local name="$1" start=$SECONDS rc
+  shift
+  total=$((total + 1))
+  timeout --kill-after=10 "$limit" nice -n 19 "$@" </dev/null >"$log" 2>&1
+  rc=$?
+  if ((rc == 0)); then
+    echo "ok   $name ($((SECONDS - start))s)"
+    return
+  fi
+  ((rc == 124 || rc == 137)) && echo "FAIL $name (timeout after ${limit}s)" || echo "FAIL $name (exit $rc)"
+  tail -n 15 "$log" | sed 's/^/     /'
+  failed+=("$name")
+}
+
+while IFS= read -r file; do
+  case "$file" in
+    */test.sh | */test-*.sh) run "$file" bash "$file" ;;
+    */test_*.py) run "$file" python3 "$file" ;;
+    *.test.mjs) run "$file" env HR_CONFIG=/nonexistent node --test "$file" ;;
+    zsh/tests/run.zsh) run "$file" zsh "$file" ;;
+  esac
+done < <(git ls-files)
+
+if ((total == 0)); then
+  echo "no tests found" >&2
+  exit 2
+fi
+echo "$((total - ${#failed[@]})) of $total suites passed"
+((${#failed[@]} == 0)) || { printf 'failed: %s\n' "${failed[@]}"; exit 1; }
