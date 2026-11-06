@@ -56,11 +56,25 @@ echo '{"private":"token"}' > "$P/.credentials.json"
 ln -s "$B/gone" "$P/gone"
 ln -s "$B/.last-cleanup" "$P/.last-cleanup"
 
-"$TOOL" -c --model x
+PLAIN="$TEST_ROOT/plain.dir"
+mkdir -p "$PLAIN"
+memory_for() { printf '{"autoMemoryDirectory":"%s/projects/%s/memory"}' "$B" "${1//[^[:alnum:]]/-}"; }
+
+(cd "$PLAIN" && "$TOOL" -c --model x)
 
 call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 [[ ${call[0]} == "$P" ]] || fail "CLAUDE_CONFIG_DIR is ${call[0]}, want $P"
-[[ "${call[*]:1}" == "-c --model x" ]] || fail "args not passed through: ${call[*]:1}"
+[[ ${call[1]} == --settings && ${call[2]} == "$(memory_for "$PLAIN")" ]] || fail "memory folder outside git: ${call[*]:1:2}"
+[[ "${call[*]:3}" == "-c --model x" ]] || fail "args not passed through: ${call[*]:3}"
+
+MAIN="$TEST_ROOT/main.repo"
+git init -q "$MAIN"
+git -C "$MAIN" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty -m init
+git -C "$MAIN" worktree add -q "$TEST_ROOT/linked"
+mkdir -p "$TEST_ROOT/linked/sub"
+(cd "$TEST_ROOT/linked/sub" && "$TOOL")
+call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
+[[ ${call[2]} == "$(memory_for "$MAIN")" ]] || fail "a worktree subfolder must use the main checkout's memory folder: ${call[2]}"
 
 for e in settings.json skills projects; do
     [[ -L $P/$e && $(readlink "$P/$e") == "$B/$e" ]] || fail "$e is not linked to $B/$e"
@@ -116,7 +130,7 @@ call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 # --help is a claude flag, not the wrapper's.
 "$TOOL" --help
 call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
-[[ ${call[0]} == "$P" && ${call[1]} == --help ]] || fail "--help did not reach claude: ${call[*]}"
+[[ ${call[0]} == "$P" && ${call[3]} == --help ]] || fail "--help did not reach claude: ${call[*]}"
 
 # wclaude runs the default config and marks the account.
 cat > "$BIN/claude" <<'SH'
@@ -139,13 +153,13 @@ call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 
 "$TOOL" -c
 call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
-[[ "${call[*]}" == "$P private -c" ]] || fail "claude call is ${call[*]}"
+[[ ${call[0]} == "$P" && ${call[1]} == private && ${call[*]:4} == -c ]] || fail "claude call is ${call[*]}"
 
 if CLAUDE_ACCOUNT=bogus "$TOOL" 2>/dev/null; then fail "bad CLAUDE_ACCOUNT was accepted"; fi
 
 # The shim skips itself when its own directory comes first in PATH.
 PATH="$REPO_ROOT/scripts/shims:$PATH" "$TOOL" -c
 call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
-[[ "${call[*]}" == "$P private -c" ]] || fail "shim did not reach the real claude: ${call[*]}"
+[[ ${call[0]} == "$P" && ${call[1]} == private && ${call[*]:4} == -c ]] || fail "shim did not reach the real claude: ${call[*]}"
 
 echo "ok"

@@ -243,6 +243,17 @@ esac
         self.assertEqual(self.guard(env=env).returncode, 0)
         self.assertNotIn("failed units", self.alerts_text())
 
+    def test_old_user_unit_failure_reads_its_time_from_the_user_manager(self):
+        bindir = self.stub_bin("systemctl", """case "$*" in
+  *--failed*) case "$*" in *--user*) echo "old-user.service loaded failed failed x";; esac;;
+  *--user*old-user.service*) echo @1000;;
+esac
+""")
+        env = dict(self.env, PATH=bindir + os.pathsep + os.environ["PATH"])
+        self.seed(env)
+        self.assertEqual(self.guard(env=env).returncode, 0)
+        self.assertNotIn("old-user.service", self.alerts_text())
+
 
 class NvidiaTest(unittest.TestCase):
     def findings(self, loaded, installed):
