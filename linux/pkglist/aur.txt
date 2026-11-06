@@ -8,5 +8,3 @@ spicetify-cli
 filen-desktop-bin
 standardnotes-desktop
 plasma6-applets-netspeed
-lsfg-vk
-lib32-lsfg-vk
