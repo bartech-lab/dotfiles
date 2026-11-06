@@ -794,7 +794,7 @@ fi
 # ============================================================================
 
 if [[ "$DOTFILES_OS" == linux ]]; then
-    # Brave and Chrome GPU flags (one file, both browsers)
+    # Brave and Chrome GPU flags (one file each: only Chrome gets the WebGPU game flags)
     config_symlinks "$DOTFILES_DIR/linux/brave-flags.conf" "$HOME/.config/brave-flags.conf" "Brave flags"
     config_symlinks "$DOTFILES_DIR/linux/chrome-flags.conf" "$HOME/.config/chrome-flags.conf" "Chrome flags"
 
