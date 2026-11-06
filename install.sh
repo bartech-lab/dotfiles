@@ -775,6 +775,7 @@ config_symlinks "$DOTFILES_DIR/config/spicetify/Extensions/startLikedSongs.js" "
 # VS Code (shared settings.json, different target per platform)
 if [[ "$DOTFILES_OS" == macos ]]; then
     config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json" "VS Code settings"
+    config_symlinks "$DOTFILES_DIR/config/vscode/keybindings.json" "$HOME/Library/Application Support/Code/User/keybindings.json" "VS Code keybindings"
 else
     config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/.config/Code/User/settings.json" "VS Code settings"
 fi
