@@ -26,7 +26,7 @@ starts only those, in reverse order. A reboot clears the state; the units autost
   reported as not stopped; `sudoers.example` holds a narrow rule.
 - `system-update.timer`, `toolsmith.timer`, `logbook-sync.timer`. A run already in progress is
   left alone and named in the notification.
-- Desktop apps matching the globs in `~/.config/gaming/apps.conf` (monitors and Discord by default).
+- Desktop apps matching the globs in `~/.config/gaming/apps.conf` (monitors by default; Discord stays open).
   These are not reopened.
 
 `off` returns at once and notifies when Bonsai answers `/health` again (up to 6 minutes).
