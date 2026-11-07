@@ -4,7 +4,8 @@
 WezTerm runs in its own systemd unit, and every agent session and test run lives in that cgroup.
 The guard reads the cgroup's anonymous memory against its memory.high every few seconds:
   75% of memory.high: an ops alert, once per episode.
-  90% of memory.high: kill every headless Chromium in WezTerm (leaked test browsers are the known cause).
+  90% of memory.high: kill every headless Chromium in WezTerm and its child processes (leaked test browsers
+                      are the known cause).
                       With none left, kill nothing: alert once, naming the largest process and how to stop it.
 Every kill sends an ops alert naming what was killed and why. Nothing else is ever killed, because any other
 process may be a parallel session's live work (AGENTS.md emergency-guard exception).
@@ -61,15 +62,31 @@ def proc(pid):
     try:
         argv = read(f"/proc/{pid}/cmdline").split("\0")
         comm = read(f"/proc/{pid}/comm").strip()
+        ppid = int(read(f"/proc/{pid}/stat").rsplit(")", 1)[1].split()[1])
         rss = int(read(f"/proc/{pid}/statm").split()[1]) * os.sysconf("SC_PAGE_SIZE")
     except (OSError, IndexError, ValueError):
         return None
-    return {"pid": pid, "argv": [a for a in argv if a], "comm": comm, "rss": rss}
+    return {"pid": pid, "ppid": ppid, "argv": [a for a in argv if a], "comm": comm, "rss": rss}
 
 
 def headless_chromium(p):
-    first = os.path.basename(p["argv"][0]) if p["argv"] else ""
-    return "chrom" in (first + " " + p["comm"]).lower() and any(a.startswith("--headless") for a in p["argv"])
+    words = " ".join(p["argv"]).split()
+    first = os.path.basename(words[0]) if words else ""
+    return "chrom" in (first + " " + p["comm"]).lower() and any(w.startswith("--headless") for w in words)
+
+
+def headless_trees(procs):
+    """Headless Chromium processes plus every descendant in the cgroup: renderers carry no --headless flag."""
+    children = {}
+    for p in procs:
+        children.setdefault(p["ppid"], []).append(p)
+    found, todo = {}, [p for p in procs if headless_chromium(p)]
+    while todo:
+        p = todo.pop()
+        if p["pid"] not in found:
+            found[p["pid"]] = p
+            todo += children.get(p["pid"], [])
+    return list(found.values())
 
 
 def kill(pid):
@@ -104,10 +121,10 @@ def check(cg):
     if anon * 100 < ACT * high:
         return "warn", f"WezTerm uses {usage}. At {ACT}% the guard kills headless Chromium."
     procs = [p for p in map(proc, pids(cg)) if p]
-    browsers = [p for p in procs if headless_chromium(p)]
+    browsers = headless_trees(procs)
     if browsers:
         killed = [p for p in browsers if kill(p["pid"])]
-        return "act", f"WezTerm used {usage}. Killed {len(killed)} headless Chromium ({gib(sum(p['rss'] for p in killed))})."
+        return "act", f"WezTerm used {usage}. Killed {len(killed)} headless Chromium processes ({gib(sum(p['rss'] for p in killed))})."
     candidates = [p for p in procs if p["comm"] not in PROTECTED]
     if not candidates:
         return "critical", f"WezTerm uses {usage}, mostly shells, terminals or Claude sessions. Nothing was killed."

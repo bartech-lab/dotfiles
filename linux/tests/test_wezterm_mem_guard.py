@@ -91,6 +91,39 @@ class GuardTest(unittest.TestCase):
         self.assertTrue(self.alive(big_job))
         self.assertIn("WezTerm memory guard acted", self.notes.read_text())
 
+    def spawn_tree(self, argv0, child_argv0):
+        """A parent whose cmdline is one space-joined string, as Chromium rewrites it, with one child."""
+        exe = self.bin / "chromium"
+        if not exe.exists():
+            exe.symlink_to(os.path.realpath(sys.executable))
+        code = ("import subprocess,sys,time; c=subprocess.Popen([%r,'-c','import time; a=bytearray(8<<20); time.sleep(60)'],"
+                "executable=%r); print(c.pid, flush=True); time.sleep(60)") % (child_argv0, os.path.realpath(sys.executable))
+        p = subprocess.Popen([argv0, "-c", code], executable=str(exe), stdout=subprocess.PIPE, text=True)
+        child = int(p.stdout.readline())
+        self.addCleanup(p.stdout.close)
+        self.addCleanup(p.wait)
+        self.addCleanup(p.kill)
+        self.addCleanup(lambda: subprocess.run(["kill", "-9", str(child)], stderr=subprocess.DEVNULL))
+        self.procs += [(p.pid, None), (child, None)]
+        return p, child
+
+    def child_alive(self, pid):
+        time.sleep(0.2)
+        try:
+            return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0] != "Z"
+        except OSError:
+            return False
+
+    def test_rewritten_cmdline_and_renderer_children_are_killed(self):
+        zygote, renderer = self.spawn_tree("chromium --type=zygote --headless=new", "chromium --type=renderer")
+        window, window_renderer = self.spawn_tree("chromium --type=zygote", "chromium --type=renderer")
+        self.write_cgroup(HIGH)
+        self.assertIn("Killed 2 headless Chromium", self.run_once())
+        self.assertFalse(self.alive(zygote))
+        self.assertFalse(self.child_alive(renderer))
+        self.assertTrue(self.alive(window))
+        self.assertTrue(self.child_alive(window_renderer))
+
     def test_without_browsers_kills_nothing_and_names_largest_unprotected(self):
         claude = self.spawn("claude", mib=128)
         shell = self.spawn("zsh", mib=96)
