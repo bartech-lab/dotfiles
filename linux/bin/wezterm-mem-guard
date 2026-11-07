@@ -9,7 +9,7 @@ The guard reads the cgroup's anonymous memory against its memory.high every few 
                       With none left, kill nothing: alert once, naming the largest process and how to stop it.
 Every kill sends an ops alert naming what was killed and why. Nothing else is ever killed, because any other
 process may be a parallel session's live work (AGENTS.md emergency-guard exception).
---once runs one check and exits (tests and manual use). WEZTERM_MEM_GUARD_ROOT overrides the cgroup root.
+--once runs one check and exits (manual use); --ticks N runs N rounds with no sleep (tests). WEZTERM_MEM_GUARD_ROOT overrides the cgroup root.
 """
 import glob
 import os
@@ -86,6 +86,9 @@ def headless_trees(procs):
         if p["pid"] not in found:
             found[p["pid"]] = p
             todo += children.get(p["pid"], [])
+            parent = proc(p["ppid"])
+            if parent and headless_chromium(parent):
+                todo.append(parent)
     return list(found.values())
 
 
@@ -137,6 +140,25 @@ def units():
     return sorted(glob.glob(os.path.join(ROOT, UNIT_GLOB)) + glob.glob(os.path.join(ROOT, "*.slice", UNIT_GLOB)))
 
 
+def tick(alerted):
+    """One round over every WezTerm unit. Every kill alerts; a warn or critical alerts once until memory is ok again."""
+    acted = False
+    for cg in units():
+        try:
+            level, message = check(cg)
+        except OSError:
+            continue
+        if level == "act":
+            notify(TITLES[level], message, PRIORITY[level])
+            acted = True
+        elif level in TITLES and RANK[level] > alerted.get(cg, 0):
+            notify(TITLES[level], message, PRIORITY[level])
+            alerted[cg] = RANK[level]
+        elif level == "ok":
+            alerted.pop(cg, None)
+    return acted
+
+
 def main():
     if "-h" in sys.argv or "--help" in sys.argv:
         print("usage: wezterm-mem-guard [--once]\n" + __doc__)
@@ -152,22 +174,14 @@ def main():
                 notify(TITLES[level], message, PRIORITY[level])
         return
     alerted = {}
+    if "--ticks" in sys.argv:
+        for _ in range(int(sys.argv[sys.argv.index("--ticks") + 1])):
+            tick(alerted)
+            print("tick", flush=True)
+            input()
+        return
     while True:
-        acted = False
-        for cg in units():
-            try:
-                level, message = check(cg)
-            except OSError:
-                continue
-            if level == "act":
-                notify(TITLES[level], message, PRIORITY[level])
-                acted = True
-            elif level in TITLES and RANK[level] > alerted.get(cg, 0):
-                notify(TITLES[level], message, PRIORITY[level])
-                alerted[cg] = RANK[level]
-            elif level == "ok":
-                alerted.pop(cg, None)
-        time.sleep(COOLDOWN if acted else INTERVAL)
+        time.sleep(COOLDOWN if tick(alerted) else INTERVAL)
 
 
 if __name__ == "__main__":

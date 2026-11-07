@@ -151,6 +151,35 @@ class GuardTest(unittest.TestCase):
         self.assertIn("Killed 1 headless Chromium", self.run_once())
         self.assertFalse(self.alive(browser))
 
+    def test_loop_alerts_once_per_episode_and_again_after_recovery(self):
+        self.write_cgroup(0)
+        env = {**os.environ, "HOME": str(self.home), "WEZTERM_MEM_GUARD_ROOT": str(self.tmp / "cg")}
+        steps = [(85, "warn"), (85, None), (80, None), (95, "critical"), (95, None), (85, None),
+                 (10, None), (85, "warn")]
+        guard = subprocess.Popen([str(GUARD), "--ticks", str(len(steps))], env=env, text=True,
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.addCleanup(guard.kill)
+        self.addCleanup(guard.stdout.close)
+        self.addCleanup(guard.stdin.close)
+        self.addCleanup(guard.stderr.close)
+        seen = []
+        for i, (percent, expected) in enumerate(steps):
+            self.write_cgroup(HIGH * percent // 100)
+            if i:
+                guard.stdin.write("\n")
+                guard.stdin.flush()
+            self.assertEqual(guard.stdout.readline(), "tick\n", guard.stderr.read() if guard.poll() is not None else "")
+            notes = self.notes.read_text().splitlines() if self.notes.exists() else []
+            new, seen = notes[len(seen):], notes
+            if expected is None:
+                self.assertEqual(new, [], f"step {i} at {percent}%")
+            else:
+                self.assertEqual(len(new), 1, f"step {i} at {percent}%")
+                self.assertIn("is critical" if expected == "critical" else "is high", new[0])
+        guard.stdin.write("\n")
+        guard.stdin.flush()
+        self.assertEqual(guard.wait(timeout=10), 0)
+
     def test_no_memory_high_is_ignored(self):
         browser = self.spawn("chromium", "--headless")
         self.write_cgroup(100 * GIB, high=None)
