@@ -214,4 +214,17 @@ expect_has "pacman failure" "Failed to install zstd"
 expect_has "pacman failure" "Dotfiles Setup"
 assert_sandboxed "pacman failure"
 
+# 6. version lines
+new_home
+mkdir -p "$h/.zinit"
+make_stub eza 'printf "eza eza - A modern, maintained replacement for ls\nv0.23.5 [+git]\nhttps://github.com/eza-community/eza\n"'
+make_stub zinit 'echo "Error: No plugin or snippet ID given"; exit 1'
+run
+expect_has "eza version" "eza v0.23.5"
+expect_lacks "eza version" "replacement for ls"
+expect_has "zinit" "zinit installed"
+expect_lacks "zinit" "zinit No"
+make_stub eza 'exit 0'
+rm -f "$BIN/zinit"
+
 print -- "PASS test-doctor"

@@ -727,7 +727,7 @@ dotfiles-doctor() {
                 ffmpeg) version=$(ffmpeg -version 2>&1 | head -1 | awk '{print $3}') ;;
                 cjpeg) version=$(cjpeg -version 2>&1 | head -1 | awk '{print $3}') ;;
                 parallel) version=$(parallel --version 2>&1 | head -1 | awk '{print $3}') ;;
-                eza) version=$(eza --version 2>&1 | head -1) ;;
+                eza) version=$(eza --version 2>&1 | grep -m1 -oE '^v[0-9][^ ]*') ;;
                 rg) version=$(rg --version 2>&1 | head -1 | awk '{print $2}') ;;
                 dust) version=$(dust --version 2>&1 | awk '{print $2}') ;;
                 btm) version=$(btm --version 2>&1 | awk '{print $2}') ;;
@@ -865,8 +865,7 @@ dotfiles-doctor() {
 
     # Check zinit
     if [[ -d "${ZINIT_HOME:-$HOME/.zinit}" ]] || [[ -d "$HOME/.local/share/zinit/zinit.git" ]] || [[ -d "/opt/homebrew/opt/zinit" ]]; then
-        local zinit_version=$(zinit --version 2>/dev/null | head -1 | awk '{print $2}')
-        [[ -n "$zinit_version" ]] && echo "  ✅ zinit $zinit_version" || echo "  ✅ zinit installed"
+        echo "  ✅ zinit installed"
     else
         echo "  ⚠️  zinit not found (install: brew install zinit)"
         ((has_warnings++))
