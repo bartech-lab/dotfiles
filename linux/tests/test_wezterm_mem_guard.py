@@ -1,0 +1,128 @@
+"""Behavior tests for wezterm-mem-guard. Run: python3 -m unittest linux/tests/test_wezterm_mem_guard.py"""
+
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+
+GUARD = Path(__file__).resolve().parents[1] / "bin" / "wezterm-mem-guard"
+GIB = 1 << 30
+HIGH = 32 * GIB
+UNIT = "app-org.wezfurlong.wezterm@abc.service"
+
+
+class GuardTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(subprocess.run, ["rm", "-rf", str(self.tmp)])
+        self.home = self.tmp / "home"
+        (self.home / ".local/bin").mkdir(parents=True)
+        self.notes = self.tmp / "notes"
+        ops = self.home / ".local/bin/ops"
+        ops.write_text(f'#!/bin/sh\nprintf "%s|" "$@" >> {self.notes}\necho >> {self.notes}\n')
+        ops.chmod(0o755)
+        self.bin = self.tmp / "bin"
+        self.bin.mkdir()
+        self.cg = self.tmp / "cg" / UNIT
+        self.cg.mkdir(parents=True)
+        self.procs = []
+
+    def spawn(self, name, *args, mib=1, subgroup=None):
+        exe = self.bin / name
+        if not exe.exists():
+            exe.symlink_to(os.path.realpath(sys.executable))
+        code = f"import sys,time; a=b'x'*({mib}<<20); sys.stdout.write('r'); sys.stdout.flush(); time.sleep(60)"
+        p = subprocess.Popen([str(exe), "-c", code, *args], stdout=subprocess.PIPE)
+        self.addCleanup(p.stdout.close)
+        self.addCleanup(p.wait)
+        self.addCleanup(p.kill)
+        self.assertEqual(p.stdout.read(1), b"r")
+        self.procs.append((p.pid, subgroup))
+        return p
+
+    def write_cgroup(self, anon, high=HIGH):
+        groups = {}
+        for pid, sub in self.procs:
+            groups.setdefault(sub, []).append(str(pid))
+        for sub, pids in groups.items():
+            d = self.cg / sub if sub else self.cg
+            d.mkdir(exist_ok=True)
+            (d / "cgroup.procs").write_text("\n".join(pids) + "\n")
+        (self.cg / "memory.high").write_text(("max" if high is None else str(high)) + "\n")
+        (self.cg / "memory.stat").write_text(f"file 123\nanon {anon}\nshmem 0\n")
+
+    def run_once(self):
+        env = {**os.environ, "HOME": str(self.home), "WEZTERM_MEM_GUARD_ROOT": str(self.tmp / "cg")}
+        out = subprocess.run([str(GUARD), "--once"], env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return out.stdout
+
+    def alive(self, p):
+        time.sleep(0.2)
+        return p.poll() is None
+
+    def test_below_warn_kills_nothing(self):
+        browser = self.spawn("chromium", "--headless=new")
+        self.write_cgroup(HIGH * 75 // 100 - 1)
+        self.assertTrue(self.run_once().startswith("ok"))
+        self.assertTrue(self.alive(browser))
+        self.assertFalse(self.notes.exists())
+
+    def test_between_warn_and_act_warns_without_killing(self):
+        browser = self.spawn("chromium", "--headless=new")
+        self.write_cgroup(HIGH * 90 // 100 - 1)
+        self.assertTrue(self.run_once().startswith("warn"))
+        self.assertTrue(self.alive(browser))
+
+    def test_at_act_kills_only_headless_chromium(self):
+        headless = [self.spawn("chromium", "--headless=new"), self.spawn("chrome-headless-shell", "--headless")]
+        nested = self.spawn("chromium", "--headless", subgroup="tab")
+        windowed = self.spawn("chromium", "--remote-debugging-port=9222")
+        big_job = self.spawn("cc1plus", mib=64)
+        self.write_cgroup(HIGH * 90 // 100 + 1)
+        out = self.run_once()
+        self.assertIn("Killed 3 headless Chromium", out)
+        for p in headless + [nested]:
+            self.assertFalse(self.alive(p))
+        self.assertTrue(self.alive(windowed))
+        self.assertTrue(self.alive(big_job))
+        self.assertIn("WezTerm memory guard acted", self.notes.read_text())
+
+    def test_without_browsers_kills_largest_unprotected_process(self):
+        claude = self.spawn("claude", mib=128)
+        shell = self.spawn("zsh", mib=96)
+        small = self.spawn("pytest", mib=8)
+        large = self.spawn("node", mib=48)
+        self.write_cgroup(int(0.95 * HIGH))
+        out = self.run_once()
+        self.assertIn(f"PID {large.pid}", out)
+        self.assertFalse(self.alive(large))
+        for p in (claude, shell, small):
+            self.assertTrue(self.alive(p))
+
+    def test_only_protected_processes_kills_nothing(self):
+        claude = self.spawn("claude", mib=64)
+        self.write_cgroup(int(0.99 * HIGH))
+        self.assertIn("Nothing safe to kill", self.run_once())
+        self.assertTrue(self.alive(claude))
+
+    def test_unit_inside_app_sub_slice_is_guarded(self):
+        self.cg = self.tmp / "cg" / "app-app\\x2dorg.wezfurlong.wezterm.slice" / UNIT
+        self.cg.mkdir(parents=True)
+        browser = self.spawn("chromium", "--headless")
+        self.write_cgroup(HIGH)
+        self.assertIn("Killed 1 headless Chromium", self.run_once())
+        self.assertFalse(self.alive(browser))
+
+    def test_no_memory_high_is_ignored(self):
+        browser = self.spawn("chromium", "--headless")
+        self.write_cgroup(100 * GIB, high=None)
+        self.assertTrue(self.run_once().startswith("ok"))
+        self.assertTrue(self.alive(browser))
+
+
+if __name__ == "__main__":
+    unittest.main()

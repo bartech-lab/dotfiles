@@ -1,0 +1,11 @@
+[Unit]
+Description=WezTerm memory guard: kill leaked headless Chromium before WezTerm hits its memory cap
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/wezterm-mem-guard
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

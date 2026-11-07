@@ -1,0 +1,154 @@
+#!/usr/bin/python3 -I
+"""Stop a memory leak inside WezTerm before it reaches the unit's MemoryHigh throttle.
+
+WezTerm runs in its own systemd unit, and every agent session and test run lives in that cgroup.
+The guard reads the cgroup's anonymous memory against its memory.high every few seconds:
+  75% of memory.high: an ops alert, once per episode.
+  90% of memory.high: kill every headless Chromium in WezTerm (leaked test browsers are the known cause).
+                      With no headless Chromium left, kill the largest process that is not a shell,
+                      a terminal, or a Claude session.
+Every kill sends an ops alert naming what was killed and why.
+--once runs one check and exits (tests and manual use). WEZTERM_MEM_GUARD_ROOT overrides the cgroup root.
+"""
+import glob
+import os
+import signal
+import subprocess
+import sys
+import time
+
+ROOT = os.environ.get(
+    "WEZTERM_MEM_GUARD_ROOT",
+    f"/sys/fs/cgroup/user.slice/user-{os.getuid()}.slice/user@{os.getuid()}.service/app.slice")
+UNIT_GLOB = "app-org.wezfurlong.wezterm@*.service"
+WARN, ACT = 75, 90
+PROTECTED = {"claude", "zsh", "bash", "sh", "fish", "wezterm-gui", "wezterm-mux-server", "wezterm",
+             "ssh", "sshd", "tmux", "systemd", "nvim", "vim"}
+INTERVAL, COOLDOWN = 5, 15
+
+
+def read(path):
+    with open(path) as f:
+        return f.read()
+
+
+def anon_bytes(cg):
+    for line in read(os.path.join(cg, "memory.stat")).splitlines():
+        key, value = line.split()
+        if key == "anon":
+            return int(value)
+    return 0
+
+
+def high_bytes(cg):
+    value = read(os.path.join(cg, "memory.high")).strip()
+    return None if value == "max" else int(value)
+
+
+def pids(cg):
+    found = []
+    for dirpath, _, files in os.walk(cg):
+        if "cgroup.procs" in files:
+            found += [int(p) for p in read(os.path.join(dirpath, "cgroup.procs")).split()]
+    return found
+
+
+def proc(pid):
+    try:
+        argv = read(f"/proc/{pid}/cmdline").split("\0")
+        comm = read(f"/proc/{pid}/comm").strip()
+        rss = int(read(f"/proc/{pid}/statm").split()[1]) * os.sysconf("SC_PAGE_SIZE")
+    except (OSError, IndexError, ValueError):
+        return None
+    return {"pid": pid, "argv": [a for a in argv if a], "comm": comm, "rss": rss}
+
+
+def headless_chromium(p):
+    first = os.path.basename(p["argv"][0]) if p["argv"] else ""
+    return "chrom" in (first + " " + p["comm"]).lower() and any(a.startswith("--headless") for a in p["argv"])
+
+
+def kill(pid):
+    try:
+        os.kill(pid, signal.SIGKILL)
+        return True
+    except OSError:
+        return False
+
+
+def gib(n):
+    return f"{n / 1073741824:.1f} GiB"
+
+
+def notify(title, message, priority="4"):
+    try:
+        subprocess.run([os.path.expanduser("~/.local/bin/ops"), "notify", title, message, "--priority", priority],
+                       timeout=20, check=False)
+    except (OSError, subprocess.SubprocessError) as e:
+        print("ops notify failed:", e, file=sys.stderr)
+
+
+def check(cg):
+    """Return (level, message) for one WezTerm cgroup and kill when it is at the ACT level."""
+    high = high_bytes(cg)
+    if not high:
+        return "ok", ""
+    anon = anon_bytes(cg)
+    usage = f"{gib(anon)} of the {gib(high)} limit"
+    if anon * 100 < WARN * high:
+        return "ok", usage
+    if anon * 100 < ACT * high:
+        return "warn", f"WezTerm uses {usage}. At {ACT}% the guard starts killing."
+    procs = [p for p in map(proc, pids(cg)) if p]
+    browsers = [p for p in procs if headless_chromium(p)]
+    if browsers:
+        killed = [p for p in browsers if kill(p["pid"])]
+        return "act", f"WezTerm used {usage}. Killed {len(killed)} headless Chromium ({gib(sum(p['rss'] for p in killed))})."
+    candidates = [p for p in procs if p["comm"] not in PROTECTED and p["pid"] != os.getpid()]
+    if not candidates:
+        return "act", f"WezTerm used {usage}. Nothing safe to kill: only shells, terminals and Claude sessions."
+    top = max(candidates, key=lambda p: p["rss"])
+    if not kill(top["pid"]):
+        return "act", f"WezTerm used {usage}. Could not kill PID {top['pid']} ({top['comm']})."
+    return "act", f"WezTerm used {usage}. Killed the largest process: PID {top['pid']} {' '.join(top['argv'])[:120]} ({gib(top['rss'])})."
+
+
+def units():
+    return sorted(glob.glob(os.path.join(ROOT, UNIT_GLOB)) + glob.glob(os.path.join(ROOT, "*.slice", UNIT_GLOB)))
+
+
+def main():
+    if "-h" in sys.argv or "--help" in sys.argv:
+        print("usage: wezterm-mem-guard [--once]\n" + __doc__)
+        return
+    if "--once" in sys.argv:
+        for cg in units():
+            try:
+                level, message = check(cg)
+            except OSError:
+                continue
+            print(level, message)
+            if level == "act":
+                notify("WezTerm memory guard acted", message)
+        return
+    warned = set()
+    while True:
+        acted = False
+        for cg in units():
+            try:
+                level, message = check(cg)
+            except OSError:
+                continue
+            if level == "act":
+                notify("WezTerm memory guard acted", message)
+                acted = True
+            elif level == "warn" and cg not in warned:
+                notify("WezTerm memory is high", message, "3")
+                warned.add(cg)
+            elif level == "ok":
+                warned.discard(cg)
+        time.sleep(COOLDOWN if acted else INTERVAL)
+
+
+if __name__ == "__main__":
+    main()

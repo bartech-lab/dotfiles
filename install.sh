@@ -822,6 +822,8 @@ if [[ "$DOTFILES_OS" == linux ]]; then
 
     # WezTerm (every agent session and its tests): throttle at 32G, kill inside WezTerm only at 40G, keep other tabs alive
     config_symlinks "$DOTFILES_DIR/linux/systemd/app-org.wezfurlong.wezterm@.service.d/memory-cap.conf" "$HOME/.config/systemd/user/app-org.wezfurlong.wezterm@.service.d/memory-cap.conf" "WezTerm memory cap"
+    config_symlinks "$DOTFILES_DIR/linux/systemd/wezterm-mem-guard.service" "$HOME/.config/systemd/user/wezterm-mem-guard.service" "WezTerm memory guard unit"
+    config_symlinks "$DOTFILES_DIR/linux/bin/wezterm-mem-guard" "$HOME/.local/bin/wezterm-mem-guard" "WezTerm memory guard"
 
 
     # Autoclicker (Ctrl+. toggles it through the desktop entry)
@@ -835,6 +837,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     if [[ "$DRY_RUN" != true ]]; then
         systemctl --user daemon-reload
         systemctl --user enable --now demo-wake-ping.timer
+        systemctl --user enable --now wezterm-mem-guard.service
     fi
 
     # Personal scripts
