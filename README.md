@@ -13,11 +13,11 @@ How a coding agent reaches the local model:
 
 ```mermaid
 flowchart LR
-    CC["Claude Code<br/>Anthropic /v1/messages"] --> P
-    OMP["OMP<br/>OpenAI /v1/responses"] --> P
-    subgraph host["Linux workstation, one consumer GPU"]
-        P["bonsai-cc-proxy :8090<br/>moves stray system messages to the top<br/>holds a request until its tokens fit the KV pool<br/>503 with a reason while game mode is on"]
-        P --> L["llama-server :8080<br/>Ternary Bonsai 2 27B<br/>one shared 200k-token KV pool"]
+    CC["Claude Code"] --> P
+    OMP["OMP"] --> P
+    subgraph host["one consumer GPU"]
+        P["bonsai-cc-proxy<br/>fixes message order<br/>KV admission control<br/>503 in game mode"]
+        P --> L["llama-server<br/>Bonsai 2 27B<br/>200k-token KV pool"]
     end
 ```
 
