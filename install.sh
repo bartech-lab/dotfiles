@@ -820,6 +820,9 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/systemd/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "$HOME/.config/systemd/user/drkonqi-coredump-launcher@.service.d/runtime-limit.conf" "DrKonqi runtime limit"
     config_symlinks "$DOTFILES_DIR/linux/bin/drkonqi-launcher-filter" "$HOME/.local/bin/drkonqi-launcher-filter" "DrKonqi Playwright filter"
 
+    # WezTerm (every agent session and its tests): throttle at 32G, kill inside WezTerm only at 40G, keep other tabs alive
+    config_symlinks "$DOTFILES_DIR/linux/systemd/app-org.wezfurlong.wezterm@.service.d/memory-cap.conf" "$HOME/.config/systemd/user/app-org.wezfurlong.wezterm@.service.d/memory-cap.conf" "WezTerm memory cap"
+
 
     # Autoclicker (Ctrl+. toggles it through the desktop entry)
     config_symlinks "$DOTFILES_DIR/linux/systemd/autoclicker.service" "$HOME/.config/systemd/user/autoclicker.service" "Autoclicker unit"
