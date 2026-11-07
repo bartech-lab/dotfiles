@@ -124,6 +124,15 @@ class GuardTest(unittest.TestCase):
         self.assertTrue(self.alive(window))
         self.assertTrue(self.child_alive(window_renderer))
 
+    def test_headless_browser_outside_the_cgroup_dies_with_its_children(self):
+        """Chromium moves its browser process into its own scope; its zygote stays in WezTerm."""
+        browser, zygote = self.spawn_tree("chromium --headless=new --remote-debugging-pipe", "chromium --type=zygote --headless=new")
+        self.procs.remove((browser.pid, None))
+        self.write_cgroup(HIGH)
+        self.assertIn("Killed 2 headless Chromium", self.run_once())
+        self.assertFalse(self.child_alive(zygote))
+        self.assertFalse(self.alive(browser))
+
     def test_without_browsers_kills_nothing_and_names_largest_unprotected(self):
         claude = self.spawn("claude", mib=128)
         shell = self.spawn("zsh", mib=96)
@@ -179,6 +188,15 @@ class GuardTest(unittest.TestCase):
         guard.stdin.write("\n")
         guard.stdin.flush()
         self.assertEqual(guard.wait(timeout=10), 0)
+
+    def test_alert_names_only_a_non_launcher_unit(self):
+        self.write_cgroup(HIGH * 85 // 100)
+        self.assertIn(f"in test unit {UNIT}", self.run_once())
+        real = self.tmp / "cg" / ("app-org.wezfurlong.wezterm@" + "0123456789abcdef" * 2 + ".service")
+        self.cg.rename(real)
+        out = self.run_once()
+        self.assertTrue(out.startswith("warn"), out)
+        self.assertNotIn("wezterm@", out)
 
     def test_no_memory_high_is_ignored(self):
         browser = self.spawn("chromium", "--headless")
