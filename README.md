@@ -9,6 +9,18 @@ Personal shell functions, aliases, and scripts for macOS 14+ and Linux (Endeavou
 - **Safe setup:** one idempotent `install.sh` with `--dry-run`, plus `dotfiles-doctor` and `validate-setup.sh` to check a machine.
 - **Tested:** 34 test suites across the scripts, the background jobs and the proxy (see [Validation](#validation)).
 
+How a coding agent reaches the local model:
+
+```mermaid
+flowchart LR
+    CC["Claude Code<br/>Anthropic /v1/messages"] --> P
+    OMP["OMP<br/>OpenAI /v1/responses"] --> P
+    subgraph host["Linux workstation, one consumer GPU"]
+        P["bonsai-cc-proxy :8090<br/>moves stray system messages to the top<br/>holds a request until its tokens fit the KV pool<br/>503 with a reason while game mode is on"]
+        P --> L["llama-server :8080<br/>Ternary Bonsai 2 27B<br/>one shared 200k-token KV pool"]
+    end
+```
+
 ## Quick Start
 
 ### macOS
