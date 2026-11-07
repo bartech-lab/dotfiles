@@ -91,22 +91,23 @@ class GuardTest(unittest.TestCase):
         self.assertTrue(self.alive(big_job))
         self.assertIn("WezTerm memory guard acted", self.notes.read_text())
 
-    def test_without_browsers_kills_largest_unprotected_process(self):
+    def test_without_browsers_kills_nothing_and_names_largest_unprotected(self):
         claude = self.spawn("claude", mib=128)
         shell = self.spawn("zsh", mib=96)
         small = self.spawn("pytest", mib=8)
         large = self.spawn("node", mib=48)
         self.write_cgroup(int(0.95 * HIGH))
         out = self.run_once()
-        self.assertIn(f"PID {large.pid}", out)
-        self.assertFalse(self.alive(large))
-        for p in (claude, shell, small):
+        self.assertTrue(out.startswith("critical"), out)
+        self.assertIn(f"kill {large.pid}", out)
+        for p in (claude, shell, small, large):
             self.assertTrue(self.alive(p))
+        self.assertIn("nothing killed", self.notes.read_text())
 
     def test_only_protected_processes_kills_nothing(self):
         claude = self.spawn("claude", mib=64)
         self.write_cgroup(int(0.99 * HIGH))
-        self.assertIn("Nothing safe to kill", self.run_once())
+        self.assertIn("Nothing was killed", self.run_once())
         self.assertTrue(self.alive(claude))
 
     def test_unit_inside_app_sub_slice_is_guarded(self):

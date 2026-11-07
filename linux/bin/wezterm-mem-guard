@@ -5,9 +5,9 @@ WezTerm runs in its own systemd unit, and every agent session and test run lives
 The guard reads the cgroup's anonymous memory against its memory.high every few seconds:
   75% of memory.high: an ops alert, once per episode.
   90% of memory.high: kill every headless Chromium in WezTerm (leaked test browsers are the known cause).
-                      With no headless Chromium left, kill the largest process that is not a shell,
-                      a terminal, or a Claude session.
-Every kill sends an ops alert naming what was killed and why.
+                      With none left, kill nothing: alert once, naming the largest process and how to stop it.
+Every kill sends an ops alert naming what was killed and why. Nothing else is ever killed, because any other
+process may be a parallel session's live work (AGENTS.md emergency-guard exception).
 --once runs one check and exits (tests and manual use). WEZTERM_MEM_GUARD_ROOT overrides the cgroup root.
 """
 import glob
@@ -25,6 +25,10 @@ WARN, ACT = 75, 90
 PROTECTED = {"claude", "zsh", "bash", "sh", "fish", "wezterm-gui", "wezterm-mux-server", "wezterm",
              "ssh", "sshd", "tmux", "systemd", "nvim", "vim"}
 INTERVAL, COOLDOWN = 5, 15
+TITLES = {"warn": "WezTerm memory is high", "critical": "WezTerm memory is critical, nothing killed",
+          "act": "WezTerm memory guard acted"}
+PRIORITY = {"warn": "3", "critical": "5", "act": "4"}
+RANK = {"warn": 1, "critical": 2}
 
 
 def read(path):
@@ -98,19 +102,18 @@ def check(cg):
     if anon * 100 < WARN * high:
         return "ok", usage
     if anon * 100 < ACT * high:
-        return "warn", f"WezTerm uses {usage}. At {ACT}% the guard starts killing."
+        return "warn", f"WezTerm uses {usage}. At {ACT}% the guard kills headless Chromium."
     procs = [p for p in map(proc, pids(cg)) if p]
     browsers = [p for p in procs if headless_chromium(p)]
     if browsers:
         killed = [p for p in browsers if kill(p["pid"])]
         return "act", f"WezTerm used {usage}. Killed {len(killed)} headless Chromium ({gib(sum(p['rss'] for p in killed))})."
-    candidates = [p for p in procs if p["comm"] not in PROTECTED and p["pid"] != os.getpid()]
+    candidates = [p for p in procs if p["comm"] not in PROTECTED]
     if not candidates:
-        return "act", f"WezTerm used {usage}. Nothing safe to kill: only shells, terminals and Claude sessions."
+        return "critical", f"WezTerm uses {usage}, mostly shells, terminals or Claude sessions. Nothing was killed."
     top = max(candidates, key=lambda p: p["rss"])
-    if not kill(top["pid"]):
-        return "act", f"WezTerm used {usage}. Could not kill PID {top['pid']} ({top['comm']})."
-    return "act", f"WezTerm used {usage}. Killed the largest process: PID {top['pid']} {' '.join(top['argv'])[:120]} ({gib(top['rss'])})."
+    return "critical", (f"WezTerm uses {usage}. Nothing was killed. Largest: PID {top['pid']} "
+                        f"{' '.join(top['argv'])[:120]} ({gib(top['rss'])}). Stop it with: kill {top['pid']}")
 
 
 def units():
@@ -128,10 +131,10 @@ def main():
             except OSError:
                 continue
             print(level, message)
-            if level == "act":
-                notify("WezTerm memory guard acted", message)
+            if level in TITLES:
+                notify(TITLES[level], message, PRIORITY[level])
         return
-    warned = set()
+    alerted = {}
     while True:
         acted = False
         for cg in units():
@@ -140,13 +143,13 @@ def main():
             except OSError:
                 continue
             if level == "act":
-                notify("WezTerm memory guard acted", message)
+                notify(TITLES[level], message, PRIORITY[level])
                 acted = True
-            elif level == "warn" and cg not in warned:
-                notify("WezTerm memory is high", message, "3")
-                warned.add(cg)
+            elif level in TITLES and RANK[level] > alerted.get(cg, 0):
+                notify(TITLES[level], message, PRIORITY[level])
+                alerted[cg] = RANK[level]
             elif level == "ok":
-                warned.discard(cg)
+                alerted.pop(cg, None)
         time.sleep(COOLDOWN if acted else INTERVAL)
 
 
