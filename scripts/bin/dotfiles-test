@@ -2,6 +2,16 @@
 # Run every tracked test suite in this repository. Exit 1 if any fails.
 set -uo pipefail
 
+usage() {
+  echo "Usage: dotfiles-test"
+  echo "Run every tracked test suite. TEST_TIMEOUT sets the per-suite limit (default 300 s)."
+}
+case "${1-}" in
+  "") ;;
+  -h | --help) usage; exit 0 ;;
+  *) echo "dotfiles-test: unknown argument: $1" >&2; usage >&2; exit 2 ;;
+esac
+
 root="$(git -C "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" rev-parse --show-toplevel)" || exit 2
 cd "$root" || exit 2
 
