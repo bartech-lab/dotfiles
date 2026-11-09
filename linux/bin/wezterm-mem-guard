@@ -113,12 +113,6 @@ def notify(title, message, priority="4"):
         print("ops notify failed:", e, file=sys.stderr)
 
 
-def test_unit(cg):
-    """The desktop launcher names WezTerm units by a 32-hex id; any other instance is a hand-made unit, such as a test."""
-    instance = os.path.basename(cg).split("@", 1)[1].removesuffix(".service")
-    return "" if re.fullmatch("[0-9a-f]{32}", instance) else f" in test unit {os.path.basename(cg)}"
-
-
 def check(cg):
     """Return (level, message) for one WezTerm cgroup and kill when it is at the ACT level."""
     high = high_bytes(cg)
