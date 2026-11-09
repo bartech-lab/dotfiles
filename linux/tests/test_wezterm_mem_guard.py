@@ -198,6 +198,41 @@ class GuardTest(unittest.TestCase):
         self.assertTrue(out.startswith("warn"), out)
         self.assertNotIn("wezterm@", out)
 
+    def test_process_with_chromium_comm_but_other_argv0_is_killed(self):
+        exe = self.bin / "chromium"
+        exe.symlink_to(os.path.realpath(sys.executable))
+        code = "import sys,time; sys.stdout.write('r'); sys.stdout.flush(); time.sleep(60)"
+        p = subprocess.Popen(["renderer-stand-in", "-c", code, "--headless=new"], executable=str(exe), stdout=subprocess.PIPE)
+        self.addCleanup(p.stdout.close)
+        self.addCleanup(p.wait)
+        self.addCleanup(p.kill)
+        self.assertEqual(p.stdout.read(1), b"r")
+        self.assertIn("chromium", Path(f"/proc/{p.pid}/comm").read_text())
+        self.assertNotIn("chrom", Path(f"/proc/{p.pid}/cmdline").read_bytes().split(b"\0")[0].decode())
+        self.procs.append((p.pid, None))
+        self.write_cgroup(HIGH)
+        self.assertIn("Killed 1 headless Chromium", self.run_once())
+        self.assertFalse(self.alive(p))
+
+    def test_loop_round_that_kills_sends_a_notification(self):
+        browser = self.spawn("chromium", "--headless=new")
+        self.write_cgroup(HIGH)
+        env = {**os.environ, "HOME": str(self.home), "WEZTERM_MEM_GUARD_ROOT": str(self.tmp / "cg")}
+        guard = subprocess.Popen([str(GUARD), "--ticks", "1"], env=env, text=True,
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.addCleanup(guard.kill)
+        self.addCleanup(guard.stdout.close)
+        self.addCleanup(guard.stdin.close)
+        self.addCleanup(guard.stderr.close)
+        self.assertEqual(guard.stdout.readline(), "tick\n", guard.stderr.read() if guard.poll() is not None else "")
+        guard.stdin.write("\n")
+        guard.stdin.flush()
+        self.assertEqual(guard.wait(timeout=10), 0)
+        self.assertFalse(self.alive(browser))
+        text = self.notes.read_text()
+        self.assertIn("WezTerm memory guard acted", text)
+        self.assertRegex(text.lower(), "killed.*headless chromium")
+
     def test_no_memory_high_is_ignored(self):
         browser = self.spawn("chromium", "--headless")
         self.write_cgroup(100 * GIB, high=None)

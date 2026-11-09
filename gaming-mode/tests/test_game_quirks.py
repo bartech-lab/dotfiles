@@ -147,6 +147,22 @@ class GameQuirks(unittest.TestCase):
         self.assertIn('Fresh', self.sent()[1])
         self.assertNotIn('Remnant II', self.sent()[1])
 
+    def test_steam_game_without_a_settings_block_asks_to_start_it_once(self):
+        self.vdf.write_text(EXPECT_STEAM_BLOCK.replace('"1282100"', '"555"'))
+        before = self.vdf.read_text()
+        result = self.run_tool('afmf', 'steam:1282100')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('start the game once', result.stdout + result.stderr)
+        self.assertEqual(self.vdf.read_text(), before)
+        conf = self.root/'games.conf'
+        self.assertNotIn('steam:1282100', conf.read_text() if conf.exists() else '')
+
+    def test_skip_without_a_reason_is_a_usage_error(self):
+        result = self.run_tool('skip', 'steam:99')
+        self.assertNotEqual(result.returncode, 0)
+        conf = self.root/'games.conf'
+        self.assertNotIn('steam:99', conf.read_text() if conf.exists() else '')
+
     def test_unknown_game_is_refused(self):
         self.assertNotEqual(self.run_tool('afmf', 'steam:7').returncode, 0)
         self.assertFalse((self.root/'games.conf').exists())
