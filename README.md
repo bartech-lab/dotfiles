@@ -54,8 +54,6 @@ p10k configure
 
 The installer is idempotent and safe to re-run.
 
-Agent setup (rules, skills, hooks, client settings) lives in a separate private repository. After the installer, clone it to `~/.agents`, run `~/.agents/bin/agents-sync`, then `~/.agents/bin/client-config apply --force`.
-
 On macOS it also enables daily Homebrew autoupdate for formulae. On Linux it enables systemd timers for automatic git syncing, heartbeat monitoring, SSD TRIM, and mirror list refresh.
 
 ## Global Git Ignore
