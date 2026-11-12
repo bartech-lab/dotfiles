@@ -158,7 +158,6 @@ dotfiles-doctor
 - `repo-check` - Pre-archive sanity checker
 - `dotfiles-doctor` - Environment health check
 - `gitlab-stats [options]` - GitLab merge request statistics
-- `claude` / `wclaude [claude args]` - Claude Code on the private / work subscription account, same config for both (see [Functions Reference](docs/functions.md#claude-and-wclaude))
 - `discord-openasar-apply [flags]` - Apply OpenAsar and the theme CSS, then smoke-test Discord (opt-in)
 - `discord-openasar-recover [--launch] [backup]` - Restore Discord's stock app.asar from a backup
 - `discord-openasar-status` - Show the current OpenAsar state

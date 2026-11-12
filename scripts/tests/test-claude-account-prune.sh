@@ -2,10 +2,13 @@
 set -euo pipefail
 
 TEST_ROOT=$(mktemp -d)
-trap 'rm -rf "$TEST_ROOT"' EXIT
+trap 'rm -rf "$TEST_ROOT" "${LINKS:-}"' EXIT
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-TOOL="$REPO_ROOT/scripts/shims/claude"
+LINKS=$(mktemp -d)
+ln -s "$REPO_ROOT/scripts/bin/claude-account" "$LINKS/claude"
+ln -s "$REPO_ROOT/scripts/bin/claude-account" "$LINKS/wclaude"
+TOOL="$LINKS/claude"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 

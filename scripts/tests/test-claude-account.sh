@@ -2,10 +2,13 @@
 set -euo pipefail
 
 TEST_ROOT=$(mktemp -d)
-trap 'rm -rf "$TEST_ROOT"' EXIT
+trap 'rm -rf "$TEST_ROOT" "${LINKS:-}"' EXIT
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-TOOL="$REPO_ROOT/scripts/shims/claude"
+LINKS=$(mktemp -d)
+ln -s "$REPO_ROOT/scripts/bin/claude-account" "$LINKS/claude"
+ln -s "$REPO_ROOT/scripts/bin/claude-account" "$LINKS/wclaude"
+TOOL="$LINKS/claude"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -137,7 +140,7 @@ cat > "$BIN/claude" <<'SH'
 #!/usr/bin/env bash
 printf '%s\n' "${CLAUDE_CONFIG_DIR:-unset}" "${CLAUDE_ACCOUNT:-unset}" "$@" > "$HOME/claude-call"
 SH
-"$REPO_ROOT/scripts/bin/wclaude" -c
+"$LINKS/wclaude" -c
 call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 [[ "${call[*]}" == "unset work -c" ]] || fail "wclaude call is ${call[*]}"
 
@@ -147,7 +150,7 @@ call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 [[ "${call[*]}" == "unset work -p x" ]] || fail "nested claude call is ${call[*]}"
 
 # wclaude ignores an inherited private account.
-CLAUDE_ACCOUNT=private "$REPO_ROOT/scripts/bin/wclaude"
+CLAUDE_ACCOUNT=private "$LINKS/wclaude"
 call=(); while IFS= read -r l; do call+=("$l"); done < "$HOME/claude-call"
 [[ ${call[1]} == work ]] || fail "wclaude ran as ${call[1]}"
 

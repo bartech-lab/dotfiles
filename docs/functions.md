@@ -456,6 +456,10 @@ repo-check              # Check for issues before archiving
 
 ### claude and wclaude
 
+Not in use: plain `claude` is stock Claude Code with `~/.claude`, because only
+one subscription is active. To run two accounts again, restore the links
+`scripts/shims/claude` and `scripts/bin/wclaude` to `../bin/claude-account`.
+
 `scripts/bin/claude-account` runs Claude Code on one of two subscription
 accounts. It is called through two links: `claude` in `scripts/shims`, which
 comes before `~/.local/bin` in `PATH`, runs the private account, and `wclaude`
@@ -665,7 +669,7 @@ See [dev.md](dev.md) for full documentation.
 | **Scripts** | | |
 | Browser | `scripts/bin/cookies` | Browser cookie extraction (Node.js) |
 | GitLab stats | `scripts/bin/gitlab-stats` | GitLab merge request statistics |
-| Claude accounts | `scripts/bin/claude-account` | `claude` (private) and `wclaude` (work) Claude Code accounts |
+| Claude accounts | `scripts/bin/claude-account` | Two Claude Code accounts side by side; not in use |
 
 ## Browser Utilities
 
