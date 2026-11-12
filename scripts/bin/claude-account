@@ -49,6 +49,7 @@ EXCLUDE=(
     bridge-spawn
     seed-admin
     .cc-writes
+    plans
 )
 
 # Top-level files to share. Any other file is per-account state.
