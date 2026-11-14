@@ -25,8 +25,8 @@ kwinrc	NightColor	Active	true
 kwinrc	Desktops	Number	1
 kwinrc	Desktops	Rows	1
 kdeglobals	General	BrowserApplication	brave-browser.desktop
-kdeglobals	General	TerminalApplication	wezterm
-kdeglobals	General	TerminalService	org.wezfurlong.wezterm.desktop
+kdeglobals	General	TerminalApplication	ghostty
+kdeglobals	General	TerminalService	com.mitchellh.ghostty.desktop
 kdeglobals	KDE	DndBehavior	MoveIfSameDevice
 kdeglobals	KDE	LookAndFeelPackage	org.kde.breezedark.desktop
 kdeglobals	KDE	ShowDeleteCommand	false
