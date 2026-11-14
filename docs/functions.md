@@ -588,6 +588,7 @@ Applies performance-focused defaults: disables animations, enables fast key repe
 | `cpu-uv-test` | Per-core stability test for Ryzen Curve Optimizer undervolts |
 | `hw-log [file]` | Log CPU, GPU, temperatures, fans and power to CSV every 10 s |
 | `llama-prof-watch <pid>` | Profile llama-server when it burns CPU power with an idle GPU |
+| `wezterm-launch [-e cmd...]` | WezTerm menu launcher; with a command (KDE "run in terminal" apps) opens it in a new window on the persistent session |
 | `sgsearch` | Code search across public repositories through Sourcegraph's public API |
 | `ydotool-autoclick-toggle` | Start or stop the left-button autoclicker (`autoclicker.service`); bound to Ctrl+. |
 

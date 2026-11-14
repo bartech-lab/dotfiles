@@ -1,0 +1,18 @@
+#!/bin/bash
+# WezTerm launcher for the persistent unix mux domain.
+# No arguments: open (or reattach) the GUI.  With a command, as KDE passes it
+# for Terminal=true apps (`-e cmd...`): run it in a new window.  `wezterm
+# connect` and `wezterm start` drop the command once the mux has panes.
+set -u
+
+[ "${1-}" = -e ] && shift
+[ $# -eq 0 ] && exec wezterm connect unix
+
+if ! pgrep -x wezterm-gui >/dev/null; then
+    setsid -f wezterm connect unix >/dev/null 2>&1
+    for _ in $(seq 50); do
+        pgrep -x wezterm-gui >/dev/null && wezterm cli list >/dev/null 2>&1 && break
+        sleep 0.1
+    done
+fi
+exec wezterm cli spawn --new-window --cwd "$PWD" -- "$@"
