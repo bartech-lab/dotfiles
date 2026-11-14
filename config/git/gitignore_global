@@ -35,3 +35,7 @@ __pycache__/
 .gitconfig-github
 .gitconfig-gitlab
 .gitconfig.local
+
+# Claude Code appends this line whenever it writes a local settings file.
+# *.local.json already covers it; keeping it stops the tree going dirty.
+**/.claude/settings.local.json
