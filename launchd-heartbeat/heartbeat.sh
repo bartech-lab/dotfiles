@@ -119,6 +119,13 @@ check_job_record() {
     echo "ok last_success=${last_success:-none}"
 }
 
+job_alert_handled() {
+    local deadline
+    [[ -e "$JOBS_DIR/$1.alerted" ]] && return 0
+    deadline=$(cat "$JOBS_DIR/$1.deferred" 2>/dev/null)
+    [[ "$deadline" =~ ^[0-9]+$ ]] && (( $(date +%s) < deadline ))
+}
+
 problem_labels=""
 problem_count=0
 
@@ -364,8 +371,9 @@ if [[ -d "$JOBS_DIR" ]]; then
                 record_ok "$job" "job ${result#ok }"
                 ;;
             failed*)
-                # jobrun already sent this failure's alert; a stale or missing job still alerts here.
-                record_problem "$job" failed "job ${result#* }" "$( [[ -e "$JOBS_DIR/$job.alerted" ]] && echo 1 )"
+                # jobrun already sent this failure's alert, or holds it until its deadline while
+                # the unit retries; a stale or missing job still alerts here.
+                record_problem "$job" failed "job ${result#* }" "$(job_alert_handled "$job" && echo 1)"
                 ;;
             *)
                 record_problem "$job" "${result%% *}" "job ${result#* }"

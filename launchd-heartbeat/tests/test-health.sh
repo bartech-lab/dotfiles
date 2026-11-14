@@ -337,6 +337,28 @@ write_record nightly "last_success=$((now - 30 * 3600))" 'max_age_hours=26'
 heartbeat
 assert_contains "$NOTIFY_LOG" 'nightly (stale)' 'a stale job must alert even with an old .alerted marker'
 
+echo "== a failure jobrun holds until its deadline is not alerted until the deadline passes"
+reset
+now=$(date +%s)
+write_record archive "last_failure=$((now - 60))" "last_success=$((now - 86400))" 'reason=exit 1: EAI_AGAIN'
+echo "$((now + 1800))" > "$JOB_DIR/archive.deferred"
+rc=0
+out=$(heartbeat --status) || rc=$?
+assert_eq "$rc" 2 'a held failure must still make --status exit 2'
+assert_line "$out" '^FAIL archive failed' 'held failure missing from --status'
+heartbeat
+assert_eq "$(notify_count)" 0 'a failure held by jobrun sent a summary before its deadline'
+reset
+write_record archive "last_failure=$((now - 60))" "last_success=$((now - 86400))" 'reason=exit 1: EAI_AGAIN'
+echo "$((now - 1))" > "$JOB_DIR/archive.deferred"
+heartbeat
+assert_contains "$NOTIFY_LOG" 'archive (failed)' 'a failure whose hold expired must alert'
+reset
+write_record archive "last_failure=$((now - 60))" "last_success=$((now - 86400))" 'reason=exit 1: EAI_AGAIN'
+echo 'soon' > "$JOB_DIR/archive.deferred"
+heartbeat
+assert_contains "$NOTIFY_LOG" 'archive (failed)' 'an unreadable hold deadline must not silence a failure'
+
 echo "== pause file"
 write_pause() {
     local since="$1" maxage="$2" owner="$3"

@@ -11,7 +11,7 @@ Supports **macOS** (LaunchAgents) and **Linux** (systemd user units). Detects pl
 - Logs active, failed, or missing status on Linux, including the service result.
 - An active timer does not hide a failed service.
 - Runs the probes in `probes.conf`. A probe is a shell command that must exit 0 within `HEARTBEAT_PROBE_TIMEOUT` seconds (default 20).
-- Reads job health records in `~/.local/state/jobs/*.status`, written by `job-status`. A job is failed when its last failure is newer than its last success, and stale when its last success is older than its `max_age_hours`.
+- Reads job health records in `~/.local/state/jobs/*.status`, written by `job-status`. A job is failed when its last failure is newer than its last success, and stale when its last success is older than its `max_age_hours`. A failed job is not alerted while `<job>.alerted` exists (jobrun sent it) or `<job>.deferred` holds a deadline still in the future (jobrun's `--alert-after` hold).
 - On Linux, reports every failed system or user unit by name, so a unit outside the label list still alerts. It ignores `app-*` desktop apps and reports `failed-units-<scope> unknown` when `systemctl --failed` does not answer.
 - Sends one desktop notification when the set of problems changes. It does not repeat while the set stays the same.
 - Writes errors to a separate log file. Each log moves to `.1` above 1 MB.
