@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Discord
+Comment=Autostart with the same command as the menu launcher
+Exec=/usr/bin/discord --url --
+Icon=discord
+Terminal=false
+X-GNOME-Autostart-enabled=true

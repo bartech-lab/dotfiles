@@ -841,7 +841,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     fi
 
     # Personal scripts
-    for script in ark-extract-delete check-browser-logout-hook chrome-launch cpu-uv-check cpu-uv-test hw-log llama-prof-watch sgsearch; do
+    for script in ark-extract-delete check-browser-logout-hook chrome-launch cpu-uv-check cpu-uv-test hw-log llama-prof-watch sgsearch wezterm-launch; do
         config_symlinks "$DOTFILES_DIR/linux/bin/$script" "$HOME/.local/bin/$script" "$script"
     done
 
@@ -857,6 +857,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/google-chrome.desktop" "$HOME/.local/share/applications/google-chrome.desktop" "Google Chrome open-file limit"
     config_symlinks "$DOTFILES_DIR/linux/autostart/google-chrome.desktop" "$HOME/.config/autostart/google-chrome.desktop" "Google Chrome autostart"
     config_symlinks "$DOTFILES_DIR/linux/autostart/chromium.desktop" "$HOME/.config/autostart/chromium.desktop" "Chromium autostart"
+    config_symlinks "$DOTFILES_DIR/linux/autostart/discord.desktop" "$HOME/.config/autostart/discord.desktop" "Discord autostart"
 
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/org.wezfurlong.wezterm.desktop" "$HOME/.local/share/applications/org.wezfurlong.wezterm.desktop" "WezTerm reconnect launcher"
 fi
