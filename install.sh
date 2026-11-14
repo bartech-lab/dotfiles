@@ -806,6 +806,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     # Brave and Chrome GPU flags (one file each: only Chrome gets the WebGPU game flags)
     config_symlinks "$DOTFILES_DIR/linux/brave-flags.conf" "$HOME/.config/brave-flags.conf" "Brave flags"
     config_symlinks "$DOTFILES_DIR/linux/chrome-flags.conf" "$HOME/.config/chrome-flags.conf" "Chrome flags"
+    config_symlinks "$DOTFILES_DIR/linux/chromium-flags.conf" "$HOME/.config/chromium-flags.conf" "Chromium flags (CDP port 9222)"
 
     # Bonsai units (archpc only; After= only: starting the proxy must not start Bonsai)
     config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai.service" "$HOME/.config/systemd/user/bonsai.service" "Bonsai unit"
