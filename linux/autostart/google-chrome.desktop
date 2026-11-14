@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Google Chrome
+Comment=Autostart via chrome-launch (open-file limit); flags come from ~/.config/chrome-flags.conf
+Exec=/home/bartech/.local/bin/chrome-launch
+Icon=google-chrome
+Terminal=false
+X-GNOME-Autostart-enabled=true

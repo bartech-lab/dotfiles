@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Chromium
+Comment=Autostart; flags (CDP port 9222) come from ~/.config/chromium-flags.conf
+Exec=chromium
+Icon=chromium
+Terminal=false
+X-GNOME-Autostart-enabled=true

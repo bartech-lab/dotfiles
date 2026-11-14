@@ -855,6 +855,8 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standard-notes.desktop" "$HOME/.config/autostart/standard-notes.desktop" "Standard Notes autostart"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/filen-desktop.desktop" "$HOME/.local/share/applications/filen-desktop.desktop" "Filen Desktop desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/google-chrome.desktop" "$HOME/.local/share/applications/google-chrome.desktop" "Google Chrome open-file limit"
+    config_symlinks "$DOTFILES_DIR/linux/autostart/google-chrome.desktop" "$HOME/.config/autostart/google-chrome.desktop" "Google Chrome autostart"
+    config_symlinks "$DOTFILES_DIR/linux/autostart/chromium.desktop" "$HOME/.config/autostart/chromium.desktop" "Chromium autostart"
 
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/org.wezfurlong.wezterm.desktop" "$HOME/.local/share/applications/org.wezfurlong.wezterm.desktop" "WezTerm reconnect launcher"
 fi
