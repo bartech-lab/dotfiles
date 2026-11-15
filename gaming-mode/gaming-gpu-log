@@ -1,5 +1,5 @@
 #!/bin/bash
-# gaming-gpu-log — while game mode is on, record every 10 s how full the
+# gaming-gpu-log — while game mode is on, record every second how full the
 # graphics memory is and how many file handles Chrome's graphics process holds.
 # Diagnostic for VK_ERROR_OUT_OF_DEVICE_MEMORY in browser games: the row at the
 # time of the error shows which of the two ran out.
@@ -8,7 +8,7 @@
 set -u
 
 LOG_DIR="${GAMING_GPU_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/gaming}"
-INTERVAL="${GAMING_GPU_LOG_INTERVAL:-10}"
+INTERVAL="${GAMING_GPU_LOG_INTERVAL:-1}"
 HEADER="time,vram_used_mib,vram_total_mib,chrome_gpu_pid,chrome_gpu_vram_mib,chrome_gpu_handles,handle_limit"
 
 mkdir -p "$LOG_DIR"
