@@ -1,0 +1,32 @@
+#!/bin/bash
+# gaming-gpu-log — while game mode is on, record every 10 s how full the
+# graphics memory is and how many file handles Chrome's graphics process holds.
+# Diagnostic for VK_ERROR_OUT_OF_DEVICE_MEMORY in browser games: the row at the
+# time of the error shows which of the two ran out.
+# Started and stopped by `gaming on` / `gaming off` (gaming-gpu-log.service).
+
+set -u
+
+LOG_DIR="${GAMING_GPU_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/gaming}"
+INTERVAL="${GAMING_GPU_LOG_INTERVAL:-10}"
+HEADER="time,vram_used_mib,vram_total_mib,chrome_gpu_pid,chrome_gpu_vram_mib,chrome_gpu_handles,handle_limit"
+
+mkdir -p "$LOG_DIR"
+
+while :; do
+    log="$LOG_DIR/gpu-log-$(date +%F).csv"
+    [[ -s "$log" ]] || echo "$HEADER" > "$log"
+
+    vram=$(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d ' ')
+    pid=$(pgrep -o -f '^/opt/google/chrome/chrome --type=gpu-process' || true)
+    pid_vram="" handles="" limit=""
+    if [[ -n "$pid" ]]; then
+        pid_vram=$(nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader,nounits 2>/dev/null \
+            | awk -F', *' -v p="$pid" '$1 == p { print $2 }')
+        # The size of /proc/<pid>/fd is the number of open handles.
+        handles=$(stat -c %s "/proc/$pid/fd" 2>/dev/null || true)
+        limit=$(awk '/^Max open files/ { print $4 }' "/proc/$pid/limits" 2>/dev/null || true)
+    fi
+    echo "$(date +%T),${vram:-,},$pid,$pid_vram,$handles,$limit" >> "$log"
+    sleep "$INTERVAL"
+done

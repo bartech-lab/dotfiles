@@ -21,8 +21,9 @@ chmod +x "$HOME/.local/bin/gaming.tmp"
 mv -f "$HOME/.local/bin/gaming.tmp" "$HOME/.local/bin/gaming"
 
 ln -sfn "$SRC_DIR/game-quirks" "$HOME/.local/bin/game-quirks"
+ln -sfn "$SRC_DIR/gaming-gpu-log" "$HOME/.local/bin/gaming-gpu-log"
 mkdir -p "$HOME/.config/systemd/user"
-cp "$SRC_DIR/game-quirks.path" "$SRC_DIR/game-quirks.service" "$HOME/.config/systemd/user/"
+cp "$SRC_DIR/game-quirks.path" "$SRC_DIR/game-quirks.service" "$SRC_DIR/gaming-gpu-log.service" "$HOME/.config/systemd/user/"
 systemctl --user daemon-reload
 systemctl --user enable --now game-quirks.path
 

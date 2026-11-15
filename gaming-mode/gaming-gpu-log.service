@@ -1,0 +1,5 @@
+[Unit]
+Description=Log graphics memory and Chrome graphics handles while game mode is on
+
+[Service]
+ExecStart=%h/.local/bin/gaming-gpu-log

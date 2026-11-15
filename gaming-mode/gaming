@@ -34,6 +34,8 @@ SYSTEM_UNITS=(docker.socket docker.service)
 USER_TIMERS=(system-update.timer toolsmith.timer logbook-sync.timer)
 # Heartbeat names that go quiet while Bonsai is stopped.
 PAUSED_PROBES=(bonsai-cc-proxy.service bonsai-http bonsai-cc-proxy bonsai-no-crash)
+# Diagnostic logger that runs only while game mode is on (see gaming-gpu-log).
+GPU_LOG_UNIT=gaming-gpu-log.service
 DEFAULT_APPS=('app-io.missioncenter.MissionCenter@*.service' 'app-org.kde.plasma\x2dsystemmonitor@*.service' 'app-psensor@*.service')
 
 say() {
@@ -120,6 +122,8 @@ cmd_on() {
         systemctl --user reset-failed "$pattern" >/dev/null 2>&1 || true
     done < <(app_patterns)
 
+    systemctl --user start "$GPU_LOG_UNIT" >/dev/null 2>&1 || true
+
     local msg
     msg="Game mode on. VRAM free: $(vram_free_gb) GB."
     (( ${#failed[@]} )) && msg+=" Not stopped: ${failed[*]}."
@@ -158,6 +162,7 @@ cmd_off() {
         [[ "$unit" == bonsai.service ]] && bonsai=1
     done
     rm -f "$STATE_FILE" "$PAUSE_FILE"
+    systemctl --user stop "$GPU_LOG_UNIT" >/dev/null 2>&1 || true
 
     local msg="Game mode off."
     (( ${#failed[@]} )) && msg+=" Not started: ${failed[*]}."

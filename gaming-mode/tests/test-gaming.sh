@@ -143,7 +143,7 @@ for u in "${SYS_UNITS[@]}"; do
 done
 assert_file_lacks "$EVENTS" '^sudo .*(bonsai|timer)' 'user unit stopped through sudo'
 assert_file_lacks "$EVENTS" 'stop bonsai-cc-proxy' 'on stopped the proxy, so clients get a refused port instead of the game mode 503'
-assert_eq "$(cat "$ACTIVE")" bonsai-cc-proxy.service 'after on only the proxy may stay active'
+assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'bonsai-cc-proxy.service gaming-gpu-log.service ' 'after on only the proxy and the GPU logger may be active'
 assert_file_lacks "$EVENTS" 'stop-saw-pause=n' 'a unit was stopped before the pause file existed'
 assert_file_has "$EVENTS" 'stop-saw-pause=y' 'no stop observed (pause ordering untestable)'
 [[ -f "$STATE_DIR/state" ]] || fail 'state file missing after on'
@@ -184,7 +184,7 @@ done
 [[ ! -e "$STATE_DIR/state" ]] || fail 'state file survived off'
 [[ ! -e "$PAUSE_FILE" ]] || fail 'pause file survived off'
 [[ ! -s "$SETSID_LOG" ]] || fail 'setsid called with GAMING_NO_WAIT=1 during off'
-assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" "$(printf '%s\n' bonsai-cc-proxy.service "${ALL_UNITS[@]}" | sort | tr '\n' ' ')" 'off did not restore the active set'
+assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" "$(printf '%s\n' bonsai-cc-proxy.service "${ALL_UNITS[@]}" | sort | tr '\n' ' ')" 'off did not restore the active set (the GPU logger must be stopped)'
 
 echo "== on twice keeps the first snapshot"
 reset
@@ -230,7 +230,7 @@ assert_has "$line" 'bonsai.service' 'failed unit not named after Not stopped:'
 assert_lacks "$line" 'docker' 'Not stopped lists a unit that stopped'
 assert_lacks "$line" 'timer' 'Not stopped lists a timer that stopped'
 assert_eq "$(calls stop | sorted)" "$(printf '%s\n' "${ALL_UNITS[@]}" | sorted)" 'a failure stopped the run early'
-assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'bonsai-cc-proxy.service bonsai.service ' 'only the proxy and the failing unit may remain active'
+assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'bonsai-cc-proxy.service bonsai.service gaming-gpu-log.service ' 'only the proxy, the GPU logger and the failing unit may remain active'
 
 echo "== sudo has no rule"
 reset
@@ -243,7 +243,7 @@ assert_has "$line" 'docker.socket' 'docker.socket not named'
 assert_has "$line" 'docker.service' 'docker.service not named'
 assert_lacks "$line" 'bonsai' 'user unit reported though stopped without sudo'
 assert_lacks "$line" 'timer' 'timer reported though stopped without sudo'
-assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'bonsai-cc-proxy.service docker.service docker.socket ' 'user units/timers must stop even without sudo'
+assert_eq "$(sort "$ACTIVE" | tr '\n' ' ')" 'bonsai-cc-proxy.service docker.service docker.socket gaming-gpu-log.service ' 'user units/timers must stop even without sudo'
 
 echo "== start failure on off"
 reset

@@ -58,6 +58,14 @@ bash ~/dotfiles/gaming-mode/setup.sh
 Installs `~/.local/bin/gaming`, `~/.config/gaming/apps.conf` (kept if present), the
 `gaming-toggle.desktop` entry and the Meta+Shift+G shortcut.
 
+## GPU log
+
+While game mode is on, `gaming-gpu-log.service` appends a row every 10 seconds to
+`~/.local/state/gaming/gpu-log-YYYY-MM-DD.csv`: graphics memory used and total, and
+for Chrome's graphics process its memory, open file handles and handle limit.
+It is a diagnostic for `VK_ERROR_OUT_OF_DEVICE_MEMORY` in browser games. Find the
+error times with `journalctl --user | grep VK_ERROR` and read the rows around them.
+
 ## Tests
 
 ```bash
