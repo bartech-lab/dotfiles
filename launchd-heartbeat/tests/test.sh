@@ -124,6 +124,7 @@ chmod +x "$MOCK_BIN/notify-send"
 
 export CALL_LOG NOTIFY_LOG
 export HOME="$TEST_HOME"
+export HEARTBEAT_PAUSE_FILE="$TEST_ROOT/no-such-pause-file"
 export PATH="$MOCK_BIN:$PATH"
 export HEARTBEAT_BOOT_GRACE=0
 
