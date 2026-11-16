@@ -52,7 +52,7 @@ dotfiles/
 │   ├── setup.sh              # One-time setup for new machines
 │   └── README.md             # Component documentation
 ├── system-update/            # Linux systemd timer for daily yay -Syu
-│   ├── system-update-guard   # holds the update on Arch news needing manual intervention (--ack releases it), post-update checks
+│   ├── system-update-guard   # holds the update on Arch news needing manual intervention (--ack releases it), post-update checks, restarts ZapZap when it runs on replaced files
 │   ├── system-update.service # systemd oneshot service, runs the guard under jobrun (~/.agents/ops) for a health record
 │   ├── system-update.timer   # Daily timer at 10:00
 │   └── tests/                # python3 -m unittest discover -s system-update/tests

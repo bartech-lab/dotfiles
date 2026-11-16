@@ -37,8 +37,10 @@ class GuardTest(unittest.TestCase):
         fake_ops = self.dir / "ops"
         fake_ops.write_text(f'#!/bin/sh\necho "$2|$3" >> "{self.alerts}"\n')
         fake_ops.chmod(0o755)
+        (self.dir / "proc").mkdir()
         self.env = dict(os.environ, SU_STATE_DIR=str(self.dir / "state"), SU_FEED_FILE=str(self.feed),
-                        OPS_BIN=str(fake_ops), SU_UPDATE_CMD=f"touch {self.updated}")
+                        OPS_BIN=str(fake_ops), SU_UPDATE_CMD=f"touch {self.updated}",
+                        SU_PROC_DIR=str(self.dir / "proc"))
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -295,6 +297,120 @@ class NvidiaTest(unittest.TestCase):
 
     def test_equal_versions_report_nothing(self):
         self.assertEqual(self.findings("580.95.05", "580.95.05-1"), [])
+
+
+ENGINE = "7fa2ce000000-7fa2ce0bc000 r--p 00000000 103:02 49464850                  /usr/lib/libQt6WebEngineCore.so.6.11.3"
+SHM = "7fa2cd000000-7fa2cd0bc000 r--s 00000000 00:1b 5120                       /dev/shm/.org.chromium.Chromium.uPzkeN (deleted)"
+
+
+class ZapZapRestartTest(unittest.TestCase):
+    """The fake /proc holds the processes; a fake kill removes one, as a real exit would."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.proc = Path(tmp.name)
+        (self.proc / "cpuinfo").write_text("not a process\n")
+        loader = importlib.machinery.SourceFileLoader("guard", str(GUARD))
+        self.module = importlib.util.module_from_spec(importlib.util.spec_from_loader("guard", loader))
+        loader.exec_module(self.module)
+        self.killed, self.started, self.hung = [], [], set()
+
+    def process(self, pid, cmdline, *maps):
+        path = self.proc / str(pid)
+        path.mkdir()
+        (path / "cmdline").write_bytes(b"\0".join(part.encode() for part in cmdline) + b"\0")
+        (path / "maps").write_text("".join(line + "\n" for line in maps))
+
+    def zapzap(self, pid, *maps):
+        self.process(pid, ["/usr/bin/python", "/usr/bin/zapzap", ""], *maps)
+
+    def run_restart(self, start_code=0):
+        def fake_kill(pid, sig):
+            self.killed.append((pid, sig))
+            if pid not in self.hung:
+                for name in ("cmdline", "maps"):
+                    (self.proc / str(pid) / name).unlink()
+                (self.proc / str(pid)).rmdir()
+
+        def fake_run(cmd, **kwargs):
+            self.started.append((cmd, sorted(p.name for p in self.proc.iterdir() if p.name.isdigit())))
+            return mock.Mock(returncode=start_code)
+
+        with mock.patch.object(self.module, "PROC_DIR", str(self.proc)), \
+                mock.patch.object(self.module, "ZAPZAP_QUIT_WAIT", 0.2), \
+                mock.patch.object(self.module.os, "kill", fake_kill), \
+                mock.patch.object(self.module.subprocess, "run", fake_run):
+            return self.module.restart_stale_zapzap()
+
+    def test_copy_on_a_replaced_engine_is_stopped_then_started_once(self):
+        self.zapzap(518433, SHM, ENGINE + " (deleted)")
+        self.assertIsNone(self.run_restart())
+        self.assertEqual(self.killed, [(518433, self.module.signal.SIGTERM)])
+        self.assertEqual(len(self.started), 1)
+        self.assertEqual(self.started[0][1], [], "started while the old copy was still alive")
+        self.assertIn("/usr/bin/zapzap", self.started[0][0])
+
+    def test_healthy_copy_with_only_deleted_shared_memory_is_left_alone(self):
+        self.zapzap(1932689, SHM, ENGINE)
+        self.assertIsNone(self.run_restart())
+        self.assertEqual((self.killed, self.started), ([], []))
+
+    def test_other_program_on_replaced_files_is_left_alone(self):
+        self.process(4242, ["/usr/bin/python", "/usr/bin/other-app"], ENGINE + " (deleted)")
+        self.process(4243, ["/usr/bin/zapzap-helper"], ENGINE + " (deleted)")
+        self.assertIsNone(self.run_restart())
+        self.assertEqual((self.killed, self.started), ([], []))
+
+    def test_no_zapzap_running_starts_nothing(self):
+        self.assertIsNone(self.run_restart())
+        self.assertEqual(self.started, [])
+
+    def test_second_copy_is_stopped_too_so_one_copy_owns_the_profile(self):
+        self.zapzap(518433, ENGINE + " (deleted)")
+        self.zapzap(1922296, ENGINE)
+        self.assertIsNone(self.run_restart())
+        self.assertEqual(sorted(pid for pid, _ in self.killed), [518433, 1922296])
+        self.assertEqual(len(self.started), 1)
+
+    def test_copy_that_does_not_quit_is_reported_and_no_second_copy_starts(self):
+        self.zapzap(518433, ENGINE + " (deleted)")
+        self.hung.add(518433)
+        finding = self.run_restart()
+        self.assertEqual(self.started, [])
+        self.assertEqual(finding[0], "ZapZap not restarted")
+        self.assertIn("did not quit", finding[1])
+
+    def test_failed_start_is_reported(self):
+        self.zapzap(518433, ENGINE + " (deleted)")
+        finding = self.run_restart(start_code=1)
+        self.assertEqual(finding[0], "ZapZap not restarted")
+        self.assertIn("exited 1", finding[1])
+
+    def test_process_that_vanishes_between_listing_and_reading_is_ignored(self):
+        self.zapzap(518433, ENGINE + " (deleted)")
+        (self.proc / "518433" / "maps").unlink()
+        self.assertIsNone(self.run_restart())
+        self.assertEqual((self.killed, self.started), ([], []))
+
+    def test_guard_run_reports_a_copy_that_does_not_quit(self):
+        # End to end through main(): a fake pid nobody can signal stays listed, so the guard must alert.
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        work = Path(tmp.name)
+        alerts = work / "alerts"
+        ops = work / "ops"
+        ops.write_text(f'#!/bin/sh\necho "$2|$3" >> "{alerts}"\n')
+        ops.chmod(0o755)
+        (work / "feed.xml").write_text(feed(OLD))
+        self.zapzap(4194999, ENGINE + " (deleted)")  # above pid_max: the signal finds no process
+        env = dict(os.environ, SU_STATE_DIR=str(work / "state"), SU_FEED_FILE=str(work / "feed.xml"),
+                   OPS_BIN=str(ops), SU_UPDATE_CMD="true", SU_PROC_DIR=str(self.proc), SU_ZAPZAP_QUIT_WAIT="0.2",
+                   SU_ZAPZAP_START=f"touch {work / 'started'}")
+        result = subprocess.run([str(GUARD)], capture_output=True, text=True, env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("ZapZap not restarted|", alerts.read_text())
+        self.assertFalse((work / "started").exists(), "started a second copy beside the stuck one")
 
 
 if __name__ == "__main__":

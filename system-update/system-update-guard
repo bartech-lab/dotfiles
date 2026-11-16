@@ -12,6 +12,10 @@ feed is announced as "unchecked" and the update proceeds.
 After a successful update each finding is its own notification and never changes the exit
 code: units that failed since the update started, new .pacnew files, a running kernel
 whose modules are gone, a loaded nvidia module older than the installed package.
+
+Last it restarts ZapZap when ZapZap still runs on a /usr file the update replaced. Such a
+copy stops answering its single-instance socket, so the next launch starts a second copy
+that cannot open the locked profile and shows the login page.
 """
 import email.utils
 import glob
@@ -19,6 +23,7 @@ import json
 import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import tempfile
@@ -32,6 +37,12 @@ ACK_FILE = os.path.join(STATE_DIR, "news-ack")
 OPS = os.environ.get("OPS_BIN", os.path.expanduser("~/.agents/ops/bin/ops"))
 ETC_DIR = os.environ.get("SU_ETC_DIR", "/etc")
 UPDATE_CMD = shlex.split(os.environ.get("SU_UPDATE_CMD", "/usr/bin/yay -Syu --noconfirm --removemake"))
+PROC_DIR = os.environ.get("SU_PROC_DIR", "/proc")
+ZAPZAP_BIN = b"/usr/bin/zapzap"
+ZAPZAP_START = shlex.split(os.environ.get(
+    "SU_ZAPZAP_START",
+    "systemd-run --user --collect --quiet --slice=app.slice --description=ZapZap /usr/bin/zapzap --hideStart"))
+ZAPZAP_QUIT_WAIT = float(os.environ.get("SU_ZAPZAP_QUIT_WAIT", "20"))
 INTERVENTION = re.compile(r"manual(ly)? intervention|intervention (is |may be )?required|requires? manual", re.I)
 
 
@@ -129,6 +140,53 @@ def post_checks(started):
     return findings
 
 
+def zapzap_pids():
+    pids = []
+    for entry in os.listdir(PROC_DIR):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(os.path.join(PROC_DIR, entry, "cmdline"), "rb") as handle:
+                argv = handle.read().split(b"\0")
+        except OSError:
+            continue
+        if argv[1:2] == [ZAPZAP_BIN]:
+            pids.append(int(entry))
+    return pids
+
+
+def runs_replaced_files(pid):
+    """True when the process still maps a /usr file that no longer exists on disk."""
+    try:
+        with open(os.path.join(PROC_DIR, str(pid), "maps")) as handle:
+            return any(re.search(r"\s/usr/.* \(deleted\)$", line) for line in handle)
+    except OSError:
+        return False
+
+
+def restart_stale_zapzap():
+    """Restart ZapZap when it runs on replaced files. Returns a finding when it could not."""
+    pids = zapzap_pids()
+    if not any(runs_replaced_files(pid) for pid in pids):
+        return None
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    deadline = time.monotonic() + ZAPZAP_QUIT_WAIT
+    while zapzap_pids() and time.monotonic() < deadline:
+        time.sleep(0.5)
+    if zapzap_pids():
+        return ("ZapZap not restarted", "it runs on files the update replaced and did not quit; "
+                "quit it from the tray before opening it again, or it will show the login page")
+    code = subprocess.run(ZAPZAP_START).returncode
+    if code != 0:
+        return ("ZapZap not restarted", f"stopped after the update, but starting it again exited {code}")
+    print("ZapZap restarted: it was running on files the update replaced")
+    return None
+
+
 def main(argv):
     if argv[:1] in (["-h"], ["--help"]):
         print(__doc__.strip())
@@ -171,7 +229,7 @@ def main(argv):
     if code != 0:
         print(f"update failed: {' '.join(UPDATE_CMD)} exited {code}", file=sys.stderr)
         return code
-    for title, message in post_checks(started):
+    for title, message in post_checks(started) + [f for f in [restart_stale_zapzap()] if f]:
         notify(title, message, priority=4)
     return 0
 
