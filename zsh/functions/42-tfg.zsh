@@ -2,23 +2,29 @@ tfg() {
   emulate -L zsh
   unsetopt XTRACE VERBOSE
 
-  local agent=claude cycles
-  if [[ ${1:-} == --help || ${1:-} == -h ]]; then
-    print -r -- 'Usage: tfg [--codex] [cycles]'
-    print -r -- 'Run Tokens for Good cycles in ~/volunteer/tokens-for-good (Claude by default).'
-    print -r -- 'Each cycle is a fresh headless session. Without a count it runs until 90% 5h or 95% weekly usage, or Ctrl-C.'
-    print -r -- 'First run saves your Tokens for Good key in ~/.zshenv (mode 600).'
-    return 0
-  fi
-  if [[ ${1:-} == --codex ]]; then
-    agent=codex
+  local agent=claude cycles usage='Usage: tfg [--codex] [--ignore-weekly] [--ignore-5h] [cycles]'
+  local -a limit_args=()
+  while (( $# )); do
+    case $1 in
+      -h|--help)
+        print -r -- $usage
+        print -r -- 'Run Tokens for Good cycles in ~/volunteer/tokens-for-good (Claude by default).'
+        print -r -- 'Each cycle is a fresh headless session. Without a count it runs until 90% 5h or 95% weekly usage, or Ctrl-C.'
+        print -r -- '--ignore-weekly  this run only: skip the 95% weekly stop and run until the weekly limit.'
+        print -r -- '--ignore-5h      this run only: skip the 90% 5h stop and run until the 5h limit.'
+        print -r -- 'Paid extra usage always stops the run at once.'
+        print -r -- 'First run saves your Tokens for Good key in ~/.zshenv (mode 600).'
+        return 0 ;;
+      --codex) agent=codex ;;
+      --ignore-weekly) limit_args+=(--long-limit 100) ;;
+      --ignore-5h) limit_args+=(--short-limit 100) ;;
+      <1->)
+        [[ -z $cycles ]] || { print -u2 -- $usage; return 2 }
+        cycles=$1 ;;
+      *) print -u2 -- $usage; return 2 ;;
+    esac
     shift
-  fi
-  if (( $# > 1 )) || [[ -n ${1:-} && $1 != <1-> ]]; then
-    print -u2 -- 'Usage: tfg [--codex] [cycles]'
-    return 2
-  fi
-  cycles=${1:-}
+  done
 
   local work_dir="$HOME/volunteer/tokens-for-good"
   if [[ ! -f $work_dir/app/src/mcp-server.js || ! -x $HOME/volunteer/bin/tfg-run ]]; then
@@ -49,6 +55,7 @@ tfg() {
 
   local -a run_args=()
   [[ $agent == codex ]] && run_args+=(--codex)
+  run_args+=($limit_args)
   [[ -n $cycles ]] && run_args+=($cycles)
   command "$HOME/volunteer/bin/tfg-run" "${run_args[@]}"
 }
