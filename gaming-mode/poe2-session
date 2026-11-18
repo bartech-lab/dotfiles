@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# poe2-session — start Path of Exile 2 with game mode on and the session
+# recorder running. The desktop icon runs this.
+#
+# While the game runs the bottom Plasma panel dodges windows; its old setting
+# comes back at exit. Game mode is switched off at exit only if this launch
+# switched it on (see gaming run).
+
+set -u
+
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+LOCK="${POE2_SESSION_LOCK:-$RUNTIME_DIR/gaming/poe2-session.lock}"
+GAMING="${POE2_GAMING:-$HOME/.local/bin/gaming}"
+GAMELOG="${POE2_GAMELOG:-$HOME/.local/bin/gamelog}"
+
+mkdir -p "$(dirname "$LOCK")"
+exec 8> "$LOCK"
+flock -n 8 || { echo "poe2-session: already running" >&2; exit 0; }
+
+panel() {
+    qdbus6 org.kde.plasmashell /PlasmaShell evaluateScript "
+var bp = panels().find(function(p) { return p.location === 'bottom'; });
+var orig = bp ? bp.hiding : 'none';
+if (bp) bp.hiding = '$1';
+print(orig);" 2>/dev/null
+}
+
+orig_hiding=$(panel dodgewindows)
+restore_panel() { [[ -n "$orig_hiding" ]] && panel "$orig_hiding" >/dev/null; }
+trap restore_panel EXIT
+
+# The lock must not leak into Lutris, which can outlive the game.
+"$GAMING" run -- "$GAMELOG" record --launch 8>&-

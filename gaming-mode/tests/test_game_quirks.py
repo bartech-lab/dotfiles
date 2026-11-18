@@ -168,5 +168,85 @@ class GameQuirks(unittest.TestCase):
         self.assertFalse((self.root/'games.conf').exists())
 
 
+    # D. afmf-off: undo the setting for a Lutris game and record the decision
+    def conf_lines(self):
+        conf = self.root/'games.conf'
+        return conf.read_text().splitlines() if conf.exists() else []
+
+    def test_afmf_off_removes_only_the_system_variable_and_records_the_reason(self):
+        base = LUTRIS_YML + "system:\n  gamemode: true\n  env:\n    A: b\nversion: x\n"
+        self.yml.write_text(base)
+        self.run_tool('afmf', 'lutris:poe')
+        self.assertIn("AFMF_ENABLE: '1'", self.yml.read_text())
+        result = self.run_tool('afmf-off', 'lutris:poe', 'looks', 'worse')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.yml.read_text(), base)
+        self.assertEqual(self.conf_lines(), ['lutris:poe afmf-off looks worse'])
+
+    def test_afmf_off_leaves_the_game_block_alone(self):
+        game_has_it = LUTRIS_YML.replace('IGNORED', 'AFMF_ENABLE')
+        self.yml.write_text(game_has_it + "system:\n  env:\n    AFMF_ENABLE: '1'\n    A: b\n")
+        self.assertEqual(self.run_tool('afmf-off', 'lutris:poe', 'no').returncode, 0)
+        self.assertEqual(self.yml.read_text(), game_has_it + "system:\n  env:\n    A: b\n")
+
+    def test_afmf_off_replaces_only_this_games_afmf_decision(self):
+        self.run_tool('afmf', 'steam:99')
+        self.run_tool('afmf', 'lutris:poe')
+        self.run_tool('afmf-off', 'lutris:poe', 'artifacts')
+        lines = self.conf_lines()
+        self.assertEqual([x for x in lines if x.startswith('lutris:poe')], ['lutris:poe afmf-off artifacts'])
+        self.assertEqual(len([x for x in lines if x.startswith('steam:99 afmf')]), 1)
+        self.assertEqual(len(lines), 2)
+
+    def test_afmf_off_game_counts_as_decided_not_as_a_missing_setting(self):
+        self.run_tool('afmf', 'lutris:poe')
+        self.run_tool('afmf-off', 'lutris:poe', 'artifacts')
+        self.run_tool('skip', 'steam:1282100', 'online only')
+        self.run_tool('skip', 'steam:99', '2D')
+        self.assertNotIn('AFMF_ENABLE', self.yml.read_text())
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn('SETTING MISSING', result.stdout)
+
+    def test_afmf_again_after_afmf_off_ends_with_one_variable(self):
+        self.run_tool('afmf', 'lutris:poe')
+        self.run_tool('afmf-off', 'lutris:poe', 'artifacts')
+        self.assertEqual(self.run_tool('afmf', 'lutris:poe').returncode, 0)
+        text = self.yml.read_text()
+        self.assertEqual(text.count('AFMF_ENABLE'), 1)
+        self.assertTrue(text.startswith(LUTRIS_YML))
+        self.assertTrue(text.endswith("    AFMF_ENABLE: '1'\n"))
+        lines = self.conf_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith('lutris:poe afmf'))
+        self.assertNotIn('afmf-off', lines[0])
+
+    def test_afmf_off_on_steam_is_refused_and_changes_nothing(self):
+        before = self.vdf.read_text()
+        result = self.run_tool('afmf-off', 'steam:1282100', 'no')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.vdf.read_text(), before)
+        self.assertEqual(self.conf_lines(), [])
+        self.run_tool('afmf', 'steam:1282100')
+        after_afmf, lines = self.vdf.read_text(), self.conf_lines()
+        self.assertNotEqual(self.run_tool('afmf-off', 'steam:1282100', 'no').returncode, 0)
+        self.assertEqual(self.vdf.read_text(), after_afmf)
+        self.assertEqual(self.conf_lines(), lines)
+
+    def test_afmf_off_without_the_variable_succeeds_and_keeps_the_file(self):
+        for text in (LUTRIS_YML, LUTRIS_YML + "system:\n  gamemode: true\n  env:\n    A: b\nversion: x\n"):
+            self.yml.write_text(text)
+            result = self.run_tool('afmf-off', 'lutris:poe', 'never had it')
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(self.yml.read_text(), text)
+            self.assertEqual(self.conf_lines(), ['lutris:poe afmf-off never had it'])
+
+    def test_afmf_on_a_game_block_only_yml_adds_a_system_block_and_keeps_game_env(self):
+        text = "game:\n  env:\n    DXVK_ASYNC: '1'\n    OTHER: x\n  exe: a.exe\nname: Game\n"
+        self.yml.write_text(text)
+        self.assertEqual(self.run_tool('afmf', 'lutris:poe').returncode, 0)
+        self.assertEqual(self.yml.read_text(), text + "system:\n  env:\n    AFMF_ENABLE: '1'\n")
+
+
 if __name__ == '__main__':
     unittest.main()

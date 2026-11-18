@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Record and analyse Path of Exile 2 sessions.
+
+  gamelog record [--launch]   record until the game exits, then write the report and notify
+                              (--launch starts the game through Lutris)
+  gamelog list                recorded sessions
+  gamelog report [SESSION]    rebuild the report of a session (default: the latest) and print its path
+  gamelog compare             current settings against the previous ones, when both have enough sessions
+  gamelog next                what is worth testing next, and why; nothing is applied
+  gamelog backfill            count crashes, disconnects and memory warnings in the game's existing log
+  gamelog install-env         make Lutris start PoE2 with the frame-logging MangoHud config
+  gamelog prune               apply the retention rules now
+
+Started by poe2-session, the desktop icon's command. Data: ~/.local/state/gaming/poe2/.
+The tool only reads: the game's log and config, OS counters, MangoHud's frame log.
+"""
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+os.environ['PATH'] = f'{Path.home()}/.local/bin:' + os.environ.get('PATH', '/usr/bin')
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gamelog_lib import analyze, capture  # noqa: E402
+
+
+def finish(session):
+    """Summary, comparison, suggestions and report.html for one recorded session."""
+    meta = json.loads((session/'meta.json').read_text())
+    summary, detail = analyze.write_summary(session)
+    comparison = analyze.compare(analyze.summaries(capture.SESSIONS))
+    suggestions = analyze.candidates(summary, meta) if summary.get('overall') else []
+    return summary, analyze.report(session, summary, detail, comparison, suggestions), comparison, suggestions
+
+
+def latest(name=None):
+    sessions = sorted(p.parent for p in capture.SESSIONS.glob('*/meta.json'))
+    if name:
+        sessions = [s for s in sessions if s.name == name]
+    else:
+        sessions = [s for s in sessions if json.loads((s/'meta.json').read_text()).get('status') == 'ok']
+    if not sessions:
+        raise SystemExit('no such recorded session' if name else 'no measured session yet')
+    return sessions[-1]
+
+
+def backfill():
+    position = {'offset': 0, 'inode': None}
+    events, _, _ = capture.read_events(position)
+    runs = []
+    for event in events:
+        # Older logs have no start line: a clean exit or a long silence also ends a run.
+        if event['kind'] == 'start' or not runs or runs[-1]['graceful'] or event['t'] - runs[-1]['end'] > 1800:
+            runs.append({'start': event['t'], 'end': event['t'], 'zones': 0, 'vram_warnings': 0, 'disconnects': 0, 'graceful': False})
+        run = runs[-1]
+        run['end'] = event['t']
+        run['zones'] += event['kind'] == 'zone'
+        run['vram_warnings'] += event['kind'] == 'vram_warning'
+        run['disconnects'] += event['kind'] == 'disconnect'
+        run['graceful'] |= event['kind'] == 'exit_graceful'
+    runs = [r for r in runs if r['zones']]
+    capture.STATE.mkdir(parents=True, exist_ok=True)
+    (capture.STATE/'backfill.json').write_text(json.dumps(runs, indent=1) + '\n')
+    print(f"{'started':<17}{'min':>5}{'areas':>7}{'memory warnings':>17}{'disconnects':>13}  clean exit")
+    for r in runs:
+        print(f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(r['start'])):<17}{(r['end'] - r['start']) / 60:>5.0f}{r['zones']:>7}"
+              f"{r['vram_warnings']:>17}{r['disconnects']:>13}  {'yes' if r['graceful'] else 'NO'}")
+    bad = sum(not r['graceful'] for r in runs)
+    print(f"{len(runs)} sessions, {bad} without a clean exit, {sum(r['vram_warnings'] for r in runs)} memory warnings, "
+          f"{sum(r['disconnects'] for r in runs)} disconnects")
+
+
+def main(argv):
+    command, rest = (argv[1] if len(argv) > 1 else ''), argv[2:]
+    if command == 'record' and rest in ([], ['--launch']):
+        session = capture.record(launch=bool(rest))
+        capture.prune()
+        if not session:
+            return 1
+        if json.loads((session/'meta.json').read_text()).get('status') == 'ok':
+            summary, path, _, suggestions = finish(session)
+            o = summary.get('overall')
+            if o:
+                first = summary['findings'][0]['text'] if summary['findings'] else 'Nothing unusual.'
+                then = f" Next to test: {suggestions[0]['id']}." if suggestions else ''
+                bad = any(f['level'] == 'bad' for f in summary['findings'])
+                capture.notify('PoE2 session', f"{o['avg_fps']:.0f} fps average, {o['low1_fps']:.0f} fps 1% low, "
+                               f"{summary['stutters_per_10min']} stutters per 10 min. {first}{then} Report: {path}", 4 if bad else 3)
+            else:
+                capture.notify('PoE2 session', f'Recorded, but the game never entered an area, so there are no play numbers. Report: {path}', 2)
+        print(session)
+        return 0
+    if command == 'list' and not rest:
+        for session in sorted(capture.SESSIONS.glob('*/meta.json')):
+            meta = json.loads(session.read_text())
+            minutes = (meta.get('end', meta['start']) - meta.get('game_start', meta['start'])) / 60
+            print(f"{session.parent.name}  {meta.get('status', '?'):<10}{minutes:5.0f} min  {meta.get('frames', 0):>8} frames")
+        return 0
+    if command == 'report' and len(rest) <= 1:
+        print(finish(latest(*rest))[1])
+        return 0
+    if command == 'compare' and not rest:
+        result = analyze.compare(analyze.summaries(capture.SESSIONS))
+        print(result['verdict'])
+        for label, key in (('Settings changed', 'changed'), ('Updates in between', 'updates')):
+            for name, (old, new) in (result.get(key) or {}).items():
+                print(f'  {label}: {name}: {old} -> {new}')
+        return 0
+    if command == 'next' and not rest:
+        _, _, comparison, suggestions = finish(latest())
+        have = comparison.get('current', 0)
+        if have < analyze.MIN_SESSIONS:
+            print(f'Collecting: {have} of {analyze.MIN_SESSIONS} sessions on the current settings. Change nothing until then.')
+        for i, c in enumerate(suggestions):
+            print(f"{'NEXT' if i == 0 and have >= analyze.MIN_SESSIONS else '    '} {c['id']}: {c['change']}\n       why: {c['evidence']}\n       judged by: {c['judged_by']}")
+        if not suggestions:
+            print('Nothing in the latest session points at a setting worth testing.')
+        return 0
+    if command == 'backfill' and not rest:
+        backfill()
+        return 0
+    if command == 'install-env' and not rest:
+        capture.install_env()
+        return 0
+    if command == 'prune' and not rest:
+        capture.prune()
+        return 0
+    print(__doc__.strip(), file=sys.stdout if command in ('-h', '--help') else sys.stderr)
+    return 0 if command in ('-h', '--help') else 2
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

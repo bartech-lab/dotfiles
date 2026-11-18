@@ -393,6 +393,12 @@ Linux only. Run `gaming` (or press Meta+Shift+G) before a game: it stops Bonsai,
 `gaming status` shows what is stopped; `gaming run -- %command%` as a Steam launch option does both around one game.
 Installed by `gaming-mode/setup.sh`; see [gaming-mode README](../gaming-mode/README.md).
 
+### gamelog
+
+Linux only. Records every Path of Exile 2 session started from the desktop icon (`poe2-session`): each frame's length, system load once per second, and the game's own log events. After the game exits it writes `report.html` and sends a notification.
+`gamelog list` shows sessions, `gamelog report` rebuilds the latest report, `gamelog compare` judges a settings change once both sides have 3 sessions, and `gamelog next` names what is worth testing next. It changes no setting.
+See [gaming-mode README](../gaming-mode/README.md#path-of-exile-2-session-recorder).
+
 ### extract
 
 Universal archive extractor.

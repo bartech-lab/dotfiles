@@ -22,6 +22,8 @@ mv -f "$HOME/.local/bin/gaming.tmp" "$HOME/.local/bin/gaming"
 
 ln -sfn "$SRC_DIR/game-quirks" "$HOME/.local/bin/game-quirks"
 ln -sfn "$SRC_DIR/gaming-gpu-log" "$HOME/.local/bin/gaming-gpu-log"
+ln -sfn "$SRC_DIR/gamelog" "$HOME/.local/bin/gamelog"
+ln -sfn "$SRC_DIR/poe2-session" "$HOME/.local/bin/poe2-session"
 mkdir -p "$HOME/.config/systemd/user"
 cp "$SRC_DIR/game-quirks.path" "$SRC_DIR/game-quirks.service" "$SRC_DIR/gaming-gpu-log.service" "$HOME/.config/systemd/user/"
 systemctl --user daemon-reload
@@ -47,6 +49,7 @@ else
 fi
 
 echo "Installed: ~/.local/bin/gaming, ~/.config/gaming/apps.conf, gaming-toggle.desktop"
+echo "PoE2 recorder: point the game's desktop icon at ~/.local/bin/poe2-session, then run: gamelog install-env"
 if ! sudo -n -l /usr/bin/systemctl stop docker.service >/dev/null 2>&1; then
     echo "Docker is skipped until you install the sudoers rule:"
     echo "  sudo install -m 440 $SRC_DIR/sudoers.example /etc/sudoers.d/gaming-docker && sudo visudo -c"

@@ -153,6 +153,7 @@ dotfiles-doctor
 
 - `tfg [--codex] [--ignore-weekly] [--ignore-5h] [cycles]` - Run Tokens for Good research cycles until 90% usage, Claude by default ([setup](docs/dev.md#tfg))
 - `gaming [on|off|status]` - Free the GPU for a game and restore after, Linux only, Meta+Shift+G ([gaming-mode](gaming-mode/README.md))
+- `gamelog [list|report|compare|next]` - Path of Exile 2 session recorder: frame times, system load, report per session, Linux only ([gaming-mode](gaming-mode/README.md#path-of-exile-2-session-recorder))
 - `extract <archive>` - Universal archive extractor
 - `archive [name] [--dry-run] [-gzip]` - Create reproducible archives
 - `repo-check` - Pre-archive sanity checker

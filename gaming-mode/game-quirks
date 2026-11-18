@@ -4,6 +4,7 @@
   game-quirks                  show every installed game; exit 1 if any needs attention
   game-quirks --notify         same, and send one `ops notify` for what is new
   game-quirks afmf GAME        turn afmf-linux on for GAME and record it
+  game-quirks afmf-off GAME    turn it off again for a Lutris GAME (a measured baseline) and record it
   game-quirks skip GAME WHY    record that GAME stays without it
 
 GAME is an id from the list: steam:<appid> or lutris:<slug>.
@@ -14,6 +15,10 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gamelog_lib import lutris_env  # noqa: E402
 
 HOME = Path.home()
 STEAM = Path(os.environ.get('GAME_QUIRKS_STEAM', HOME/'.local/share/Steam'))
@@ -81,9 +86,7 @@ def lutris_config(slug):
 def has_afmf(game):
     kind, key = game.split(':', 1)
     if kind == 'lutris':
-        text = lutris_config(key).read_text()
-        system = re.search(r'^system:\n((?:[ \t].*\n)*)', text, re.M)
-        return bool(system and re.search(r"^\s+AFMF_ENABLE: '?1'?\s*$", system.group(1), re.M))
+        return lutris_env.get_env(lutris_config(key).read_text(), 'AFMF_ENABLE') == '1'
     for config in steam_configs():
         lines = config.read_text(errors='surrogateescape').split('\n')
         top, end = app_block(lines, key)
@@ -92,21 +95,9 @@ def has_afmf(game):
     return False
 
 
-def enable_lutris(slug):
+def enable_lutris(slug, value='1'):
     path = lutris_config(slug)
-    text = path.read_text()
-    entry = "    AFMF_ENABLE: '1'\n"
-    system = re.search(r'^system:\n', text, re.M)
-    if not system:
-        text += "system:\n  env:\n" + entry
-    else:
-        env = re.compile(r'^  env:\n', re.M).search(text, system.end())
-        following = re.compile(r'^\S', re.M).search(text, system.end())
-        if env and (not following or env.start() < following.start()):
-            text = text[:env.end()] + entry + text[env.end():]
-        else:
-            text = text[:system.end()] + "  env:\n" + entry + text[system.end():]
-    path.write_text(text)
+    path.write_text(lutris_env.set_env(path.read_text(), 'AFMF_ENABLE', value))
 
 
 def enable_steam(appid):
@@ -157,10 +148,16 @@ def notify(games, new, missing):
 def main(argv):
     command = argv[1] if len(argv) > 1 else ''
     games = installed()
-    if command in ('afmf', 'skip'):
-        if len(argv) < (3 if command == 'afmf' else 4) or argv[2] not in games:
+    if command in ('afmf', 'afmf-off', 'skip'):
+        if len(argv) < (4 if command == 'skip' else 3) or argv[2] not in games:
             raise SystemExit(__doc__)
         game = argv[2]
+        if command == 'afmf-off':
+            if not game.startswith('lutris:'):
+                raise SystemExit(__doc__)
+            enable_lutris(game.split(':', 1)[1], None)
+            record(game, 'afmf-off', ' '.join(argv[3:]))
+            return 0
         if command == 'skip':
             record(game, 'skip', ' '.join(argv[3:]))
             return 0

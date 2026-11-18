@@ -218,6 +218,9 @@ timers, monitor apps and Discord before a game; running it again restores what i
 bash ~/dotfiles/gaming-mode/setup.sh
 ```
 
+The same script links the Path of Exile 2 session recorder (`gamelog`, `poe2-session`). To use it,
+point the game's desktop icon at `~/.local/bin/poe2-session` and run `gamelog install-env` once.
+
 See [gaming-mode README](../gaming-mode/README.md).
 
 ## Fresh macOS Setup
