@@ -26,6 +26,8 @@ LUTRIS_GAMES = Path(os.environ.get('GAMELOG_LUTRIS_GAMES', HOME/'.config/lutris/
 LUTRIS_SLUG = 'path-of-exile-2'
 LAUNCH = shlex.split(os.environ.get('GAMELOG_LAUNCH', f'lutris lutris:rungame/{LUTRIS_SLUG}'))
 PROC_RE = re.compile(os.environ.get('GAMELOG_PROC_RE', r'PathOfExile\w*\.exe'))
+LAUNCHER_RE = re.compile(PROC_RE.pattern + r'|lutris-wrapper.*Path.of.Exile')
+START_WAIT_MAX = float(os.environ.get('GAMELOG_START_WAIT_MAX', '1200'))
 PORT = 21360
 NOTIFY = os.environ.get('GAMELOG_NOTIFY', 'ops').split()
 INTERVAL = float(os.environ.get('GAMELOG_INTERVAL', '1'))
@@ -184,9 +186,10 @@ def pids():
         return []
 
 
-def find_game():
-    """Pid of the game: the largest process that runs the game's exe under its own name or Wine."""
-    best, best_rss = None, -1
+def pick_game():
+    """(pid, named) of the game. A process named after the exe beats Proton's helper
+    processes, which are Wine binaries with the exe in their arguments and start first."""
+    best, best_key = None, (0, -1)
     for pid in pids():
         if not PROC_RE.search(read(PROC/str(pid)/'cmdline').replace('\0', ' ')):
             continue
@@ -197,21 +200,40 @@ def find_game():
             exe = ''
         # Launch wrappers (lutris-wrapper, umu-run, python) carry the exe in
         # their arguments too; only Wine processes and the game itself count.
-        if not (comm and PROC_RE.pattern.startswith(comm[:8]) or exe.startswith('wine')):
+        named = bool(comm) and PROC_RE.pattern.startswith(comm[:8])
+        if not (named or exe.startswith('wine')):
             continue
         rss = int((re.search(r'VmRSS:\s+(\d+)', read(PROC/str(pid)/'status')) or [0, 0])[1])
-        if rss > best_rss:
-            best, best_rss = pid, rss
-    return best
+        if (1 + named, rss) > best_key:
+            best, best_key = pid, (1 + named, rss)
+    return best, best_key[0] == 2
 
 
-def wait_for_game(seconds):
-    deadline = time.monotonic() + seconds
+def find_game():
+    return pick_game()[0]
+
+
+def launching():
+    """True while a launcher for the game is still at work (Lutris, umu, a runtime download)."""
+    return any(LAUNCHER_RE.search(read(PROC/str(pid)/'cmdline').replace('\0', ' ')) for pid in pids())
+
+
+def wait_for_game(seconds, patient=False):
+    """Pid of the game once it shows up. A patient wait goes on past seconds while a launcher runs."""
+    begun = time.monotonic()
     while True:
         pid = find_game()
-        if pid or time.monotonic() >= deadline:
+        waited = time.monotonic() - begun
+        if pid or (waited >= seconds and not (patient and waited < START_WAIT_MAX and launching())):
             return pid
         time.sleep(min(1, max(INTERVAL, 0.01)))
+
+
+def wait_until_gone():
+    """Block until the game has started and exited; for when recording failed."""
+    wait_for_game(START_WAIT, patient=True)
+    while find_game():
+        time.sleep(min(5, max(INTERVAL, 0.01)))
 
 
 def alive(pid):
@@ -249,7 +271,7 @@ INI_SECTIONS = ('DISPLAY', 'NETWORKING', 'GENERAL', 'SOUND')
 def filtered_ini():
     """The game config without account data: four sections, no secret-looking keys."""
     lines, keep = [], True
-    for line in read(INI).splitlines():
+    for line in read(INI).lstrip('\ufeff').splitlines():
         section = re.match(r'\[(\w+)\]', line)
         if section:
             keep = section.group(1) in INI_SECTIONS
@@ -308,7 +330,8 @@ def capture_process(pid):
     maps = read(base/'maps')
     libs = sorted({os.path.basename(p) for p in re.findall(r'(/\S+)$', maps, re.M) if LIBS.search(os.path.basename(p))})
     proton_root = re.search(r'(/\S+)/files/(?:lib|bin)', maps)
-    proton_dir = env.get('PROTONPATH') or (proton_root.group(1) if proton_root else '')
+    # PROTONPATH can be a bare name ("GE-Proton": whatever umu fetched last), so trust the loaded files.
+    proton_dir = proton_root.group(1) if proton_root else env.get('PROTONPATH', '')
     ntsync = eventfd = 0
     for candidate in [pid] + [p for p in pids() if read(PROC/str(p)/'comm').strip() == 'wineserver']:
         try:
@@ -331,7 +354,7 @@ def capture_process(pid):
         out['afmf_loaded'] = any('afmf' in l.lower() for l in libs)
     if proton_dir:
         out['proton_dir'] = proton_dir
-        out['proton_version'] = read(Path(proton_dir)/'version').strip().split(' ')[-1]
+        out['proton_version'] = read(Path(proton_dir)/'version').strip().split(' ')[-1] or os.path.basename(proton_dir)
     return out
 
 
@@ -527,17 +550,17 @@ def write_json(path, data):
 def record(launch):
     """Record one session. Returns the session directory, or None when no game started."""
     started = time.time()
+    position = log_position()
+    if launch:    # first, so that nothing below can keep the game from starting
+        subprocess.Popen(LAUNCH, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
     session = SESSIONS/time.strftime('%Y%m%d-%H%M%S', time.localtime(started))
     session.mkdir(parents=True, mode=0o700)
     INCOMING.mkdir(parents=True, exist_ok=True)
     meta = {'schema': 1, 'start': started, 'tz_offset_s': time.localtime(started).tm_gmtoff, 'settings': capture_settings()}
-    position = log_position()
     ini = filtered_ini()
     if ini:
         (session/'config.ini').write_text(ini)
-    if launch:
-        subprocess.Popen(LAUNCH, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, start_new_session=True)
-    pid = wait_for_game(START_WAIT)
+    pid = wait_for_game(START_WAIT, patient=True)
     if not pid:
         meta.update(end=time.time(), status='no-game')
         write_json(session/'meta.json', meta)
@@ -545,16 +568,21 @@ def record(launch):
         return None
     meta['game_start'] = time.time()
     sampler = Sampler(pid, session/'sampler.csv')
-    process = {}
+    process, named, checked = {}, False, -1
     while True:
         tick_start = time.monotonic()
         if not alive(pid):
             pid = wait_for_game(RESTART_WAIT)
             if not pid:
                 break
-            sampler.pid = pid
+            sampler.pid, named = pid, False
             meta['game_restarts'] = meta.get('game_restarts', 0) + 1
-        if sampler.n in (1, 10, 60):
+        if not named:    # a helper may have been found first; move to the real game when it appears
+            better, named = pick_game()
+            if named and better != pid:
+                pid = sampler.pid = better
+                process, checked = {}, sampler.n - 1
+        if sampler.n - checked in (2, 10, 60):
             process.update(capture_process(pid))
         sampler.tick()
         time.sleep(max(0, INTERVAL - (time.monotonic() - tick_start)))

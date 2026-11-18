@@ -75,12 +75,23 @@ def backfill():
 def main(argv):
     command, rest = (argv[1] if len(argv) > 1 else ''), argv[2:]
     if command == 'record' and rest in ([], ['--launch']):
-        session = capture.record(launch=bool(rest))
-        capture.prune()
+        # This process holds game mode on, so whatever fails here must not end before the game does.
+        try:
+            session = capture.record(launch=bool(rest))
+        except Exception as error:
+            capture.notify('PoE2 recorder', f'Recording failed ({type(error).__name__}: {error}). The game is not affected; this session has no data.', 4)
+            capture.wait_until_gone()
+            return 1
         if not session:
             return 1
-        if json.loads((session/'meta.json').read_text()).get('status') == 'ok':
-            summary, path, _, suggestions = finish(session)
+        try:
+            capture.prune()
+            ok = json.loads((session/'meta.json').read_text()).get('status') == 'ok'
+            summary, path, _, suggestions = finish(session) if ok else (None, None, None, None)
+        except Exception as error:
+            capture.notify('PoE2 recorder', f'The session was recorded but the report failed ({type(error).__name__}: {error}). Data: {session}', 4)
+            return 1
+        if ok:
             o = summary.get('overall')
             if o:
                 first = summary['findings'][0]['text'] if summary['findings'] else 'Nothing unusual.'

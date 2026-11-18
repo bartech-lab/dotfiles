@@ -499,6 +499,20 @@ class FindGame(CapCase):
         self.proc(402, rss=5)
         self.assertEqual(self.find(), 402)
 
+    def test_game_preferred_over_wine_helper_even_with_larger_rss(self):
+        self.proc(100, comm='steam.exe', rss=900000, exe='/opt/wine/bin/wine64')  # Proton helper started first
+        self.proc(200, rss=100)
+        self.assertEqual(self.find(), 200)
+
+    def test_game_preferred_over_helper_with_higher_pid(self):
+        self.proc(100, rss=100)
+        self.proc(300, comm='steam.exe', rss=900000, exe='/opt/wine/bin/wine64')
+        self.assertEqual(self.find(), 100)
+
+    def test_helper_alone_is_returned_so_sampling_can_begin(self):
+        self.proc(100, comm='steam.exe', rss=900000, exe='/opt/wine/bin/wine64')
+        self.assertEqual(self.find(), 100)
+
     def test_custom_regex(self):
         self.proc(500, cmd='C:\\\\x\\\\MyGame.exe', comm='wine64-preloader', rss=1, exe='/usr/bin/wine64-preloader')
         self.assertEqual(self.find(GAMELOG_PROC_RE=r'MyGame\.exe'), 500)
@@ -924,6 +938,233 @@ class Sessions(unittest.TestCase):
         self.assertEqual(s.rc, 0, s.err)
         self.assertEqual(s.meta()['status'], 'ok')
         self.assertIn(str(s.session()), s.out)
+
+
+# ---------------------------------------------------------------- B6 helper, patient start, failure isolation, config, proton
+FAKE2 = r'''#!/usr/bin/env python3
+import json, os, shutil, time
+E = os.environ
+ops = json.load(open(E['SCENARIO']))
+proc = E['GAMELOG_PROC']
+def put(p, s):
+    with open(p, 'w') as f:
+        f.write(s)
+def stat(pid, comm):
+    return f"{pid} ({comm}) S 1 1 1 0 -1 4194304 100 0 0 0 200 100 0 0 20 0 5 0 5000 1000000 5000 " + " ".join(["0"] * 30) + "\n"
+for op in ops:
+    k = op[0]
+    if k == 'xproc':
+        pid, o = str(op[1]), op[2]
+        comm = o.get('comm', 'PathOfExile.exe')
+        d = os.path.join(proc, pid)
+        os.makedirs(os.path.join(d, 'task', pid), exist_ok=True)
+        os.makedirs(os.path.join(d, 'fd'), exist_ok=True)
+        put(os.path.join(d, 'status'), f"Name:\t{comm}\nVmRSS:\t  {o.get('rss', 500000)} kB\nThreads:\t5\n")
+        put(os.path.join(d, 'environ'), ''.join(f'{a}={b}\0' for a, b in o.get('env', {}).items()))
+        put(os.path.join(d, 'maps'), o.get('maps', ''))
+        put(os.path.join(d, 'io'), 'rchar: 1\nwchar: 2\nread_bytes: 3\nwrite_bytes: 4\n')
+        put(os.path.join(d, 'cmdline'), '\0'.join(o.get('cmd', ['C:\\Games\\PathOfExile.exe', '--arg'])) + '\0')
+        if o.get('exe'):
+            os.symlink(o['exe'], os.path.join(d, 'exe'))
+        put(os.path.join(d, 'task', pid, 'stat'), stat(pid, comm))
+        put(os.path.join(d, 'stat'), stat(pid, comm))
+        put(os.path.join(d, 'comm'), comm + '\n')
+    elif k == 'rmproc':
+        shutil.rmtree(os.path.join(proc, str(op[1])), ignore_errors=True)
+    elif k == 'sleep':
+        time.sleep(op[1])
+    elif k == 'mark':
+        put(os.path.join(E['MARKDIR'], op[1]), repr(time.time()))
+'''
+
+HELPER = {'comm': 'steam.exe', 'exe': '/opt/wine/bin/wine64', 'rss': 900000,
+          'cmd': ['C:\\windows\\system32\\steam.exe', 'C:\\Games\\PathOfExile.exe']}
+LAUNCHER_LUTRIS = {'comm': 'lutris-wrapper', 'exe': '/usr/bin/python3', 'rss': 1000,
+                   'cmd': ['lutris-wrapper: Path of Exile 2']}
+LAUNCHER_UMU = {'comm': 'umu-run', 'exe': '/usr/bin/python3', 'rss': 1000,
+                'cmd': ['umu-run', 'C:\\Games\\PathOfExile.exe']}
+GAME_PROC = {'env': GAME_ENV, 'rss': 100000}
+CONFIG_INI = ('[DISPLAY]\nrenderer_type=Vulkan\nvsync=Off\nlogin_token=MARKDISPTOKEN\n'
+              '[LOGIN]\ngateway_id=xyzMARK\nrealm=harmlessrealm\n'
+              '[UI]\nui_scale=1.5\n'
+              '[NETWORKING]\nnetworking_type=predictive\n'
+              '[ACTION_KEYS]\nkey_inventory=i\n'
+              '[GENERAL]\nengine_multithreading_mode=enabled\npassword=MARKGENPASS\n'
+              '[CACHED_DATA]\nlast_zone=MARKZONE\n'
+              '[SOUND]\nmaster_volume=50\n')
+FLAT_INI = 'renderer_type=Vulkan\nvsync=Off\npassword=MARKFLATPASS\nsome_plain_key=3\n'
+
+
+class Sim2(Sim):
+    """Sim with a scripted launch stub (own op set, output detached) and exact start/end times."""
+
+    def __init__(self, base, name, ops, timeout=40, **env):
+        super().__init__(base, name, ops, **env)
+        self.timeout = timeout
+        self.exe('fakegame.py', FAKE2)
+        self.exe('launch.sh', f'#!/bin/bash\nexec >/dev/null 2>&1\nexec {sys.executable} {self.root}/fakegame.py\n')
+        self.env_over.setdefault('GAMELOG_LAUNCH', self.root / 'launch.sh')
+        self.env_over['MARKDIR'] = self.root
+        self.t_end = None
+
+    def mark(self, name):
+        p = self.root / name
+        return float(p.read_text()) if p.exists() else None
+
+    def _run(self):
+        t0 = time.time()
+        p = subprocess.Popen([GAMELOG, 'record', '--launch'], env=self.env(), cwd=self.root,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            self.out, self.err = p.communicate(timeout=self.timeout)
+            self.rc = p.returncode
+        except subprocess.TimeoutExpired:
+            p.kill()
+            self.out, self.err = p.communicate()
+            self.rc = 'timeout'
+        self.t_end = time.time()
+        self.elapsed = self.t_end - t0
+
+
+def write_proc(root, pid, comm, cmd):
+    d = Path(root) / 'proc' / str(pid)
+    d.mkdir(parents=True)
+    (d / 'comm').write_text(comm + '\n')
+    (d / 'cmdline').write_bytes('\0'.join(cmd).encode() + b'\0')
+    (d / 'stat').write_text(f'{pid} ({comm}) S 1 1 1 0\n')
+
+
+class RecorderRobustness(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp(prefix='gamelog-sim2.')
+        cls.addClassCleanup(shutil.rmtree, cls.tmp, True)
+        S = cls.S = {}
+        play = lambda: [['sleep', 1.5], ['rmproc', 4242]]
+        # R1: helper first, game 0.3 s later, both end together
+        S['helper'] = Sim2(cls.tmp, 'helper', [['xproc', 4100, HELPER], ['sleep', 0.3], ['xproc', 4242, GAME_PROC],
+                                               ['sleep', 1.5], ['rmproc', 4242], ['rmproc', 4100]])
+        # R2a: launcher present, game after 1.2 s, START_WAIT 0.3
+        S['patient_lutris'] = Sim2(cls.tmp, 'pl', [['xproc', 900, LAUNCHER_LUTRIS], ['sleep', 1.2], ['xproc', 4242, GAME_PROC],
+                                                   ['sleep', 1.5], ['rmproc', 4242], ['rmproc', 900]], GAMELOG_START_WAIT='0.3')
+        S['patient_umu'] = Sim2(cls.tmp, 'pu', [['xproc', 900, LAUNCHER_UMU], ['sleep', 1.2], ['xproc', 4242, GAME_PROC],
+                                                ['sleep', 1.5], ['rmproc', 4242], ['rmproc', 900]], GAMELOG_START_WAIT='0.3')
+        # R2b: same timing, no launcher
+        S['impatient'] = Sim2(cls.tmp, 'imp', [['sleep', 1.2], ['xproc', 4242, GAME_PROC]] + play(), GAMELOG_START_WAIT='0.3')
+        # R2c: a launcher that never produces a game
+        S['forever'] = Sim2(cls.tmp, 'forever', [], timeout=8, GAMELOG_LAUNCH='/bin/true',
+                            GAMELOG_START_WAIT='0.2', GAMELOG_START_WAIT_MAX='0.8')
+        write_proc(S['forever'].root, 777, 'lutris-wrapper', ['lutris-wrapper: Path of Exile 2'])
+        # R3: the session directory cannot be created
+        S['fail'] = Sim2(cls.tmp, 'fail', [['mark', 'launched'], ['xproc', 4242, GAME_PROC], ['sleep', 1.0],
+                                           ['rmproc', 4242], ['mark', 'removed']])
+        shutil.rmtree(S['fail'].root / 'state')
+        (S['fail'].root / 'state').mkdir()
+        (S['fail'].root / 'state' / 'sessions').write_text('i am a file\n')
+        # R4: config filtering
+        for key, text, bom in (('ini', CONFIG_INI, False), ('ini_bom', CONFIG_INI, True), ('ini_flat', FLAT_INI, False)):
+            S[key] = Sim2(cls.tmp, key, [['xproc', 4242, GAME_PROC]] + play())
+            data = text.encode()
+            (S[key].root / 'game' / 'production_Config.ini').write_bytes((b'\xef\xbb\xbf' if bom else b'') + data)
+        # R5: proton version from the loaded files
+        pdir = Path(cls.tmp) / 'proton' / 'x' / 'compat' / 'GE-Proton10-34'
+        pdir.mkdir(parents=True)
+        (pdir / 'version').write_text('1774856027 GE-Proton10-34\n')
+        maps = ('7f0000000000-7f0000001000 r--p 00000000 08:01 11 /usr/lib/libc.so.6\n'
+                f'7f0000002000-7f0000003000 r-xp 00000000 08:01 12 {pdir}/files/lib/wine/x86_64-unix/ntdll.so\n'
+                f'7f0000004000-7f0000005000 r-xp 00000000 08:01 13 {pdir}/files/lib/wine/x86_64-unix/win32u.so\n')
+        S['proton'] = Sim2(cls.tmp, 'proton', [['xproc', 4242, {'env': {**GAME_ENV, 'PROTONPATH': 'GE-Proton'},
+                                                               'maps': maps, 'rss': 100000}]] + play())
+        for s in S.values():
+            cls.addClassCleanup(s.kill_stubs)
+        for s in S.values():
+            s.start()
+        for s in S.values():
+            s.finish()
+
+    # ---- R1
+    def test_helper_first_then_game_is_one_session_following_the_game_pid(self):
+        s = self.S['helper']
+        self.assertEqual(s.rc, 0, s.err)
+        self.assertEqual(len(s.sessions()), 1)
+        rows = [r.split(',') for r in (s.session() / 'sampler.csv').read_text().splitlines()[1:]]
+        pids = [r[1] for r in rows]
+        self.assertGreaterEqual(len(pids), 5, pids)
+        self.assertEqual(set(pids[-3:]), {'4242'}, pids)
+        self.assertLessEqual(set(pids), {'4100', '4242'})
+        self.assertEqual(s.meta()['process']['comm'], 'PathOfExile.exe')
+
+    # ---- R2
+    def test_launcher_still_working_keeps_the_start_wait_going(self):
+        for key in ('patient_lutris', 'patient_umu'):
+            s = self.S[key]
+            with self.subTest(key):
+                self.assertEqual(s.rc, 0, s.err)
+                self.assertNotEqual(s.meta()['status'], 'no-game')
+                pids = {r.split(',')[1] for r in (s.session() / 'sampler.csv').read_text().splitlines()[1:]}
+                self.assertIn('4242', pids)
+
+    def test_without_launcher_it_gives_up_at_start_wait(self):
+        s = self.S['impatient']
+        self.assertEqual(s.rc, 1, s.err)
+        self.assertEqual(s.meta()['status'], 'no-game')
+        self.assertLess(s.elapsed, 1.1)  # the game only appears at 1.2 s
+        self.assertGreaterEqual(s.elapsed, 0.25)
+
+    def test_endless_launcher_is_bounded_by_start_wait_max(self):
+        s = self.S['forever']
+        self.assertEqual(s.rc, 1, f'{s.rc} {s.err}')
+        self.assertEqual(s.meta()['status'], 'no-game')
+        self.assertGreaterEqual(s.elapsed, 0.7)  # not at START_WAIT (0.2 s)
+        self.assertLess(s.elapsed, 5)
+
+    # ---- R3
+    def test_recording_failure_does_not_end_the_process_before_the_game_ends(self):
+        s = self.S['fail']
+        self.assertIsNotNone(s.mark('launched'), 'the launch stub never ran')
+        removed = s.mark('removed')
+        self.assertIsNotNone(removed, 'the game never ended')
+        self.assertEqual(s.rc, 1, s.err)
+        self.assertGreaterEqual(s.t_end, removed - 0.05, 'gamelog exited while the game was still running')
+        failed = [n for n in s.prio4() if any('Recording failed' in a for a in n)]
+        self.assertEqual(len(failed), 1, s.notes())
+
+    # ---- R4
+    def kept(self, key):
+        return (self.S[key].session() / 'config.ini').read_text()
+
+    def test_config_keeps_only_the_four_sections(self):
+        for key in ('ini', 'ini_bom'):
+            text = self.kept(key)
+            with self.subTest(key):
+                for line in ('renderer_type=Vulkan', 'vsync=Off', 'networking_type=predictive',
+                             'engine_multithreading_mode=enabled', 'master_volume=50'):
+                    self.assertIn(line, text)
+                for gone in ('gateway_id', 'xyzMARK', 'harmlessrealm', '[LOGIN]', '[UI]', 'ui_scale', 'key_inventory',
+                             'ACTION_KEYS', 'last_zone', 'MARKZONE', 'CACHED_DATA'):
+                    self.assertNotIn(gone, text)
+
+    def test_config_drops_secret_keys_inside_kept_sections(self):
+        for key in ('ini', 'ini_bom'):
+            text = self.kept(key)
+            with self.subTest(key):
+                self.assertNotIn('MARKDISPTOKEN', text)
+                self.assertNotIn('MARKGENPASS', text)
+
+    def test_config_with_byte_order_mark_equals_one_without(self):
+        self.assertEqual(self.kept('ini_bom'), self.kept('ini'))
+
+    def test_config_without_sections_keeps_plain_lines_only(self):
+        text = self.kept('ini_flat')
+        for line in ('renderer_type=Vulkan', 'vsync=Off', 'some_plain_key=3'):
+            self.assertIn(line, text)
+        self.assertNotIn('MARKFLATPASS', text)
+
+    # ---- R5
+    def test_proton_version_comes_from_the_loaded_files_not_the_bare_name(self):
+        s = self.S['proton']
+        self.assertEqual(s.rc, 0, s.err)
+        self.assertEqual(s.meta()['process']['proton_version'], 'GE-Proton10-34')
 
 
 class Cli(CapCase):

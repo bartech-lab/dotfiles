@@ -21,6 +21,7 @@ CHOSEN_INI = ('renderer_type', 'vsync', 'framerate_limit', 'framerate_limit_enab
               'texture_filtering', 'light_quality', 'engine_multithreading_mode', 'screenspace_effects_resolution',
               'resolution_width', 'resolution_height', 'fullscreen', 'borderless_windowed_fullscreen', 'reflex_mode',
               'frame_generation', 'water_detail', 'global_illumination_detail', 'sun_shadow_type', 'bloom_strength')
+VOLATILE_INI = ('window_x', 'window_y', 'adapter_name', 'last_monitor_name')    # may move without anyone choosing
 CAUSES = {
     'new_area': 'new area loading in (shaders compile; expected, the game cannot keep its shader cache under Proton)',
     'vram': 'graphics memory full',
@@ -100,14 +101,21 @@ def load_events(session):
 
 
 def ini_values(session):
-    values = {}
+    """All key=value pairs of the saved game config; '[DISPLAY]' holds that section's keys alone."""
+    values, display, section = {}, {}, None
     try:
-        for line in (session/'config.ini').read_text().splitlines():
+        for line in (session/'config.ini').read_text().lstrip('\ufeff').splitlines():
+            if line.startswith('['):
+                section = line.strip('[] \r')
+                continue
             key, sep, value = line.partition('=')
             if sep:
                 values[key.strip()] = value.strip()
+                if section == 'DISPLAY':
+                    display[key.strip()] = value.strip()
     except OSError:
         pass
+    values['[DISPLAY]'] = display
     return values
 
 
@@ -185,8 +193,13 @@ def fingerprint(meta, ini):
     """The settings somebody chose. Updates (kernel, driver, packages) are kept apart as 'ambient'."""
     settings, process = meta.get('settings', {}), meta.get('process', {})
     env = process.get('env', {})
+    # The whole display section when the file has one, so no graphics key is missed.
+    graphics = dict(ini.get('[DISPLAY]') or {k: ini[k] for k in CHOSEN_INI if k in ini})
+    graphics.update({k: ini[k] for k in ('engine_multithreading_mode', 'networking_type') if k in ini})
+    for volatile in VOLATILE_INI:
+        graphics.pop(volatile, None)
     chosen = {
-        'ini': {k: ini[k] for k in CHOSEN_INI if k in ini},
+        'ini': graphics,
         'lutris_env': {k: v for k, v in settings.get('lutris_env', {}).items() if not k.startswith('MANGOHUD')},
         'game_env': {k: v for k, v in env.items() if k.startswith(('PROTON_', 'WINEFSYNC', 'WINEESYNC', 'WINENTSYNC', 'DXVK_', 'VKD3D_', 'AFMF', '__GL_'))
                      and k not in ('PROTON_LOG_DIR',)},
@@ -195,8 +208,10 @@ def fingerprint(meta, ini):
         'afmf': bool(process.get('afmf_loaded')),
         'game_mode': settings.get('game_mode_on'),
         'system': {k: settings.get(k) for k in ('governor', 'epp', 'power_profile', 'thp', 'split_lock_mitigate',
-                                                'swappiness', 'swap_total_mb', 'kwin_allow_tearing', 'cmdline')},
+                                                'swappiness', 'swap_total_mb', 'kwin_allow_tearing')},
     }
+    # The kernel command line names the kernel version in initrd=; that part is an update, not a choice.
+    chosen['system']['cmdline'] = ' '.join(p for p in (settings.get('cmdline') or '').split() if not p.startswith(('initrd=', 'BOOT_IMAGE='))) or None
     ambient = {'kernel': settings.get('kernel'), 'nvidia_driver': settings.get('nvidia_driver'),
                'game_version': settings.get('game_version'), 'packages': settings.get('packages', {})}
     digest = hashlib.sha256(json.dumps(chosen, sort_keys=True).encode()).hexdigest()[:8]

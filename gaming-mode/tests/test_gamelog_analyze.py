@@ -949,5 +949,104 @@ class Report(SharedTmp):
             self.assertTrue(self.has(page, f['text']))
 
 
+# ---------------------------------------------------------------- fingerprint: kernel command line and sectioned config
+CMDLINE = ('initrd=\\abc\\7.3.4-arch1-1\\initrd nvme_load=YES nowatchdog rw split_lock_detect=off '
+           'root=UUID=1234-5678 systemd.machine_id=0123456789abcdef')
+SECTIONED = """[DISPLAY]
+renderer_type=Vulkan
+some_new_graphics_option=3
+framerate_limit=60
+framerate_limit_enabled=true
+[SOUND]
+master_volume=50
+[GENERAL]
+engine_multithreading_mode=enabled
+enable_subtitles=true
+[NETWORKING]
+networking_type=predictive
+"""
+FLAT = ('framerate_limit=60\nframerate_limit_enabled=true\nrenderer_type=Vulkan\nupscale=NIS\n'
+        'key_inventory=i\nsome_unknown_ui_thing=1\n')
+
+
+class FingerprintCmdlineAndSections(Tmp):
+    def summ(self, text=SECTIONED, cmdline=CMDLINE, bom=False):
+        name = f'fc{len(os.listdir(self.root))}'
+        path = micro(self.root, name, [(10, 300)], meta={'settings': {'cmdline': cmdline}})
+        data = text.encode()
+        if bom:
+            data = b'\xef\xbb\xbf' + data
+        (Path(path) / 'config.ini').write_bytes(data)
+        return analyze.analyze(str(path))[0]
+
+    def fp(self, *args, **kw):
+        return self.summ(*args, **kw)['fingerprint']
+
+    # ---- A1
+    def test_kernel_update_in_the_initrd_path_keeps_the_fingerprint(self):
+        newer = CMDLINE.replace('7.3.4-arch1-1', '7.3.5-arch1-1')
+        self.assertNotEqual(newer, CMDLINE)
+        self.assertEqual(self.fp(cmdline=CMDLINE), self.fp(cmdline=newer))
+
+    def test_other_kernel_parameters_change_the_fingerprint(self):
+        base = self.fp()
+        variants = {
+            'split_lock_detect removed': CMDLINE.replace(' split_lock_detect=off', ''),
+            'mitigations added': CMDLINE + ' mitigations=off',
+            'value changed': CMDLINE.replace('nvme_load=YES', 'nvme_load=NO'),
+        }
+        seen = {base}
+        for name, cmd in variants.items():
+            with self.subTest(name):
+                self.assertNotEqual(cmd, CMDLINE)
+                value = self.fp(cmdline=cmd)
+                self.assertNotEqual(value, base)
+                seen.add(value)
+        self.assertEqual(len(seen), len(variants) + 1)
+
+    # ---- A2
+    def test_any_display_key_changes_it_even_an_unknown_one(self):
+        base = self.fp()
+        for old, new in [('some_new_graphics_option=3', 'some_new_graphics_option=4'),
+                         ('renderer_type=Vulkan', 'renderer_type=DX12'),
+                         ('framerate_limit=60', 'framerate_limit=90')]:
+            with self.subTest(old):
+                self.assertNotEqual(self.fp(SECTIONED.replace(old, new)), base)
+
+    def test_general_and_networking_keys_change_it(self):
+        base = self.fp()
+        for old, new in [('engine_multithreading_mode=enabled', 'engine_multithreading_mode=disabled'),
+                         ('networking_type=predictive', 'networking_type=lockstep')]:
+            with self.subTest(old):
+                self.assertNotEqual(self.fp(SECTIONED.replace(old, new)), base)
+
+    def test_sound_and_subtitles_do_not_change_it(self):
+        base = self.fp()
+        for old, new in [('master_volume=50', 'master_volume=10'), ('enable_subtitles=true', 'enable_subtitles=false')]:
+            with self.subTest(old):
+                self.assertEqual(self.fp(SECTIONED.replace(old, new)), base)
+
+    def test_byte_order_mark_changes_nothing(self):
+        plain, bom = self.summ(), self.summ(bom=True)
+        self.assertEqual(plain['fingerprint'], bom['fingerprint'])
+        self.assertEqual(plain['fps_cap'], 60)
+        self.assertEqual(bom['fps_cap'], 60)
+        changed = self.summ(SECTIONED.replace('some_new_graphics_option=3', 'some_new_graphics_option=4'), bom=True)
+        self.assertNotEqual(changed['fingerprint'], bom['fingerprint'])  # the BOM does not hide the DISPLAY section
+
+    def test_flat_file_without_sections_still_reacts_to_graphics_keys(self):
+        base = self.fp(FLAT)
+        for old, new in [('framerate_limit=60', 'framerate_limit=120'), ('renderer_type=Vulkan', 'renderer_type=DX12'),
+                         ('upscale=NIS', 'upscale=FSR')]:
+            with self.subTest(old):
+                self.assertNotEqual(self.fp(FLAT.replace(old, new)), base)
+
+    def test_flat_file_ignores_unknown_non_graphics_keys(self):
+        base = self.fp(FLAT)
+        self.assertEqual(self.fp(FLAT.replace('some_unknown_ui_thing=1', 'some_unknown_ui_thing=2')), base)
+        self.assertEqual(self.fp(FLAT.replace('key_inventory=i', 'key_inventory=b')), base)
+        self.assertEqual(self.summ(FLAT)['fps_cap'], 60)
+
+
 if __name__ == '__main__':
     unittest.main()
