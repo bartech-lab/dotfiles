@@ -203,7 +203,6 @@ def fingerprint(meta, ini):
         'lutris_env': {k: v for k, v in settings.get('lutris_env', {}).items() if not k.startswith('MANGOHUD')},
         'game_env': {k: v for k, v in env.items() if k.startswith(('PROTON_', 'WINEFSYNC', 'WINEESYNC', 'WINENTSYNC', 'DXVK_', 'VKD3D_', 'AFMF', '__GL_'))
                      and k not in ('PROTON_LOG_DIR',)},
-        'proton': process.get('proton_version'),
         'sync': process.get('sync'),
         'afmf': bool(process.get('afmf_loaded')),
         'game_mode': settings.get('game_mode_on'),
@@ -212,7 +211,8 @@ def fingerprint(meta, ini):
     }
     # The kernel command line names the kernel version in initrd=; that part is an update, not a choice.
     chosen['system']['cmdline'] = ' '.join(p for p in (settings.get('cmdline') or '').split() if not p.startswith(('initrd=', 'BOOT_IMAGE='))) or None
-    ambient = {'kernel': settings.get('kernel'), 'nvidia_driver': settings.get('nvidia_driver'),
+    # The Proton build follows the newest release on purpose, so it is an update like the driver.
+    ambient = {'kernel': settings.get('kernel'), 'nvidia_driver': settings.get('nvidia_driver'), 'proton': process.get('proton_version'),
                'game_version': settings.get('game_version'), 'packages': settings.get('packages', {})}
     digest = hashlib.sha256(json.dumps(chosen, sort_keys=True).encode()).hexdigest()[:8]
     return digest, chosen, ambient
@@ -520,15 +520,14 @@ def candidates(summary, meta, today=None):
         if when:
             out.append({'id': key, 'change': change, 'judged_by': judged, 'evidence': evidence})
 
-    add('pin-proton', settings.get('proton_pinned') is False,
-        'Pin the Proton build in Lutris (PoE2 > Configure > Runner options > Wine version) so it cannot change between sessions.',
-        'nothing to measure; makes later comparisons valid', f"build used now: {process.get('proton_version') or 'unknown'}; Lutris names no version")
     add('game-mode', settings.get('game_mode_on') is False, 'Start the game from the desktop icon so game mode frees the graphics memory.',
         'graphics memory warnings', f"only {((settings.get('vram_total_mib') or 0) - (settings.get('vram_used_mib_at_launch') or 0)) / 1024:.1f} GB free at launch")
     add('afmf', today >= '2026-12-01' and not s['chosen']['afmf'], 'Turn frame generation on: game-quirks afmf lutris:path-of-exile-2',
         'smoothness as seen, real 1% low, stutters per 10 min (fps numbers double; never compared across)', 'planned first test; baseline is measured without it')
-    add('ignored-lutris-env', bool(settings.get('lutris_ignored_env')),
-        f"Move one ignored Lutris setting at a time to 'system: env:': {', '.join(settings.get('lutris_ignored_env') or [])}",
+    # Left out: settings that cannot matter here (DXVK with the Vulkan renderer, cache housekeeping, fsync under ntsync).
+    ignored = [n for n in settings.get('lutris_ignored_env') or []
+               if not (n.startswith(('DXVK_', '__GL_SHADER_DISK_CACHE', 'VK_ICD')) or (n in ('WINEFSYNC', 'WINEESYNC') and process.get('sync') == 'ntsync'))]
+    add('ignored-lutris-env', bool(ignored), f"Move one ignored Lutris setting at a time to 'system: env:': {', '.join(ignored)}",
         '1% low, stutters per 10 min', 'Lutris ignores the game-level list, so none of these has ever applied')
     add('fps-cap', capped_easily and gpu is not None and gpu < 60, f"Raise the in-game fps limit from {s.get('fps_cap') or 0:.0f} to 120 (the monitor shows 240).",
         '1% low at the new limit, temperatures, power', f"limit held {100 * (1 - s.get('slow_share', 0)):.1f}% of the time with the graphics card {gpu or 0:.0f}% busy")
@@ -625,7 +624,7 @@ def report(session, summary, detail, comparison, suggestions):
     title = f"PoE2 session {time.strftime('%Y-%m-%d %H:%M', time.localtime(start))}"
     doc = [f'<!doctype html><html lang="en"><meta charset="utf-8"><title>{e(title)}</title><style>{CSS}</style><h1>{e(title)}</h1>']
     chosen, ambient = summary['chosen'], summary['ambient']
-    doc.append(f"<div class='muted'>{summary.get('active_minutes', 0)} min of play · Proton {e(str(chosen.get('proton')))} · driver {e(str(ambient.get('nvidia_driver')))} · kernel {e(str(ambient.get('kernel')))} · settings group <code>{summary['fingerprint']}</code></div>")
+    doc.append(f"<div class='muted'>{summary.get('active_minutes', 0)} min of play · Proton {e(str(ambient.get('proton')))} · driver {e(str(ambient.get('nvidia_driver')))} · kernel {e(str(ambient.get('kernel')))} · settings group <code>{summary['fingerprint']}</code></div>")
     if o:
         cards = [('average fps', o['avg_fps']), ('1% low fps', o['low1_fps']), ('0.1% low fps', o['low01_fps']),
                  ('stutters / 10 min', summary['stutters_per_10min']), ('worst frame, ms', o['max_ms'])]

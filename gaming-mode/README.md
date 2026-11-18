@@ -45,7 +45,7 @@ Nothing runs between sessions.
 Each session is a directory in `~/.local/state/gaming/poe2/sessions/`:
 
 - `frames/`: every frame's length, from MangoHud (`~/.config/gaming/poe2-mangohud.conf`).
-  A small fps counter is visible in the game; Right Shift+F12 hides it.
+  Nothing is drawn in the game.
 - `sampler.csv`: one row per second. CPU per core, the game's busiest threads, CPU power and
   temperature; graphics card load, memory, clocks, power, temperature and throttle reasons;
   the game's memory, files and disk use; pressure stall; round trip of the game's own
@@ -55,11 +55,12 @@ Each session is a directory in `~/.local/state/gaming/poe2/sessions/`:
   never stored.
 - `meta.json`, `config.ini`: versions and settings in effect, including the environment
   the game process really got, the Proton build and the sync method in use.
-- `summary.json`, `report.html`: numbers, findings and charts. The report is one offline file.
+- `summary.json`, `report.html`: numbers, findings and charts. The report is one offline file;
+  the latest one is also copied to `~/Downloads/poe2-session-report.html`.
 
 Numbers leave out loading screens and time with the window unfocused. A stutter is a frame
 at least 2.5 times the local median and at least 25 ms. `compare` groups sessions by the
-settings you chose; kernel, driver and package updates are listed, not grouped, so a rolling
+settings you chose; kernel, driver, Proton and package updates are listed, not grouped, so a rolling
 system still reaches three sessions per group.
 
 The recorder only reads: the game's log and config, OS counters and MangoHud's log. It never

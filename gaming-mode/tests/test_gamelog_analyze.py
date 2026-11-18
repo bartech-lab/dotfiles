@@ -631,9 +631,16 @@ class Fingerprint(Tmp):
         self.assertEqual(b['ambient']['kernel'], '7.0.1')
         self.assertEqual(b['ambient']['nvidia_driver'], '580.1')
 
+    def test_proton_build_is_an_update_not_a_chosen_setting(self):
+        # The user keeps Proton on the newest build: a new build must not open a new settings group.
+        old = self.fp()
+        new = self.fp(meta={'process': {'proton_version': 'GE-Proton10-27'}})
+        self.assertEqual(old['fingerprint'], new['fingerprint'])
+        self.assertEqual(new['ambient']['proton'], 'GE-Proton10-27')
+
     def test_chosen_has_the_documented_parts(self):
         c = self.fp(meta={'settings': {'lutris_env': {'AFMF_ENABLE': '1'}}})['chosen']
-        for key in ('ini', 'lutris_env', 'proton', 'sync', 'afmf', 'game_mode', 'system'):
+        for key in ('ini', 'lutris_env', 'sync', 'afmf', 'game_mode', 'system'):
             self.assertIn(key, c)
         self.assertIn('AFMF_ENABLE', c['lutris_env'])
         self.assertFalse([k for k in c['lutris_env'] if k.startswith('MANGOHUD')])
@@ -644,7 +651,6 @@ class Fingerprint(Tmp):
             'framerate_limit': dict(ini={'framerate_limit': '120'}),
             'renderer_type': dict(ini={'renderer_type': 'DX12'}),
             'upscale': dict(ini={'upscale': 'FSR'}),
-            'proton': dict(meta={'process': {'proton_version': 'GE-Proton10-27'}}),
             'afmf_loaded': dict(meta={'process': {'afmf_loaded': True}}),
             'lutris AFMF_ENABLE': dict(meta={'settings': {'lutris_env': {'AFMF_ENABLE': '1'}}}),
             'lutris DXVK_ASYNC': dict(meta={'settings': {'lutris_env': {'DXVK_ASYNC': '0'}}}),
@@ -857,13 +863,15 @@ class Candidates(Tmp):
             for key in ('id', 'change', 'judged_by', 'evidence'):
                 self.assertIn(key, c)
 
-    def test_pin_proton_depends_on_the_pin_and_comes_first(self):
-        pinned = self.cand(meta={'settings': {'proton_pinned': True}})
-        self.assertNotIn('pin-proton', self.ids(pinned))
-        everything = self.cand('2026-12-05', meta={'settings': {'proton_pinned': False, 'game_mode_on': False,
-                                                                'lutris_ignored_env': ['FOO_BAR']},
-                                                   'process': {'proton_version': 'GE-Proton10-27'}})
-        self.assertEqual(self.ids(everything)[0], 'pin-proton')
+    def test_everything_at_once_and_no_pin_suggestion(self):
+        everything = self.cand('2026-12-05', meta={'settings': {'game_mode_on': False,
+                                                                'lutris_ignored_env': ['FOO_BAR', 'DXVK_LOG_LEVEL', 'WINEFSYNC']},
+                                                   'process': {'proton_version': 'GE-Proton10-27', 'sync': 'ntsync'}})
+        self.assertNotIn('pin-proton', self.ids(everything))
+        moved = next(c['change'] for c in everything if c['id'] == 'ignored-lutris-env')
+        self.assertIn('FOO_BAR', moved)
+        self.assertNotIn('DXVK_LOG_LEVEL', moved)      # does nothing with the Vulkan renderer
+        self.assertNotIn('WINEFSYNC', moved)           # ntsync is in use
         self.assertTrue({'afmf', 'ignored-lutris-env', 'fps-cap', 'game-mode', 'proton-ge11'} <= set(self.ids(everything)))
 
     def test_afmf_waits_for_december_and_only_when_not_loaded(self):
@@ -874,9 +882,9 @@ class Candidates(Tmp):
 
     def test_ignored_lutris_env_names_the_variables(self):
         self.assertNotIn('ignored-lutris-env', self.ids(self.cand()))
-        items = self.cand(meta={'settings': {'lutris_ignored_env': ['DXVK_HUD', 'FOO_BAR']}})
+        items = self.cand(meta={'settings': {'lutris_ignored_env': ['PROTON_FOO', 'FOO_BAR']}})
         change = next(c for c in items if c['id'] == 'ignored-lutris-env')['change']
-        self.assertIn('DXVK_HUD', change)
+        self.assertIn('PROTON_FOO', change)
         self.assertIn('FOO_BAR', change)
 
     def test_fps_cap_needs_a_cap_few_slow_seconds_and_a_idle_card(self):

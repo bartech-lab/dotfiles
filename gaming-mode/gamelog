@@ -92,6 +92,9 @@ def main(argv):
             capture.notify('PoE2 recorder', f'The session was recorded but the report failed ({type(error).__name__}: {error}). Data: {session}', 4)
             return 1
         if ok:
+            copy = os.environ.get('GAMELOG_REPORT_COPY')
+            if copy:    # one file, replaced each session
+                Path(copy).write_bytes(path.read_bytes())
             o = summary.get('overall')
             if o:
                 first = summary['findings'][0]['text'] if summary['findings'] else 'Nothing unusual.'

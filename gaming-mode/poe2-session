@@ -29,5 +29,8 @@ orig_hiding=$(panel dodgewindows)
 restore_panel() { [[ -n "$orig_hiding" ]] && panel "$orig_hiding" >/dev/null; }
 trap restore_panel EXIT
 
+# The latest report is also copied here, replacing the one before.
+export GAMELOG_REPORT_COPY="${GAMELOG_REPORT_COPY-$HOME/Downloads/poe2-session-report.html}"
+
 # The lock must not leak into Lutris, which can outlive the game.
 "$GAMING" run -- "$GAMELOG" record --launch 8>&-

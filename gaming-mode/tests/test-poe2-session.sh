@@ -47,6 +47,7 @@ STUB
 cat > "$BIN/gaming" <<'STUB'
 #!/bin/bash
 echo "gaming $*" >> "$EVENTS"
+echo "${GAMELOG_REPORT_COPY-unset}" > "$EVENTS.copy"
 echo $$ >> "$PIDS"
 case "$GAMING_MODE" in
   fail) exit 3 ;;
@@ -172,6 +173,9 @@ for mode in fail empty; do
   bad=$(grep '^qdbus6' "$EVENTS" | grep -vc dodgewindows)
   check_eq "$bad" 0 "no restore call with an unknown mode (qdbus6 $mode)"
 done
+
+# --- the recorder is told where to put a copy of the latest report
+check_eq "$(cat "$EVENTS.copy")" "$HOME/Downloads/poe2-session-report.html" "report copy path handed to the recorder"
 
 if (( FAILS > 0 )); then echo "$FAILS check(s) failed" >&2; exit 1; fi
 echo "poe2-session: all checks passed"

@@ -312,7 +312,6 @@ def capture_settings():
         'lutris_env': system_env(read(config)) if config else {},
         'lutris_ignored_env': sorted(set(re.findall(r"^    (\w+):", (re.search(r'^game:\n(?:[ \t].*\n)*?  env:\n((?:    .*\n?)*)', read(config), re.M) or ['', ''])[1], re.M))
                                      - set(system_env(read(config)))) if config else [],
-        'proton_pinned': bool(re.search(r'^wine:\n(?:[ \t].*\n)*?  version:', read(config), re.M)) if config else None,
         'implicit_layers': layers,
         'game_version': VERSION_FILE.read_bytes()[:16].hex() if VERSION_FILE.is_file() else None,
         'ini_hash': hashlib.sha256(ini.encode()).hexdigest()[:16] if ini else None,
@@ -645,11 +644,11 @@ def prune(now=None, frame_days=30, detail_days=180, cap_bytes=5 * 2**30):
 
 
 MANGO_TEMPLATE = """# Written by gamelog install-env. Per-frame log for the PoE2 session recorder.
+# Nothing is drawn. MangoHud 0.8.4 stops logging when its display is switched
+# off, so the overlay is fully transparent instead.
 fps_only
-position=top-right
-font_size=16
-background_alpha=0.3
-toggle_hud=Shift_R+F12
+alpha=0
+background_alpha=0
 autostart_log=1
 log_interval=0
 log_versioning
