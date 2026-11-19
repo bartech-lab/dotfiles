@@ -591,7 +591,7 @@ Applies performance-focused defaults: disables animations, enables fast key repe
 | `ark-extract-delete <archive>...` | Extract each archive into its own folder with Ark, then delete the archive |
 | `check-browser-logout-hook` | One-shot login check that the last logout quit Brave and Chromium cleanly |
 | `chrome-launch` | Start Google Chrome with the open-file limit raised to the hard limit, for WebGPU games |
-| `comfyui [args]` | Start ComfyUI in its own memory scope (default 32G, `COMFYUI_MEM` overrides) so it stays outside the terminal's memory cap |
+| `comfyui [args]` | Start ComfyUI from `~/Projects/faceswap/ComfyUI` in its own memory scope (default 32G, `COMFYUI_MEM` overrides), with pinned memory off; the ComfyUI menu entry runs it in Ghostty and opens the browser |
 | `cpu-uv-check` | After a Curve Optimizer change: report CPU hardware errors and unclean shutdowns |
 | `cpu-uv-test` | Per-core stability test for Ryzen Curve Optimizer undervolts |
 | `hw-log [file]` | Log CPU, GPU, temperatures, fans and power to CSV every 10 s |
