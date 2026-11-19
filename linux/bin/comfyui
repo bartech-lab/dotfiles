@@ -1,0 +1,9 @@
+#!/bin/bash
+# Start ComfyUI in its own memory scope, outside the terminal's cgroup.
+# A ComfyUI run inside WezTerm counts against WezTerm's memory cap and trips wezterm-mem-guard.
+# Over COMFYUI_MEM (default 32G) only ComfyUI is killed. Extra arguments go to main.py.
+set -euo pipefail
+cd "$HOME/Projects/ComfyUI"
+exec systemd-run --user --scope --unit=comfyui --description="ComfyUI in its own memory scope" \
+    -p MemoryMax="${COMFYUI_MEM:-32G}" -p MemorySwapMax=0 \
+    .venv/bin/python main.py "$@"
