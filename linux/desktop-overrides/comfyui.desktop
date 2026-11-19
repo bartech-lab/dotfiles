@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=ComfyUI
-Comment=Start ComfyUI in its own Ghostty window and memory scope, then open it in the browser
-Exec=ghostty --gtk-single-instance=false --title=ComfyUI --class=com.bartech.comfyui --wait-after-command=true -e /home/bartech/.local/bin/comfyui --auto-launch
-Terminal=false
-StartupWMClass=com.bartech.comfyui
-Categories=Graphics;
