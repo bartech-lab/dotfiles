@@ -2,9 +2,10 @@
 # Start ComfyUI in its own memory scope, outside the terminal's cgroup.
 # A ComfyUI run inside WezTerm counts against WezTerm's memory cap and trips wezterm-mem-guard.
 # Over COMFYUI_MEM (default 32G) only ComfyUI is killed. Extra arguments go to main.py.
+# --collect: a scope killed for memory is removed, so the next start can reuse the name.
 # --disable-pinned-memory: pinned (locked) RAM cannot be reclaimed and made up most of the measured 29-31 GB peaks.
 set -euo pipefail
 cd "$HOME/Projects/faceswap/ComfyUI"
-exec systemd-run --user --scope --unit=comfyui --description="ComfyUI in its own memory scope" \
+exec systemd-run --user --scope --collect --unit=comfyui --description="ComfyUI in its own memory scope" \
     -p MemoryMax="${COMFYUI_MEM:-32G}" -p MemorySwapMax=0 \
     .venv/bin/python main.py --disable-pinned-memory "$@"
