@@ -515,6 +515,16 @@ class SlowSecondsWithoutCapOrSampler(Tmp):
         self.assertEqual(s['causes'], {'unexplained': 1})   # 33 s after loading: outside the 20 s window
         self.assertAlmostEqual(s['overall']['median_fps'], 100.0, delta=0.01)
 
+    def test_a_limit_the_game_never_reaches_is_judged_like_no_limit(self):
+        # 240 fps limit, game runs about 100: a second is slow only against the median, as without a limit.
+        kinds = {30: 'f85', 45: 'f75'}
+        path = sec_session(self.root, 'farcap', first=13, last=60, kinds=kinds, sampler=False,
+                           ini={'framerate_limit_enabled': 'true', 'framerate_limit': '240'})
+        s = analyze.analyze(str(path))[0]
+        self.assertEqual(s['fps_cap'], 240)
+        self.assertEqual(s['slow_seconds'], 1)
+        self.assertFalse(any('limit' in x for x in texts(s, 'good')), s['findings'])
+
     def test_seconds_with_less_than_half_a_second_of_play_are_not_counted(self):
         path = sec_session(self.root, 'short', first=13, last=22, kinds={18: 'f75', 20: 'short'}, sampler=False,
                            ini={'framerate_limit_enabled': 'false'})

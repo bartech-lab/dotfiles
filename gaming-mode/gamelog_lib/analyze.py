@@ -297,6 +297,9 @@ def analyze(session):
     by_second = {int(float(row['t'])): row for row in samples if number(row.get('t'))}
     stutter_seconds = {int(t) for t, _ in stutters}
     median_fps = overall['median_fps']
+    # A limit the game does not reach most of the time (240 on a card that does 200) is not a target.
+    target = cap if cap and median_fps >= 0.95 * cap else None
+    summary['fps_cap_reached'] = bool(target)
     load_ends = [z['start'] for z in zones]
     warnings = sorted(e['t'] for e in events if e['kind'] == 'vram_warning')
     pso_off = any(e['kind'] == 'pso_cache' and e['value'] != 'Enabled' for e in events) or any(e['kind'] == 'lmdb_failed' for e in events)
@@ -305,7 +308,7 @@ def analyze(session):
         if total_ms < 500:      # a second mostly spent paused
             continue
         fps = 1000 * count / total_ms
-        if not (second in stutter_seconds or fps < (0.95 * cap if cap else 0.8 * median_fps)):
+        if not (second in stutter_seconds or fps < (0.95 * target if target else 0.8 * median_fps)):
             continue
         slow += 1
         row = by_second.get(second) or by_second.get(second - 1) or by_second.get(second + 1) or {}
@@ -387,7 +390,7 @@ def findings(s, meta):
         add('warn', f"{log['disconnects']} abnormal disconnect(s) from the game server.")
     if process and process.get('mangohud_loaded') is False:
         add('warn', 'MangoHud was not loaded in the game; frame numbers may be missing.')
-    cap = s['fps_cap']
+    cap = s['fps_cap'] if s.get('fps_cap_reached') else None
     share = s['slow_share']
     if cap and share < 0.02:
         headroom = '' if system['gpu_util_median'] is None else f" The graphics card was {system['gpu_util_median']:.0f}% busy (median), so it has room for more."
@@ -512,7 +515,7 @@ def candidates(summary, meta, today=None):
     slow = max(s.get('slow_seconds', 0), 1)
     share = lambda cause: causes.get(cause, 0) / slow if s.get('slow_share', 0) >= 0.02 else 0
     gpu = system.get('gpu_util_median')
-    capped_easily = bool(s.get('fps_cap')) and s.get('slow_share', 1) < 0.02
+    capped_easily = bool(s.get('fps_cap_reached')) and s.get('slow_share', 1) < 0.02
     vram_free = (system.get('vram_total_mib') or 0) - (system.get('vram_peak_mib') or 0)
     out = []
 
