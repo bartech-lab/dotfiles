@@ -211,6 +211,7 @@ class ParseLine(CapCase):
         ('[TEXTURE] Insufficient VRAM', {'kind': 'vram_warning'}),
         ('Closing game gracefully', {'kind': 'exit_graceful'}),
         ('Abnormal disconnect: An unexpected disconnection occurred.', {'kind': 'disconnect'}),
+        ('Connected to fra.login.pathofexile2.com in 18ms.', {'kind': 'login_connect'}),
     ]
 
     def test_every_allowlisted_message_parses_with_trailing_crlf(self):
@@ -304,7 +305,9 @@ class ReadEvents(CapCase):
     LINES = {k: mk_line(m, nl='\n') for k, m in {
         'old1': 'Generating level 70 area "OldA" with seed 1', 'old2': 'Generating level 71 area "OldB" with seed 2',
         'start': '[STARTUP] Game Start', 'zone': 'Generating level 80 area "NewZ" with seed 3',
-        'filler': 'nothing interesting here'}.items()}
+        'filler': 'nothing interesting here',
+        'login': 'Connected to fra.login.pathofexile2.com in 18ms.', 'instance': 'Connect time to instance server was 26ms',
+        'disc': 'Abnormal disconnect: An unexpected disconnection occurred.'}.items()}
     LINES['crit1'] = mk_line('Bad thing 12 happened', level='CRIT', nl='\n')
     LINES['crit2'] = mk_line('Bad thing 345 happened', level='CRIT', nl='\n')
 
@@ -326,6 +329,18 @@ out = {'pos': pos, 'size': size, 'ino': ino, 'ev': ev, 'cc': cc, 'tr': tr}
         self.assertEqual(out['ev'][1]['area'], 'NewZ')
         self.assertEqual(out['cc'], {'Bad thing N happened': 2})
         self.assertIs(out['tr'], False)
+
+    def test_disconnect_at_login_is_a_failed_login_not_a_game_disconnect(self):
+        # Real order: a wrong password drops the login connection; only a drop after joining an instance counts.
+        out = self.run_snippet("""
+open(p, 'w').write('')
+pos = c.log_position(p)
+open(p, 'a').write(L['start'] + L['login'] + L['disc'] + L['login'] + L['instance'] + L['zone'] + L['disc']
+                   + L['login'] + L['disc'])
+out = [e['kind'] for e in c.read_events(pos, p)[0]]
+""")
+        self.assertEqual(out, ['start', 'login_connect', 'login_disconnect', 'login_connect', 'connect', 'zone',
+                               'disconnect', 'login_connect', 'login_disconnect'])
 
     def test_truncated_file_is_read_from_start(self):
         out = self.run_snippet("""
@@ -758,8 +773,12 @@ class Sessions(unittest.TestCase):
             ['csv', 'PathOfExile.exe_{TSFILE}_summary.csv', 'SUMMARY\n'],
             ['rmproc', pid]], pre_log=pre, stale=True, full=True)
         S['nvhang'] = Sim(cls.tmp, 'nvhang', game + [['sleep', 1.8], ['csv', 'PathOfExile.exe_{TSFILE}.csv', good], ['rmproc', pid]], nvidia='hang')
-        S['noframes_missing'] = Sim(cls.tmp, 'nfm', game + [['sleep', 1.5], ['rmproc', pid]])
-        S['noframes_zero'] = Sim(cls.tmp, 'nfz', game + [['sleep', 1.8], ['csv', 'PathOfExile.exe_{TSFILE}.csv', csv_text(0)], ['rmproc', pid]])
+        started = [['append', L('[STARTUP] Game Start')]]
+        S['noframes_missing'] = Sim(cls.tmp, 'nfm', game + started + [['sleep', 1.5], ['rmproc', pid]])
+        S['noframes_zero'] = Sim(cls.tmp, 'nfz', game + started + [['sleep', 1.8], ['csv', 'PathOfExile.exe_{TSFILE}.csv', csv_text(0)], ['rmproc', pid]])
+        # After a patch the game can sit for the whole session without ever logging its start.
+        S['stuck'] = Sim(cls.tmp, 'stuck', game + [['append', L('Started patching (1 free bytes available)')],
+                                                   ['sleep', 1.5], ['rmproc', pid]])
         S['short'] = Sim(cls.tmp, 'short', game + [['sleep', 1.2], ['rmproc', pid]], GAMELOG_MIN_SECONDS='5')
         S['nogame'] = Sim(cls.tmp, 'nogame', [], GAMELOG_START_WAIT='1', GAMELOG_LAUNCH='/bin/true')
         S['crash'] = Sim(cls.tmp, 'crash', game + [
@@ -873,6 +892,16 @@ class Sessions(unittest.TestCase):
                 self.assertEqual(s.meta()['status'], 'no-frames')
                 alerts = [n for n in s.prio4() if any('mangohud' in a.lower() for a in n)]
                 self.assertEqual(len(alerts), 1, s.notes())
+
+    def test_game_that_never_started_is_not_blamed_on_mangohud(self):
+        s = self.S['stuck']
+        self.assertEqual(s.rc, 0, s.err)
+        self.assertEqual(s.meta()['status'], 'not-started')
+        alerts = s.prio4()
+        self.assertEqual(len(alerts), 1, s.notes())
+        text = ' '.join(alerts[0]).lower()
+        self.assertNotIn('mangohud', text)
+        self.assertIn('never finished starting', text)
 
     def test_short_session(self):
         s = self.S['short']

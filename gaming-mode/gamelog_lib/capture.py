@@ -21,7 +21,7 @@ PROC = Path(os.environ.get('GAMELOG_PROC', '/proc'))
 SYS = Path(os.environ.get('GAMELOG_SYS', '/sys'))
 GAME_DIR = Path(os.environ.get('GAMELOG_GAME_DIR', HOME/'Games/path-of-exile-2'))
 CLIENT_LOG = Path(os.environ.get('GAMELOG_CLIENT_LOG', GAME_DIR/'logs/Client.txt'))
-INI = Path(os.environ.get('GAMELOG_INI', HOME/'Documents/My Games/Path of Exile 2/poe2_production_Config.ini'))
+INI = Path(os.environ.get('GAMELOG_INI', GAME_DIR/'drive_c/users/steamuser/Documents/My Games/Path of Exile 2/poe2_production_Config.ini'))
 LUTRIS_GAMES = Path(os.environ.get('GAMELOG_LUTRIS_GAMES', HOME/'.config/lutris/games'))
 LUTRIS_SLUG = 'path-of-exile-2'
 LAUNCH = shlex.split(os.environ.get('GAMELOG_LAUNCH', f'lutris lutris:rungame/{LUTRIS_SLUG}'))
@@ -82,6 +82,7 @@ EVENTS = [
     ('vram_warning', re.compile(r'\[TEXTURE\] Insufficient VRAM'), ()),
     ('exit_graceful', re.compile(r'Closing game gracefully'), ()),
     ('disconnect', re.compile(r'Abnormal disconnect'), ()),
+    ('login_connect', re.compile(r'Connected to [\w.-]*login[\w.-]* in'), ()),
 ]
 NUMERIC = {'level': int, 'seconds': float, 'ms': int}
 
@@ -125,7 +126,7 @@ def read_events(position, path=None):
     except OSError:
         return [], {}, False
     truncated = position['inode'] is not None and (stat.st_ino != position['inode'] or stat.st_size < position['offset'])
-    events, crits = [], {}
+    events, crits, in_game = [], {}, False
     with open(path, 'rb') as handle:
         handle.seek(0 if truncated else position['offset'])
         for raw in handle:
@@ -135,6 +136,11 @@ def read_events(position, path=None):
             if event['kind'] == 'crit':
                 crits[event['text']] = crits.get(event['text'], 0) + 1
             else:
+                # A drop from the login server (a wrong password, say) is not a game disconnect.
+                if event['kind'] in ('connect', 'login_connect'):
+                    in_game = event['kind'] == 'connect'
+                elif event['kind'] == 'disconnect' and not in_game:
+                    event['kind'] = 'login_disconnect'
                 events.append(event)
     return events, crits, truncated
 
@@ -608,6 +614,10 @@ def record(launch):
     if played < MIN_SECONDS:
         meta['status'] = 'short'
         notify('PoE2 recorder', f'Session lasted {played:.0f} s: too short to measure.', 2)
+    elif meta['frame_seconds'] < MIN_SECONDS and 'start' not in kinds:
+        meta['status'] = 'not-started'
+        notify('PoE2 recorder', 'Session was not measured: the game never finished starting (stuck at the patch or launch step). '
+               'If that happens again, close it and launch once more.', 4)
     elif meta['frame_seconds'] < MIN_SECONDS:
         meta['status'] = 'no-frames'
         notify('PoE2 recorder', 'Session was not measured: MangoHud wrote no frame log. '
