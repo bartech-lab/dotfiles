@@ -25,7 +25,7 @@ VOLATILE_INI = ('window_x', 'window_y', 'adapter_name', 'last_monitor_name')    
 CAUSES = {
     'new_area': 'new area loading in (shaders compile; expected, the game cannot keep its shader cache under Proton)',
     'vram': 'graphics memory full',
-    'throttle': 'heat or power limit',
+    'throttle': 'overheating or hardware slowdown',
     'pressure': 'disk or memory stall',
     'gpu': 'graphics card at its limit',
     'cpu': 'one CPU thread at its limit',
@@ -318,7 +318,8 @@ def analyze(session):
         near_warning = bisect_left(warnings, second - 5) < bisect_right(warnings, second + 5)
         if (value('vram_used') and value('vram_total') and value('vram_used') >= 0.93 * value('vram_total')) or near_warning:
             cause = 'vram'
-        elif any(value(k) == 1 for k in ('thr_hw', 'thr_hw_thermal', 'thr_sw_power', 'thr_sw_thermal')) or (value('cpu_temp') or 0) >= 93:
+        # The power-cap flag is left out: a fully busy card always sits at its power limit, so that is 'gpu'.
+        elif any(value(k) == 1 for k in ('thr_hw', 'thr_hw_thermal', 'thr_sw_thermal')) or (value('cpu_temp') or 0) >= 93:
             cause = 'throttle'
         elif (value('psi_io_ms') or 0) >= 100 or (value('psi_mem_ms') or 0) >= 100 or (value('psi_cpu_ms') or 0) >= 200:
             cause = 'pressure'
@@ -404,7 +405,7 @@ def findings(s, meta):
         why = '' if settings.get('game_mode_on') else ' Game mode was off, so Bonsai held most of it.'
         add('bad', f"Graphics memory ran short: {log['vram_warnings']} warning(s) in the game log, peak {system['vram_peak_mib'] or 0:.0f} of {system['vram_total_mib'] or 0:.0f} MiB.{why}")
     if (system['cpu_temp_max'] or 0) >= 93 or s['causes'].get('throttle'):
-        add('warn', f"Heat or power limits were hit (CPU peak {system['cpu_temp_max']} °C, GPU peak {system['gpu_temp_max']} °C).")
+        add('warn', f"Overheating or a hardware slowdown was recorded (CPU peak {system['cpu_temp_max']} °C, GPU peak {system['gpu_temp_max']} °C).")
     if system['rtt_spikes'] and system['rtt_median_ms'] is not None:
         add('warn', f"Network: {system['rtt_spikes']} latency spike(s); usual round trip {system['rtt_median_ms']:.0f} ms, 95% under {system['rtt_p95_ms']:.0f} ms. This is the connection, not rendering.")
     if log['pso_cache_off'] and s['causes'].get('new_area'):

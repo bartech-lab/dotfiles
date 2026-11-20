@@ -525,6 +525,15 @@ class SlowSecondsWithoutCapOrSampler(Tmp):
         self.assertEqual(s['slow_seconds'], 1)
         self.assertFalse(any('limit' in x for x in texts(s, 'good')), s['findings'])
 
+    def test_power_cap_at_full_load_is_the_card_at_its_limit_not_heat(self):
+        # The card sits at its own power limit (270 W here) whenever it is fully busy; that is not overheating.
+        path = sec_session(self.root, 'powercap', first=13, last=60, kinds={30: 'slow', 31: 'slow'},
+                           over={30: {'thr_sw_power': 1, 'gpu_util': 99, 'gpu_temp': 65},
+                                 31: {'thr_sw_power': 1, 'gpu_util': 99, 'gpu_temp': 65, 'thr_sw_thermal': 1}})
+        s = analyze.analyze(str(path))[0]
+        self.assertEqual(s['causes'], {'gpu': 1, 'throttle': 1})
+        self.assertNotIn('power', analyze.CAUSES['throttle'])
+
     def test_seconds_with_less_than_half_a_second_of_play_are_not_counted(self):
         path = sec_session(self.root, 'short', first=13, last=22, kinds={18: 'f75', 20: 'short'}, sampler=False,
                            ini={'framerate_limit_enabled': 'false'})
