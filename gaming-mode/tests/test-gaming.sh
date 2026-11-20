@@ -156,10 +156,12 @@ since=$(grep -m1 '^since=' "$PAUSE_FILE" | cut -d= -f2)
 (( since >= before && since <= after )) || fail 'since is not the time of on'
 assert_file_has "$PAUSE_FILE" '^owner=gaming$' 'pause file lacks owner=gaming'
 assert_file_has "$PAUSE_FILE" '^max_age_hours=12$' 'pause file lacks max_age_hours=12'
+assert_file_has "$PAUSE_FILE" "^busy_file=$STATE_DIR/gpu-busy\$" 'pause file lacks busy_file in the state directory'
+assert_file_has "$PAUSE_FILE" '^max_total_hours=72$' 'pause file lacks max_total_hours=72'
 for n in bonsai.service bonsai-cc-proxy.service bonsai-http bonsai-cc-proxy bonsai-no-crash system-update.service toolsmith.service logbook-sync.service; do
     assert_file_has "$PAUSE_FILE" "^pause=$n\$" "pause file lacks pause=$n"
 done
-assert_eq "$(grep -vE '^(since|owner|max_age_hours|pause)=' "$PAUSE_FILE" | grep -c . || true)" 0 'pause file has lines outside the key=value format'
+assert_eq "$(grep -vE '^(since|owner|max_age_hours|busy_file|max_total_hours|pause)=' "$PAUSE_FILE" | grep -c . || true)" 0 'pause file has lines outside the key=value format'
 
 echo "== off: reverse order, state and pause removed"
 stops=$(calls stop)

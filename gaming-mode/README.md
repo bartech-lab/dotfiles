@@ -88,8 +88,10 @@ starts only those, in reverse order. A reboot clears the state; the units autost
 ## Heartbeat
 
 `on` writes `$XDG_RUNTIME_DIR/heartbeat-pause`. The heartbeat reports the listed checks as
-`paused` instead of failing, and raises `pause-gaming` as stale after 12 hours, so a forgotten
-`gaming off` reaches ntfy.
+`paused` instead of failing, and raises `pause-gaming` as stale after 12 hours without a big
+GPU job, so a forgotten `gaming off` reaches ntfy. A big GPU job is one process holding at
+least 1 GiB of graphics memory (a game, ComfyUI); `gaming-gpu-log` records the last time it
+saw one. A long render therefore keeps game mode quiet, up to 72 hours in total.
 
 ## Install
 

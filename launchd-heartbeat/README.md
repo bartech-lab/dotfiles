@@ -67,13 +67,18 @@ disk-root   test "$(df -P / | awk 'NR==2 {print int($5)}')" -lt 90
 
 A deliberate stop (for example `gaming on`) writes `$XDG_RUNTIME_DIR/heartbeat-pause`
 (override with `HEARTBEAT_PAUSE_FILE`). Every label or probe named in a `pause=` line is
-reported as `paused` instead of checked. A pause older than `max_age_hours` is itself a
-problem, `pause-<owner>` with status `stale`.
+reported as `paused` instead of checked. A pause idle for more than `max_age_hours` is itself a
+problem, `pause-<owner>` with status `stale`. Idle time counts from the later of `since` and the
+epoch in the optional `busy_file`, which the owner writes while the pause is still needed; a
+missing, unreadable or future mark falls back to `since`. The optional `max_total_hours` caps the
+whole pause, busy or not.
 
 ```
 since=1761130000
 owner=gaming
 max_age_hours=12
+busy_file=/run/user/1000/gaming/gpu-busy
+max_total_hours=72
 pause=bonsai.service
 pause=bonsai-http
 ```

@@ -429,6 +429,37 @@ out=$(hb --status) || rc=$?
 assert_eq "$rc" 2 'pause uses its own max_age_hours'
 assert_line "$out" '^FAIL .*pause-other.*stale' 'owner name must appear in pause-<owner>'
 
+echo "== busy_file: idle time, not total time, makes a pause stale"
+BUSY="$TEST_ROOT/gpu-busy"
+pause_with_busy() {  # since, busy file content (or - for no file), [max_total_hours]
+    write_pause "$1" 12 gaming p-paused
+    printf 'busy_file=%s\n' "$BUSY" >> "$PAUSE_FILE"
+    [[ -n "${3:-}" ]] && printf 'max_total_hours=%s\n' "$3" >> "$PAUSE_FILE"
+    rm -f "$BUSY"
+    [[ "$2" == - ]] || printf '%s\n' "$2" > "$BUSY"
+}
+pause_with_busy "$((now - 30 * 3600))" "$((now - 60))"
+rc=0; out=$(hb --status) || rc=$?
+assert_eq "$rc" 0 'old pause with a recent busy mark must be healthy'
+assert_line "$out" '^ok .*pause-gaming' 'old pause with a recent busy mark must report ok'
+pause_with_busy "$((now - 30 * 3600))" "$((now - 13 * 3600))"
+rc=0; out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'busy mark older than max_age_hours must be stale'
+assert_line "$out" '^FAIL .*pause-gaming.*stale.*idle_hours=13' 'stale idle pause must name idle hours'
+for bad in - '' 'abc' "$((now + 3600))"; do
+    pause_with_busy "$((now - 13 * 3600))" "$bad"
+    rc=0; out=$(hb --status) || rc=$?
+    assert_eq "$rc" 2 "busy mark '$bad' must fall back to since and stay stale"
+done
+pause_with_busy "$((now - 30 * 3600))" "$((now - 60))" 24
+rc=0; out=$(hb --status) || rc=$?
+assert_eq "$rc" 2 'pause older than max_total_hours must be stale even while busy'
+assert_line "$out" '^FAIL .*pause-gaming.*stale.*max_total_hours=24' 'ceiling breach must name max_total_hours'
+pause_with_busy "$((now - 20 * 3600))" "$((now - 60))" 24
+rc=0; out=$(hb --status) || rc=$?
+assert_eq "$rc" 0 'busy pause under max_total_hours must be healthy'
+rm -f "$BUSY"
+
 unit_line() { printf '%s loaded failed failed x\n' "$1"; }
 rm -f "$PAUSE_FILE"
 

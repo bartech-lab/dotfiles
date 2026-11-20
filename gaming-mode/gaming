@@ -24,7 +24,10 @@ PAUSE_FILE="${HEARTBEAT_PAUSE_FILE:-$RUNTIME_DIR/heartbeat-pause}"
 APPS_FILE="${GAMING_APPS_FILE:-$HOME/.config/gaming/apps.conf}"
 HEALTH_URL="${GAMING_HEALTH_URL:-http://127.0.0.1:8080/health}"
 HEALTH_WAIT="${GAMING_HEALTH_WAIT:-360}"
+# The heartbeat flags a pause idle for MAX_AGE_HOURS (no big GPU job, see
+# gaming-gpu-log) or older than MAX_TOTAL_HOURS in any case.
 MAX_AGE_HOURS="${GAMING_MAX_AGE_HOURS:-12}"
+MAX_TOTAL_HOURS="${GAMING_MAX_TOTAL_HOURS:-72}"
 
 # Stop order. `off` restarts in reverse.
 # bonsai-cc-proxy.service keeps running: in game mode it answers 503 "game
@@ -102,6 +105,8 @@ cmd_on() {
         echo "since=$(date +%s)"
         echo "owner=gaming"
         echo "max_age_hours=$MAX_AGE_HOURS"
+        echo "busy_file=$STATE_DIR/gpu-busy"
+        echo "max_total_hours=$MAX_TOTAL_HOURS"
         printf 'pause=%s\n' "${pause_names[@]}"
     } > "$PAUSE_FILE.tmp" && mv -f "$PAUSE_FILE.tmp" "$PAUSE_FILE"
 

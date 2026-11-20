@@ -4,11 +4,17 @@
 # Diagnostic for VK_ERROR_OUT_OF_DEVICE_MEMORY in browser games: the row at the
 # time of the error shows which of the two ran out.
 # Started and stopped by `gaming on` / `gaming off` (gaming-gpu-log.service).
+#
+# While one process holds at least GAMING_GPU_BUSY_MIB of graphics memory (a
+# game, ComfyUI), it writes the current epoch to the busy file named in the
+# heartbeat pause, so a long render does not count as a forgotten `gaming off`.
 
 set -u
 
 LOG_DIR="${GAMING_GPU_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/gaming}"
 INTERVAL="${GAMING_GPU_LOG_INTERVAL:-1}"
+BUSY_FILE="${GAMING_GPU_BUSY_FILE:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gaming/gpu-busy}"
+BUSY_MIB="${GAMING_GPU_BUSY_MIB:-1024}"
 HEADER="time,vram_used_mib,vram_total_mib,chrome_gpu_pid,chrome_gpu_vram_mib,chrome_gpu_handles,handle_limit"
 
 mkdir -p "$LOG_DIR"
@@ -28,5 +34,9 @@ while :; do
         limit=$(awk '/^Max open files/ { print $4 }' "/proc/$pid/limits" 2>/dev/null || true)
     fi
     echo "$(date +%T),${vram:-,},$pid,$pid_vram,$handles,$limit" >> "$log"
+    top=$(nvidia-smi --query-compute-apps=used_memory --format=csv,noheader,nounits 2>/dev/null | sort -n | tail -n 1 | tr -d ' ')
+    if [[ "$top" =~ ^[0-9]+$ ]] && (( top >= BUSY_MIB )); then
+        date +%s > "$BUSY_FILE.tmp" && mv -f "$BUSY_FILE.tmp" "$BUSY_FILE"
+    fi
     sleep "$INTERVAL"
 done

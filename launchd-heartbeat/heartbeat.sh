@@ -130,17 +130,24 @@ problem_labels=""
 problem_count=0
 
 # A pause file (written by `gaming on`) names checks to skip while their
-# service is stopped on purpose. A pause older than max_age_hours is a problem.
+# service is stopped on purpose. A pause idle for more than max_age_hours is a
+# problem. Idle time counts from the later of since and the epoch in busy_file
+# (the owner writes it while the pause is still needed); a missing or bad mark
+# falls back to since. max_total_hours caps the whole pause, busy or not.
 paused_names=" "
 pause_since=""
 pause_owner="unknown"
 pause_max_age=""
+pause_busy_file=""
+pause_max_total=""
 if [[ -f "$PAUSE_FILE" ]]; then
     while IFS='=' read -r key value; do
         case "$key" in
             since) pause_since="$value" ;;
             owner) pause_owner="$value" ;;
             max_age_hours) pause_max_age="$value" ;;
+            busy_file) pause_busy_file="$value" ;;
+            max_total_hours) pause_max_total="$value" ;;
             pause) paused_names+="$value " ;;
         esac
     done < "$PAUSE_FILE"
@@ -386,9 +393,20 @@ fi
 
 if [[ -f "$PAUSE_FILE" ]]; then
     monitored=$((monitored + 1))
-    if [[ "$pause_since" =~ ^[0-9]+$ && "$pause_max_age" =~ ^[0-9]+$ ]] \
-        && (( $(date +%s) - pause_since > pause_max_age * 3600 )); then
-        record_problem "pause-$pause_owner" "stale" "paused_hours=$(( ($(date +%s) - pause_since) / 3600 )) max_age_hours=$pause_max_age (run: $pause_owner off)"
+    pause_now=$(date +%s)
+    pause_active="$pause_since"
+    pause_busy=""
+    [[ -n "$pause_busy_file" && -r "$pause_busy_file" ]] && read -r pause_busy < "$pause_busy_file"
+    if [[ "$pause_since" =~ ^[0-9]+$ && "$pause_busy" =~ ^[0-9]+$ ]] \
+        && (( pause_busy > pause_since && pause_busy <= pause_now )); then
+        pause_active="$pause_busy"
+    fi
+    if [[ "$pause_since" =~ ^[0-9]+$ && "$pause_max_total" =~ ^[0-9]+$ ]] \
+        && (( pause_now - pause_since > pause_max_total * 3600 )); then
+        record_problem "pause-$pause_owner" "stale" "paused_hours=$(( (pause_now - pause_since) / 3600 )) max_total_hours=$pause_max_total (run: $pause_owner off)"
+    elif [[ "$pause_since" =~ ^[0-9]+$ && "$pause_max_age" =~ ^[0-9]+$ ]] \
+        && (( pause_now - pause_active > pause_max_age * 3600 )); then
+        record_problem "pause-$pause_owner" "stale" "paused_hours=$(( (pause_now - pause_since) / 3600 )) idle_hours=$(( (pause_now - pause_active) / 3600 )) max_age_hours=$pause_max_age (run: $pause_owner off)"
     else
         loaded=$((loaded + 1))
         record_ok "pause-$pause_owner" "since=${pause_since:-unknown}"
