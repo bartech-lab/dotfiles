@@ -61,7 +61,8 @@ cat > "$BIN/gamelog" <<'STUB'
 #!/bin/bash
 exit 0
 STUB
-for t in ops notify-send; do printf '#!/bin/bash\nexit 0\n' > "$BIN/$t"; done
+printf '#!/bin/bash\nexit 0\n' > "$BIN/ops"
+printf '#!/bin/bash\necho "notify-send $*" >> "$EVENTS"\n' > "$BIN/notify-send"
 chmod +x "$BIN"/*
 
 # reset_state: new lock file, empty event log, default stub modes.
@@ -130,19 +131,20 @@ else
   kill -KILL "$lp" 2>/dev/null
 fi
 
-# --- 4. second launch while the first runs; 5. lock released afterwards
+# --- 4. second launch while the first runs past the wait; 5. lock released afterwards
 reset_state
 GAMING_MODE=hold; export GAMING_MODE
 "$LAUNCHER" >/dev/null 2>&1 &
 lp=$!
 if wait_for_file "$STARTED" 50; then
   t0=$SECONDS
-  timeout 10 "$LAUNCHER" >/dev/null 2>&1
+  POE2_SESSION_WAIT=1 timeout 10 "$LAUNCHER" >/dev/null 2>&1
   rc=$?
   check_eq "$rc" 0 "second launch exit code"
   (( SECONDS - t0 <= 3 )) || fail "second launch took $((SECONDS - t0)) s"
   check_eq "$(grep -c '^gaming' "$EVENTS")" 1 "second launch must not start gaming"
   check_eq "$(grep -c '^qdbus6' "$EVENTS")" 1 "second launch must not touch the panel"
+  grep -qi '^notify-send.*already running' "$EVENTS" || fail "second launch gave no 'already running' notice"
 else
   fail "first launcher never reached gaming in lock test"
 fi
@@ -153,6 +155,27 @@ GAMING_MODE=ok; export GAMING_MODE
 : > "$EVENTS"; rm -f "$COUNTER"
 timeout 20 "$LAUNCHER" >/dev/null 2>&1
 check_eq "$(summary autohide)" "$(EXPECT_OK autohide)" "run after the lock was released"
+
+# --- 4b. a click while the last session is still closing waits for it, then starts the game
+reset_state
+GAMING_MODE=hold; export GAMING_MODE
+"$LAUNCHER" >/dev/null 2>&1 &
+lp=$!
+if wait_for_file "$STARTED" 50; then
+  rm -f "$STARTED"
+  GAMING_MODE=ok POE2_SESSION_WAIT=10 timeout 20 "$LAUNCHER" >/dev/null 2>&1 &
+  sp=$!
+  sleep 1
+  touch "$RELEASE"
+  wait "$lp" 2>/dev/null
+  wait "$sp" 2>/dev/null
+  check_eq "$(grep -c '^gaming' "$EVENTS")" 2 "click during shutdown must start the game once the old session ends"
+  ! grep -q '^notify-send' "$EVENTS" || fail "click during shutdown showed a notice"
+else
+  fail "first launcher never reached gaming in wait test"
+  touch "$RELEASE"
+fi
+wait "$lp" 2>/dev/null
 
 # --- 6. lock not inherited by a background child of gaming
 reset_state

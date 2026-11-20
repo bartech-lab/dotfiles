@@ -15,7 +15,13 @@ GAMELOG="${POE2_GAMELOG:-$HOME/.local/bin/gamelog}"
 
 mkdir -p "$(dirname "$LOCK")"
 exec 8> "$LOCK"
-flock -n 8 || { echo "poe2-session: already running" >&2; exit 0; }
+# A click right after quitting lands while the last session still closes
+# (about 10 s); wait for it instead of doing nothing.
+flock -w "${POE2_SESSION_WAIT:-30}" 8 || {
+    echo "poe2-session: already running" >&2
+    notify-send -a gaming -i applications-games "Path of Exile 2" "Already running." >/dev/null 2>&1 || true
+    exit 0
+}
 
 panel() {
     qdbus6 org.kde.plasmashell /PlasmaShell evaluateScript "
