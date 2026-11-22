@@ -14,8 +14,9 @@ from pathlib import Path
 STUTTER_FACTOR = 2.5      # a stutter is a frame this many times the local median...
 STUTTER_MS = 25           # ...and at least this long
 SETTLE_S = 20             # after a loading screen, slow seconds count as "new area"
-MIN_ACTIVE_S = 600        # a session needs this much play to enter a comparison
-MIN_SESSIONS = 3
+MIN_VISIT_S = 30          # an area visit shorter than this is mostly load-in and is left out of comparisons
+MIN_PLAY_MIN = 30         # each settings group needs this many minutes of such visits, from any number of sessions
+MIN_EFFECT = {'stutters_per_10min': 5, 'p99_ms': 0.3, 'low1_fps': 2, 'avg_fps': 1}    # smaller changes are noise
 CHOSEN_INI = ('renderer_type', 'vsync', 'framerate_limit', 'framerate_limit_enabled', 'upscale', 'upscale_quality',
               'upscale_resolution', 'use_dynamic_resolution', 'dynamic_resolution_fps', 'shadow_type', 'texture_quality',
               'texture_filtering', 'light_quality', 'engine_multithreading_mode', 'screenspace_effects_resolution',
@@ -437,52 +438,71 @@ def summaries(sessions_dir):
     return out
 
 
-def comparable(summary, kind):
-    stats = (summary.get('kinds') or {}).get(kind)
-    return summary.get('status') == 'ok' and stats and stats['seconds'] >= MIN_ACTIVE_S
+def visits(summary, kind):
+    """Area visits of one kind long enough to compare; whole visits are the units resampled."""
+    if summary.get('status') != 'ok':
+        return []
+    return [z for z in summary.get('zones') or [] if z.get('kind') == kind and z.get('stats') and z['stats']['seconds'] >= MIN_VISIT_S]
 
 
-def best_kind(all_summaries):
-    totals = {}
-    for s in all_summaries:
-        for kind, stats in (s.get('kinds') or {}).items():
-            if stats:
-                totals[kind] = totals.get(kind, 0) + stats['seconds']
-    return max(totals, key=totals.get) if totals else None
+def latest_kind(all_summaries):
+    """The kind of area the most recent session spent most time in: it shows what the user plays now."""
+    for s in reversed(all_summaries):
+        kinds = {k: v['seconds'] for k, v in (s.get('kinds') or {}).items() if v} if s.get('status') == 'ok' else {}
+        if kinds:
+            return max(kinds, key=kinds.get)
+    return None
 
 
-def bootstrap(a, b, rounds=5000, seed=1):
-    """95% interval for median(b) - median(a), resampling whole sessions."""
+def metric(vs, key):
+    if key == 'stutters_per_10min':     # pooled over play time, so short visits do not count as much as long ones
+        return 600 * sum(z['stutters'] for z in vs) / sum(z['stats']['seconds'] for z in vs)
+    return statistics.median(z['stats'][key] for z in vs)
+
+
+def bootstrap(a, b, key, rounds=2000, seed=1):
+    """95% interval for metric(b) - metric(a), resampling area visits."""
     rng = random.Random(seed)
-    diffs = sorted(statistics.median(rng.choices(b, k=len(b))) - statistics.median(rng.choices(a, k=len(a))) for _ in range(rounds))
+    diffs = sorted(metric(rng.choices(b, k=len(b)), key) - metric(rng.choices(a, k=len(a)), key) for _ in range(rounds))
     return diffs[int(0.025 * rounds)], diffs[int(0.975 * rounds)]
+
+
+def minutes(group):
+    return sum(z['stats']['seconds'] for z in group['visits']) / 60
 
 
 def compare(all_summaries):
     """Latest settings group against the one before it. Returns a dict with 'verdict' text."""
-    kind = best_kind(all_summaries)
-    usable = [s for s in all_summaries if kind and comparable(s, kind)]
+    kind = latest_kind(all_summaries)
     groups = []
-    for s in usable:
+    for s in all_summaries:
+        vs = visits(s, kind) if kind else []
+        if not vs:
+            continue
         if groups and groups[-1]['fingerprint'] == s['fingerprint']:
             groups[-1]['sessions'].append(s)
+            groups[-1]['visits'].extend(vs)
         else:
-            groups.append({'fingerprint': s['fingerprint'], 'sessions': [s]})
-    result = {'kind': kind, 'groups': [{'fingerprint': g['fingerprint'], 'sessions': len(g['sessions'])} for g in groups]}
+            groups.append({'fingerprint': s['fingerprint'], 'sessions': [s], 'visits': list(vs)})
+    result = {'kind': kind, 'needed_minutes': MIN_PLAY_MIN,
+              'groups': [{'fingerprint': g['fingerprint'], 'sessions': len(g['sessions']), 'minutes': round(minutes(g))} for g in groups]}
     if not groups:
-        result['verdict'] = f'Not enough data: no session has {MIN_ACTIVE_S // 60} minutes of play in one kind of area yet.'
+        result['verdict'] = 'Not enough data: no recorded play to compare yet.'
         return result
     new = groups[-1]
-    result['current'] = len(new['sessions'])
+    result['current_minutes'] = minutes(new)
+    result['ready'] = minutes(new) >= MIN_PLAY_MIN
     if len(groups) < 2:
-        result['verdict'] = f"Baseline: {len(new['sessions'])} of {MIN_SESSIONS} sessions on the current settings. Nothing to compare with yet."
+        state = 'ready' if result['ready'] else f'needs {MIN_PLAY_MIN}'
+        result['verdict'] = (f"Baseline: {minutes(new):.0f} minutes of play in '{kind}' areas on the current settings ({state}). "
+                             'Nothing to compare with yet.')
         return result
     old = groups[-2]
     result['changed'] = differences(old['sessions'][-1]['chosen'], new['sessions'][0]['chosen'])
     result['updates'] = differences(old['sessions'][-1]['ambient'], new['sessions'][-1]['ambient'])
-    if len(old['sessions']) < MIN_SESSIONS or len(new['sessions']) < MIN_SESSIONS:
-        result['verdict'] = (f"Not enough data: the earlier settings have {len(old['sessions'])} session(s), the current ones "
-                             f"{len(new['sessions'])}; need {MIN_SESSIONS} each.")
+    if minutes(old) < MIN_PLAY_MIN or minutes(new) < MIN_PLAY_MIN:
+        result['verdict'] = (f"Not enough data in '{kind}' areas: the earlier settings have {minutes(old):.0f} minutes of play, "
+                             f"the current ones {minutes(new):.0f}; need {MIN_PLAY_MIN} each.")
         return result
     bases = {s.get('frame_basis') for s in old['sessions'] + new['sessions']}
     if len(bases) > 1:
@@ -492,16 +512,16 @@ def compare(all_summaries):
     lines = []
     for key, label, better in (('stutters_per_10min', 'stutters per 10 min', 'lower'), ('p99_ms', '99th percentile frame time (ms)', 'lower'),
                                ('low1_fps', '1% low fps', 'higher'), ('avg_fps', 'average fps', 'higher')):
-        a = [s['kinds'][kind][key] for s in old['sessions']]
-        b = [s['kinds'][kind][key] for s in new['sessions']]
-        low, high = bootstrap(a, b)
-        diff = statistics.median(b) - statistics.median(a)
-        spread = max(max(a) - min(a), max(b) - min(b))
-        real = (low > 0 or high < 0) and abs(diff) > spread / 2
+        a, b = old['visits'], new['visits']
+        low, high = bootstrap(a, b, key)
+        before, after = metric(a, key), metric(b, key)
+        diff = after - before
+        real = (low > 0 or high < 0) and abs(diff) >= MIN_EFFECT[key]
         word = 'no clear change' if not real else 'better' if (diff < 0) == (better == 'lower') else 'worse'
-        result['metrics'][key] = {'before': statistics.median(a), 'after': statistics.median(b), 'low': low, 'high': high, 'verdict': word}
-        lines.append(f"{label}: {statistics.median(a):.1f} -> {statistics.median(b):.1f} ({word}; 95% range of the change {low:+.1f} to {high:+.1f})")
-    result['verdict'] = f"In '{kind}' areas, {len(old['sessions'])} sessions before vs {len(new['sessions'])} after. " + '; '.join(lines) + '.'
+        result['metrics'][key] = {'before': before, 'after': after, 'low': low, 'high': high, 'verdict': word}
+        lines.append(f"{label}: {before:.1f} -> {after:.1f} ({word}; 95% range of the change {low:+.1f} to {high:+.1f})")
+    result['verdict'] = (f"In '{kind}' areas, {minutes(old):.0f} minutes before ({len(old['sessions'])} session(s)) vs "
+                         f"{minutes(new):.0f} after ({len(new['sessions'])}). " + '; '.join(lines) + '.')
     return result
 
 
@@ -676,7 +696,7 @@ def report(session, summary, detail, comparison, suggestions):
             doc.append(f'<div class="muted">{label}:</div><table>' + ''.join(f'<tr><td>{e(k)}</td><td>{e(str(a))}</td><td>{e(str(b))}</td></tr>' for k, (a, b) in comparison[key].items()) + '</table>')
     doc.append('<h2>Suggestions, not applied</h2>')
     if suggestions:
-        doc.append('<div class="muted">One change at a time; the first one is next. Each needs 3 sessions before and after.</div><table><tr><th>change</th><th>why now</th><th>judged by</th></tr>' + ''.join(f"<tr><td>{e(c['change'])}</td><td>{e(c['evidence'])}</td><td>{e(c['judged_by'])}</td></tr>" for c in suggestions) + '</table>')
+        doc.append(f'<div class="muted">One change at a time; the first one is next. Each needs {MIN_PLAY_MIN} minutes of play before and after, in the same kind of content.</div><table><tr><th>change</th><th>why now</th><th>judged by</th></tr>' + ''.join(f"<tr><td>{e(c['change'])}</td><td>{e(c['evidence'])}</td><td>{e(c['judged_by'])}</td></tr>" for c in suggestions) + '</table>')
     else:
         doc.append('<p>None: nothing in this session points at a setting worth testing.</p>')
     flat = flatten(chosen)

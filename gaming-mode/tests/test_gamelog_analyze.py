@@ -697,144 +697,295 @@ class Fingerprint(Tmp):
                 self.assertEqual(self.fp(**kw)['fingerprint'], base)
 
 
-def mk(fp, p99, *, seconds=900, status='ok', basis='real', chosen=None, ambient=None, kind='map', extra_kinds=None,
-       avg=None, stut=None):
-    k = {'seconds': seconds, 'p99_ms': p99, 'low1_fps': 1000.0 / p99,
-         'avg_fps': avg if avg is not None else 1500.0 / p99,
-         'stutters_per_10min': stut if stut is not None else p99 / 2}
-    kinds = {kind: k}
-    kinds.update(extra_kinds or {})
+def visit(seconds=300, p99=20.0, *, stut=0, low1=None, avg=None, kind='map'):
+    return {'kind': kind, 'stutters': stut,
+            'stats': {'seconds': seconds, 'p99_ms': p99, 'low1_fps': 1000.0 / p99 if low1 is None else low1,
+                      'avg_fps': 1500.0 / p99 if avg is None else avg}}
+
+
+def mk(fp, zones=None, *, status='ok', basis='real', chosen=None, ambient=None, kinds=None):
+    """One summary. Default: six 300 s map visits (exactly 30 min). `kinds` defaults to the seconds per zone kind."""
+    zones = [visit() for _ in range(6)] if zones is None else zones
+    if kinds is None:
+        kinds = {}
+        for z in zones:
+            if z['stats']:
+                kinds[z['kind']] = {'seconds': kinds.get(z['kind'], {}).get('seconds', 0) + z['stats']['seconds']}
     return {'status': status, 'fingerprint': fp, 'chosen': chosen or {'ini': {'framerate_limit': fp}},
-            'ambient': ambient or {'kernel': '6.1', 'nvidia_driver': '570'}, 'frame_basis': basis, 'kinds': kinds}
+            'ambient': ambient or {'kernel': '6.1', 'nvidia_driver': '570'}, 'frame_basis': basis,
+            'kinds': kinds, 'zones': zones}
 
 
-def group(fp, values, **kw):
-    return [mk(fp, v, **kw) for v in values]
+def group(fp, p99s, *, seconds=300, stut=0, **kw):
+    """One session per p99 value, one map visit each. Six values of 300 s make exactly 30 minutes."""
+    return [mk(fp, [visit(seconds, p, stut=stut)], **kw) for p in p99s]
 
 
 METRICS = ('stutters_per_10min', 'p99_ms', 'low1_fps', 'avg_fps')
 
 
 class Compare(unittest.TestCase):
-    def test_no_usable_summary(self):
+    # ---- not enough data / baseline -------------------------------------------------------------------------
+    def test_no_summaries_or_nothing_usable_is_not_enough_data(self):
         self.assertIn('Not enough data', analyze.compare([])['verdict'])
-        bad = group('a', [30, 30, 30], status='no frames') + group('b', [20, 20, 20], seconds=599)
-        self.assertIn('Not enough data', analyze.compare(bad)['verdict'])
-
-    def test_exactly_600_seconds_is_usable(self):
-        r = analyze.compare(group('a', [30, 30, 30], seconds=600) + group('b', [20, 20, 20], seconds=600))
-        self.assertIn('metrics', r)
-
-    def test_one_group_is_a_baseline_with_its_count(self):
-        r = analyze.compare(group('a', [30, 30.2]))
-        self.assertTrue(r['verdict'].startswith('Baseline'), r['verdict'])
-        self.assertIn('2 of 3', r['verdict'])
-        self.assertNotIn('metrics', r)
-
-    def test_kernel_and_driver_differences_stay_one_group(self):
-        s = [mk('a', 30, ambient={'kernel': f'6.{i}', 'nvidia_driver': f'57{i}'}) for i in range(6)]
-        self.assertTrue(analyze.compare(s)['verdict'].startswith('Baseline'))
-
-    def test_a_small_group_is_not_enough_in_either_position(self):
-        for old, new in ((3, 2), (2, 3), (1, 5)):
-            with self.subTest(old=old, new=new):
-                r = analyze.compare(group('a', [30] * old) + group('b', [20] * new))
-                self.assertIn('Not enough data', r['verdict'])
-                digits = re.findall(r'\d+', r['verdict'])
-                self.assertIn(str(old), digits)
-                self.assertIn(str(new), digits)
-                self.assertNotIn('metrics', r)
-
-    def test_short_and_failed_sessions_do_not_count_toward_the_minimum(self):
-        new = group('b', [20, 20]) + [mk('b', 20, seconds=300), mk('b', 20, status='no frames')]
-        r = analyze.compare(group('a', [30, 30, 30]) + new)
+        unusable = [mk('a', status='no frames'),
+                    mk('a', [visit(29.9)]),                                               # visit too short
+                    mk('a', [visit(600, kind='town')], kinds={'map': {'seconds': 600}}),  # other kind
+                    mk('a', [{'kind': 'map', 'stutters': 3, 'stats': None}], kinds={'map': {'seconds': 600}})]
+        r = analyze.compare(unusable)
         self.assertIn('Not enough data', r['verdict'])
         self.assertNotIn('metrics', r)
 
-    def test_mixed_frame_bases_cannot_be_compared(self):
-        old = group('a', [30, 30, 30])
-        for new in (group('b', [20, 20, 20], basis='doubled'),
-                    group('b', [20, 20], basis='real') + group('b', [20], basis='doubled')):
-            with self.subTest():
-                self.assertIn('Cannot compare', analyze.compare(old + new)['verdict'])
+    def test_one_group_is_a_baseline_with_its_minutes(self):
+        r = analyze.compare(group('a', [30] * 4))
+        self.assertTrue(r['verdict'].startswith('Baseline'), r['verdict'])
+        self.assertAlmostEqual(r['current_minutes'], 20.0)
+        self.assertFalse(r['ready'])
+        self.assertEqual(r['needed_minutes'], 30)
+        self.assertNotIn('metrics', r)
 
-    def test_clearly_better_group(self):
-        r = analyze.compare(group('a', [30.0, 30.2, 29.8]) + group('b', [20.0, 20.1, 19.9]))
-        m = r['metrics']
+    def test_thirty_minutes_exactly_is_ready_and_just_under_is_not(self):
+        r = analyze.compare(group('a', [30] * 6))
+        self.assertEqual(r['current_minutes'], 30)
+        self.assertTrue(r['ready'])
+        r = analyze.compare([mk('a', [visit(1790)])])
+        self.assertAlmostEqual(r['current_minutes'], 1790 / 60)
+        self.assertFalse(r['ready'])
+
+    def test_visit_of_exactly_30_seconds_counts_and_29_9_does_not(self):
+        r = analyze.compare([mk('a', [visit(1770), visit(30)])])
+        self.assertEqual(r['current_minutes'], 30)
+        self.assertTrue(r['ready'])
+        r = analyze.compare([mk('a', [visit(1770), visit(29.9)])])
+        self.assertAlmostEqual(r['current_minutes'], 29.5)
+        self.assertFalse(r['ready'])
+
+    def test_minutes_come_from_usable_visits_not_from_the_session_totals(self):
+        r = analyze.compare([mk('a', [visit(300)], kinds={'map': {'seconds': 5000}})])
+        self.assertAlmostEqual(r['current_minutes'], 5.0)
+        self.assertFalse(r['ready'])
+
+    def test_a_short_group_is_not_enough_in_either_position(self):
+        for old, new in ((4, 6), (6, 4), (1, 6), (6, 1)):
+            with self.subTest(old=old, new=new):
+                r = analyze.compare(group('a', [30] * old) + group('b', [20] * new))
+                self.assertIn('Not enough data', r['verdict'])
+                self.assertNotIn('metrics', r)
+
+    def test_two_groups_of_exactly_30_minutes_are_compared_and_29_9_is_not(self):
+        r = analyze.compare(group('a', [30] * 6) + group('b', [20] * 6))
+        self.assertIn('metrics', r)
+        r = analyze.compare(group('a', [30] * 6) + [mk('b', [visit(1794)])])
+        self.assertIn('Not enough data', r['verdict'])
+        self.assertNotIn('metrics', r)
+
+    # ---- kind ------------------------------------------------------------------------------------------------
+    def test_kind_comes_from_the_latest_session_not_the_all_time_busiest(self):
+        s = [mk('a', [visit(2880, kind='other')]),            # 48 min of 'other'
+             mk('b', [visit(2400, kind='map')])]              # then 40 min of 'map'
+        r = analyze.compare(s)
+        self.assertEqual(r['kind'], 'map')
+        self.assertTrue(r['verdict'].startswith('Baseline'), r['verdict'])
+        self.assertAlmostEqual(r['current_minutes'], 40.0)
+        self.assertTrue(r['ready'])
+
+    def test_kind_is_the_largest_kind_of_the_latest_ok_session_that_has_kinds(self):
+        s = [mk('a', [visit(1800, kind='other')]),
+             mk('a', [visit(1800, kind='town'), visit(2400, kind='map')]),            # map wins inside the session
+             mk('a', [], status='no frames', kinds={'other': {'seconds': 9999}}),     # not ok: ignored
+             mk('a', [], kinds={})]                                                   # no kinds: ignored
+        r = analyze.compare(s)
+        self.assertEqual(r['kind'], 'map')
+        self.assertAlmostEqual(r['current_minutes'], 40.0)
+
+    def test_only_visits_of_the_chosen_kind_count_in_every_session(self):
+        old = [mk('a', [visit(300, 30)] * 3 + [visit(900, 999, kind='town'), visit(900, 999, kind='other')])
+               for _ in range(2)]
+        new = [mk('b', [visit(300, 20)] * 3 + [visit(900, 1, kind='town')]) for _ in range(2)]
+        new[-1]['kinds'] = {'map': {'seconds': 2000}, 'town': {'seconds': 900}}      # map is the latest kind
+        r = analyze.compare(old + new)
+        self.assertEqual(r['kind'], 'map')
+        m = r['metrics']['p99_ms']
+        self.assertEqual((m['before'], m['after']), (30, 20))
+
+    # ---- short visits and ignored sessions --------------------------------------------------------------------
+    def test_short_visits_do_not_move_the_median_or_the_stutter_rate(self):
+        old = [mk('a', [visit(500, p, stut=5) for p in (40, 42, 44, 46)])]
+        new = [mk('b', [visit(500, p, stut=1) for p in (20, 22, 24, 26)]
+                  + [visit(10, 500, stut=100, low1=1, avg=1) for _ in range(4)])]
+        m = analyze.compare(old + new)['metrics']
+        self.assertEqual((m['p99_ms']['before'], m['p99_ms']['after']), (43, 23))
+        self.assertEqual(m['p99_ms']['verdict'], 'better')
+        self.assertAlmostEqual(m['stutters_per_10min']['after'], 600 * 4 / 2000)
+        self.assertAlmostEqual(m['low1_fps']['after'], (1000 / 22 + 1000 / 24) / 2)
+        self.assertEqual(m['avg_fps']['verdict'], 'better')
+
+    def test_failed_sessions_are_ignored_and_do_not_split_a_group(self):
+        s = (group('a', [30] * 3) + [mk('b', status='no frames'), mk('c', [visit(9000, 1)], status='crashed')]
+             + group('a', [30] * 3))
+        r = analyze.compare(s)
+        self.assertTrue(r['verdict'].startswith('Baseline'), r['verdict'])
+        self.assertAlmostEqual(r['current_minutes'], 30.0)
+        self.assertTrue(r['ready'])
+
+    def test_failed_session_in_the_new_group_does_not_change_its_metrics(self):
+        s = group('a', [30] * 6) + group('b', [20] * 6) + [mk('b', [visit(600, 500)], status='aborted')]
+        m = analyze.compare(s)['metrics']['p99_ms']
+        self.assertEqual((m['before'], m['after']), (30, 20))
+
+    def test_a_session_without_usable_visits_does_not_break_a_group(self):
+        gap = mk('b', [visit(20, 900)])          # only a short visit: skipped entirely
+        r = analyze.compare(group('a', [30] * 3) + [gap] + group('a', [30] * 3))
+        self.assertTrue(r['verdict'].startswith('Baseline'), r['verdict'])
+        self.assertAlmostEqual(r['current_minutes'], 30.0)
+
+    def test_a_returning_fingerprint_starts_a_new_group(self):
+        s = group('a', [20] * 6) + group('b', [30] * 6) + group('a', [24] * 6)
+        r = analyze.compare(s)
+        m = r['metrics']['p99_ms']
+        self.assertEqual((m['before'], m['after']), (30, 24))       # b vs the new a, never a with a
+        self.assertEqual({k: tuple(v) for k, v in r['changed'].items()}, {'ini.framerate_limit': ('b', 'a')})
+
+    # ---- changed / updates ------------------------------------------------------------------------------------
+    def test_changed_uses_old_last_and_new_first_while_updates_use_both_last(self):
+        def s(fp, chosen, kernel, driver):
+            return mk(fp, chosen=chosen, ambient={'kernel': kernel, 'nvidia_driver': driver})
+        old = [s('a', {'ini': {'framerate_limit': '30'}, 'proton': 'P9'}, '6.1', '570'),
+               s('a', {'ini': {'framerate_limit': '60'}, 'proton': 'P9'}, '6.2', '570')]
+        new = [s('b', {'ini': {'framerate_limit': '120'}, 'proton': 'P9'}, '6.3', '575'),
+               s('b', {'ini': {'framerate_limit': '144'}, 'proton': 'P9'}, '6.4', '575')]
+        r = analyze.compare(old + new)
+        self.assertEqual({k: tuple(v) for k, v in r['changed'].items()}, {'ini.framerate_limit': ('60', '120')})
+        self.assertEqual({k: tuple(v) for k, v in r['updates'].items()},
+                         {'kernel': ('6.2', '6.4'), 'nvidia_driver': ('570', '575')})
+
+    def test_kernel_and_driver_differences_never_split_a_group(self):
+        s = [mk('a', ambient={'kernel': f'6.{i}', 'nvidia_driver': f'57{i}'}) for i in range(4)]
+        r = analyze.compare(s)
+        self.assertTrue(r['verdict'].startswith('Baseline'), r['verdict'])
+        self.assertAlmostEqual(r['current_minutes'], 120.0)
+
+    def test_only_the_last_two_groups_are_compared(self):
+        s = group('a', [50] * 6) + group('b', [30] * 6) + group('c', [20] * 6)
+        r = analyze.compare(s)
+        m = r['metrics']['p99_ms']
+        self.assertEqual((m['before'], m['after']), (30, 20))
+        self.assertEqual({k: tuple(v) for k, v in r['changed'].items()}, {'ini.framerate_limit': ('b', 'c')})
+
+    # ---- frame basis ------------------------------------------------------------------------------------------
+    def test_mixed_frame_bases_cannot_be_compared(self):
+        old = group('a', [30] * 6)
+        for name, new in (('new group generated', group('b', [20] * 6, basis='generated')),
+                          ('mixed inside the new group', group('b', [20] * 5) + group('b', [20], basis='generated'))):
+            with self.subTest(name):
+                self.assertIn('Cannot compare', analyze.compare(old + new)['verdict'])
+        self.assertIn('Cannot compare', analyze.compare(
+            group('a', [30] * 6, basis='generated') + group('b', [20] * 6))['verdict'])
+
+    def test_two_generated_groups_are_compared_normally(self):
+        r = analyze.compare(group('a', [30] * 6, basis='generated') + group('b', [20] * 6, basis='generated'))
+        self.assertIn('metrics', r)
+
+    # ---- metric values ----------------------------------------------------------------------------------------
+    def test_stutters_are_pooled_over_seconds_not_averaged_per_visit(self):
+        # 200 s with 10 stutters and 1600 s with none: pooled 600*10/1800; mean of per-visit rates would be 15.
+        old = [mk('a', [visit(200, stut=10), visit(1600, stut=0)])]
+        new = [mk('b', [visit(900, stut=0), visit(900, stut=0)])]
+        m = analyze.compare(old + new)['metrics']['stutters_per_10min']
+        self.assertAlmostEqual(m['before'], 600 * 10 / 1800)
+        self.assertEqual(m['after'], 0)
+
+    def test_other_metrics_are_plain_medians_of_visits_not_time_weighted_or_means(self):
+        old = [mk('a', [visit(300, 20), visit(300, 20), visit(1200, 100)])]
+        new = [mk('b', [visit(600, 10), visit(600, 12), visit(600, 14)])]
+        m = analyze.compare(old + new)['metrics']
+        self.assertEqual((m['p99_ms']['before'], m['p99_ms']['after']), (20, 12))
+        self.assertAlmostEqual(m['low1_fps']['before'], 50.0)
+        self.assertAlmostEqual(m['avg_fps']['before'], 75.0)
+        self.assertAlmostEqual(m['avg_fps']['after'], 1500 / 12)
+
+    # ---- verdicts ---------------------------------------------------------------------------------------------
+    def test_clear_improvement_is_better_on_all_four_metrics(self):
+        old = group('a', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0], stut=6)      # 12 per 10 min
+        new = group('b', [20.0, 20.1, 19.9, 20.2, 19.8, 20.0], stut=2)      # 4 per 10 min
+        m = analyze.compare(old + new)['metrics']
         self.assertEqual(set(m), set(METRICS))
         for name in METRICS:
             self.assertEqual(m[name]['verdict'], 'better', name)
-            self.assertLess(m[name]['low'] if name in ('p99_ms', 'stutters_per_10min') else -m[name]['low'], 0)
-        self.assertAlmostEqual(m['p99_ms']['before'], 30.0, places=6)
-        self.assertAlmostEqual(m['p99_ms']['after'], 20.0, places=6)
-        self.assertAlmostEqual(m['low1_fps']['before'], 1000 / 30.0, places=6)
-        self.assertAlmostEqual(m['low1_fps']['after'], 1000 / 20.0, places=6)
-        self.assertLess(m['p99_ms']['high'], 0)       # whole 95% range of the change sits below zero
-        self.assertGreater(m['low1_fps']['low'], 0)   # and above zero for the fps metric
-        self.assertLessEqual(m['p99_ms']['low'], m['p99_ms']['high'])
+            self.assertLessEqual(m[name]['low'], m[name]['high'], name)
+        self.assertAlmostEqual(m['stutters_per_10min']['before'], 12.0)
+        self.assertAlmostEqual(m['stutters_per_10min']['after'], 4.0)
+        self.assertLess(m['p99_ms']['high'], 0)
+        self.assertGreater(m['low1_fps']['low'], 0)
 
-    def test_clearly_worse_group(self):
-        r = analyze.compare(group('a', [20.0, 20.1, 19.9]) + group('b', [30.0, 30.2, 29.8]))
+    def test_clear_regression_is_worse_on_all_four_metrics(self):
+        old = group('a', [20.0, 20.1, 19.9, 20.2, 19.8, 20.0], stut=2)
+        new = group('b', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0], stut=6)
+        m = analyze.compare(old + new)['metrics']
         for name in METRICS:
-            self.assertEqual(r['metrics'][name]['verdict'], 'worse', name)
-        self.assertGreater(r['metrics']['p99_ms']['low'], 0)
-        self.assertLess(r['metrics']['low1_fps']['high'], 0)
+            self.assertEqual(m[name]['verdict'], 'worse', name)
+        self.assertGreater(m['p99_ms']['low'], 0)
+        self.assertLess(m['low1_fps']['high'], 0)
+
+    def test_direction_is_judged_per_metric(self):
+        # p99 down (good), avg fps down (bad), stutters up (bad), low1 up (good)
+        old = [mk('a', [visit(600, 30, stut=5, low1=30, avg=60) for _ in range(3)])]
+        new = [mk('b', [visit(600, 20, stut=15, low1=40, avg=40) for _ in range(3)])]
+        m = analyze.compare(old + new)['metrics']
+        self.assertEqual(m['p99_ms']['verdict'], 'better')
+        self.assertEqual(m['avg_fps']['verdict'], 'worse')
+        self.assertEqual(m['stutters_per_10min']['verdict'], 'worse')
+        self.assertEqual(m['low1_fps']['verdict'], 'better')
+
+    def test_one_long_session_per_group_is_enough(self):
+        old = [mk('a', [visit(1860, 30, stut=30)])]
+        new = [mk('b', [visit(1860, 20, stut=5)])]
+        m = analyze.compare(old + new)['metrics']
+        for name in METRICS:
+            self.assertEqual(m[name]['verdict'], 'better', name)
+
+    def test_a_consistent_difference_below_the_minimum_effect_is_no_clear_change(self):
+        # Every visit identical inside a group, so the interval is a single point that excludes zero.
+        old = [mk('a', [visit(300, 20.0, stut=6, low1=50.0, avg=75.0) for _ in range(6)])]
+        new = [mk('b', [visit(300, 20.1, stut=7, low1=49.8, avg=74.5) for _ in range(6)])]
+        m = analyze.compare(old + new)['metrics']
+        for name in METRICS:
+            self.assertEqual(m[name]['verdict'], 'no clear change', name)
+        self.assertGreater(m['p99_ms']['low'], 0)                    # the range really does exclude zero
+        self.assertLess(m['avg_fps']['high'], 0)
+
+    def test_a_difference_of_exactly_the_minimum_effect_counts(self):
+        old = [mk('a', [visit(600, 20, stut=10, low1=50.0, avg=50.0) for _ in range(3)])]
+        new = [mk('b', [visit(600, 20, stut=5, low1=52.0, avg=51.0) for _ in range(3)])]
+        m = analyze.compare(old + new)['metrics']
+        self.assertEqual(m['stutters_per_10min']['verdict'], 'better')   # 10 -> 5
+        self.assertEqual(m['low1_fps']['verdict'], 'better')             # +2
+        self.assertEqual(m['avg_fps']['verdict'], 'better')              # +1
+        self.assertEqual(m['p99_ms']['verdict'], 'no clear change')      # 0
+
+    def test_a_short_visit_with_terrible_fps_does_not_change_the_verdict(self):
+        old = group('a', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0])
+        new = group('b', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0])
+        new += [mk('b', [visit(29.9, 900, low1=1, avg=1)]) for _ in range(8)]
+        for name, v in analyze.compare(old + new)['metrics'].items():
+            self.assertEqual(v['verdict'], 'no clear change', name)
 
     def test_overlapping_noisy_groups_show_no_clear_change(self):
-        r = analyze.compare(group('a', [20, 30, 25, 22, 28]) + group('b', [24, 29, 21, 27, 26]))
-        for name in METRICS:
-            self.assertEqual(r['metrics'][name]['verdict'], 'no clear change', name)
-        self.assertLess(r['metrics']['p99_ms']['low'], 0)
-        self.assertGreater(r['metrics']['p99_ms']['high'], 0)
-
-    def test_a_range_that_excludes_zero_is_not_enough_when_the_change_is_small_next_to_the_spread(self):
-        # old: 40 sessions at 20 ms and one outlier at 100 (spread 80); new: 41 sessions at 21 ms.
-        # The median never moves, so the range is [1, 1]: it excludes 0, but 1 < 80/2.
-        r = analyze.compare(group('a', [20.0] * 40 + [100.0]) + group('b', [21.0] * 41))
-        m = r['metrics']['p99_ms']
-        self.assertEqual((m['before'], m['after']), (20.0, 21.0))
-        self.assertGreater(m['low'], 0)
-        self.assertEqual(m['verdict'], 'no clear change')
+        old = group('a', [20, 30, 25, 22, 28, 24])
+        new = group('b', [24, 29, 21, 27, 26, 25])
+        m = analyze.compare(old + new)['metrics']
+        for name in ('p99_ms', 'low1_fps', 'avg_fps'):
+            self.assertEqual(m[name]['verdict'], 'no clear change', name)
+        self.assertLess(m['p99_ms']['low'], 0)
+        self.assertGreater(m['p99_ms']['high'], 0)
 
     def test_the_bootstrap_is_deterministic(self):
-        s = group('a', [20, 30, 25, 22, 28]) + group('b', [24, 29, 21, 27, 26])
-        a, b = analyze.compare(s), analyze.compare(s)
+        def build():
+            return group('a', [20, 30, 25, 22, 28, 24]) + group('b', [24, 29, 21, 27, 26, 25])
+        runs = [analyze.compare(build())['metrics'] for _ in range(3)]
         for name in METRICS:
-            self.assertEqual((a['metrics'][name]['low'], a['metrics'][name]['high']),
-                             (b['metrics'][name]['low'], b['metrics'][name]['high']))
-
-    def test_latest_group_is_compared_with_the_group_before_it(self):
-        s = group('a', [50, 50, 50]) + group('b', [30, 30, 30]) + group('c', [20, 20, 20])
-        r = analyze.compare(s)
-        self.assertEqual((r['metrics']['p99_ms']['before'], r['metrics']['p99_ms']['after']), (30, 20))
-        self.assertEqual(r['changed'], {'ini.framerate_limit': ['b', 'c']})
-
-    def test_a_returning_setting_does_not_merge_with_its_earlier_group(self):
-        s = group('a', [20, 20, 20]) + group('b', [30, 30, 30]) + group('a', [20, 20, 20])
-        r = analyze.compare(s)
-        self.assertEqual((r['metrics']['p99_ms']['before'], r['metrics']['p99_ms']['after']), (30, 20))
-        self.assertEqual(r['metrics']['p99_ms']['verdict'], 'better')
-
-    def test_changed_and_updates_list_old_and_new_values(self):
-        old = [mk('a', 30, chosen={'ini': {'framerate_limit': '60'}, 'proton': 'P10'},
-                  ambient={'kernel': '6.1', 'nvidia_driver': '570'}) for _ in range(3)]
-        new = [mk('b', 20, chosen={'ini': {'framerate_limit': '120'}, 'proton': 'P10'},
-                  ambient={'kernel': '6.2', 'nvidia_driver': '570'}) for _ in range(3)]
-        r = analyze.compare(old + new)
-        self.assertEqual(r['changed'], {'ini.framerate_limit': ['60', '120']})
-        self.assertEqual(r['updates'], {'kernel': ['6.1', '6.2']})
-
-    def test_only_the_busiest_kind_is_compared_and_short_sessions_in_it_are_ignored(self):
-        def s(fp, map_p99, hide_p99, map_seconds=3000):
-            return mk(fp, map_p99, seconds=map_seconds,
-                      extra_kinds={'hideout': {'seconds': 900, 'p99_ms': hide_p99, 'low1_fps': 1000 / hide_p99,
-                                               'avg_fps': 100.0, 'stutters_per_10min': 1.0}})
-        old = [s('a', 30, 10) for _ in range(3)]
-        new = [s('b', 20, 40), s('b', 21, 40), s('b', 22, 40), s('b', 1, 40, map_seconds=500)]
-        r = analyze.compare(old + new)
-        m = r['metrics']['p99_ms']
-        self.assertEqual((m['before'], m['after']), (30, 21))   # the 500 s session (p99 1) is dropped
-        self.assertEqual(m['verdict'], 'better')
+            ranges = {(r[name]['low'], r[name]['high']) for r in runs}
+            self.assertEqual(len(ranges), 1, name)
 
 
 class EndToEnd(SharedTmp):

@@ -5,7 +5,7 @@
                               (--launch starts the game through Lutris)
   gamelog list                recorded sessions
   gamelog report [SESSION]    rebuild the report of a session (default: the latest) and print its path
-  gamelog compare             current settings against the previous ones, when both have enough sessions
+  gamelog compare             current settings against the previous ones, when both have enough play
   gamelog next                what is worth testing next, and why; nothing is applied
   gamelog backfill            count crashes, disconnects and memory warnings in the game's existing log
   gamelog install-env         make Lutris start PoE2 with the frame-logging MangoHud config
@@ -92,9 +92,6 @@ def main(argv):
             capture.notify('PoE2 recorder', f'The session was recorded but the report failed ({type(error).__name__}: {error}). Data: {session}', 4)
             return 1
         if ok:
-            copy = os.environ.get('GAMELOG_REPORT_COPY')
-            if copy:    # one file, replaced each session
-                Path(copy).write_bytes(path.read_bytes())
             o = summary.get('overall')
             if o:
                 first = summary['findings'][0]['text'] if summary['findings'] else 'Nothing unusual.'
@@ -124,11 +121,12 @@ def main(argv):
         return 0
     if command == 'next' and not rest:
         _, _, comparison, suggestions = finish(latest())
-        have = comparison.get('current', 0)
-        if have < analyze.MIN_SESSIONS:
-            print(f'Collecting: {have} of {analyze.MIN_SESSIONS} sessions on the current settings. Change nothing until then.')
+        ready = comparison.get('ready', False)
+        if not ready:
+            print(f"Collecting: {comparison.get('current_minutes', 0):.0f} of {analyze.MIN_PLAY_MIN} minutes of play in "
+                  f"'{comparison.get('kind')}' areas on the current settings. Change nothing until then.")
         for i, c in enumerate(suggestions):
-            print(f"{'NEXT' if i == 0 and have >= analyze.MIN_SESSIONS else '    '} {c['id']}: {c['change']}\n       why: {c['evidence']}\n       judged by: {c['judged_by']}")
+            print(f"{'NEXT' if i == 0 and ready else '    '} {c['id']}: {c['change']}\n       why: {c['evidence']}\n       judged by: {c['judged_by']}")
         if not suggestions:
             print('Nothing in the latest session points at a setting worth testing.')
         return 0

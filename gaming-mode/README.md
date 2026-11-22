@@ -37,7 +37,7 @@ Nothing runs between sessions.
 |---|---|
 | `gamelog list` | recorded sessions |
 | `gamelog report [SESSION]` | rebuild a session's `report.html` and print its path |
-| `gamelog compare` | current settings against the previous ones; needs 3 sessions each |
+| `gamelog compare` | current settings against the previous ones; needs 30 minutes of play each |
 | `gamelog next` | what is worth testing next and why; nothing is applied |
 | `gamelog backfill` | crashes, disconnects and memory warnings in the game's old log |
 | `gamelog install-env` | once: make Lutris start the game with the frame-logging MangoHud config |
@@ -55,13 +55,16 @@ Each session is a directory in `~/.local/state/gaming/poe2/sessions/`:
   never stored.
 - `meta.json`, `config.ini`: versions and settings in effect, including the environment
   the game process really got, the Proton build and the sync method in use.
-- `summary.json`, `report.html`: numbers, findings and charts. The report is one offline file;
-  the latest one is also copied to `~/Downloads/poe2-session-report.html`.
+- `summary.json`, `report.html`: numbers, findings and charts. The report is one offline file.
 
 Numbers leave out loading screens and time with the window unfocused. A stutter is a frame
 at least 2.5 times the local median and at least 25 ms. `compare` groups sessions by the
-settings you chose; kernel, driver, Proton and package updates are listed, not grouped, so a rolling
-system still reaches three sessions per group.
+settings you chose; kernel, driver, Proton and package updates are listed, not grouped. It
+compares only the kind of area the latest session spent most time in (town, map or other) and
+counts area visits of at least 30 s. Each group needs 30 minutes of such play, so one long
+session is enough. A change counts only when the 95% range excludes zero and the change is at
+least 2 fps (1% low), 1 fps (average), 0.3 ms (99th percentile) or 5 stutters per 10 min.
+Compare like with like: a group from early acts against one from endgame maps measures the content.
 
 The recorder only reads: the game's log and config, OS counters and MangoHud's log. It never
 reads game memory and never sends input. `gamelog install-env` is the one setting it writes.
