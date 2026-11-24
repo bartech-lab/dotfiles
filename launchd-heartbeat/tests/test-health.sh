@@ -428,6 +428,11 @@ rc=0
 out=$(hb --status) || rc=$?
 assert_eq "$rc" 2 'pause uses its own max_age_hours'
 assert_line "$out" '^FAIL .*pause-other.*stale' 'owner name must appear in pause-<owner>'
+write_pause "$((now - 60))" '' gaming p-paused
+rc=0
+out=$(hb --status) || rc=$?
+assert_eq "$rc" 0 'a fresh pause without max_age_hours must be healthy'
+assert_no_line "$out" 'stale' 'a fresh pause without max_age_hours reported stale'
 
 echo "== busy_file: idle time, not total time, makes a pause stale"
 BUSY="$TEST_ROOT/gpu-busy"
