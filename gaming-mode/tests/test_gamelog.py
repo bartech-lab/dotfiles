@@ -1322,6 +1322,19 @@ class Cli(CapCase):
         self.assertEqual(ls(d179), nof)
         self.assertEqual(ls(d181), ['meta.json', 'summary.json'])
 
+    def test_prune_by_age_leaves_a_folder_without_a_date_name_alone(self):
+        d = self.root / 'state' / 'sessions' / 'reference-baseline'
+        (d / 'frames').mkdir(parents=True)
+        (d / 'frames' / 'a.csv.gz').write_bytes(b'F' * 400)
+        for f in ('meta.json', 'summary.json', 'events.jsonl'):
+            (d / f).write_text('{}\n')
+        old = time.time() - 400 * 86400
+        for p in [d, *d.rglob('*')]:
+            os.utime(p, (old, old))
+        r = self.run_cli('prune')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(sorted(p.name for p in d.iterdir()), ['events.jsonl', 'frames', 'meta.json', 'summary.json'])
+
     def test_prune_cap_deletes_oldest_frames_first(self):
         newest, mid, oldest = (self.age_session(x) for x in (1, 2, 3))
         self.cap("c.prune(cap_bytes=900); out = 0")
