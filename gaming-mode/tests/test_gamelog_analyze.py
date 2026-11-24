@@ -671,6 +671,13 @@ class Fingerprint(Tmp):
         self.assertNotEqual(old['fingerprint'], run('GE-Proton11-14', {'PROTON_ENABLE_WAYLAND': '0'})['fingerprint'])
         self.assertNotEqual(old['fingerprint'], run('GE-Proton11-14', {'DXVK_CONFIG_FILE': '/home/u/dxvk.conf'})['fingerprint'])
 
+    def test_stutters_in_the_first_20_seconds_after_loading_are_kept_apart(self):
+        # The zone starts at 7.93 (loading ends 7.43 + 0.5); stutters at about 12.0 and 32.0, the cutoff is 27.93.
+        runs = [(10, 300), (40, 1), (10, 2000), (40, 1), (10, 500)]
+        z = analyze.analyze(str(micro(self.root, 'settle', runs)))[0]['zones'][0]
+        self.assertEqual((z['stutters'], z['settled_stutters']), (2, 1))
+        self.assertAlmostEqual(z['settled_s'], z['stats']['seconds'] - 20)
+
     def test_chosen_has_the_documented_parts(self):
         c = self.fp(meta={'settings': {'lutris_env': {'AFMF_ENABLE': '1'}}})['chosen']
         for key in ('ini', 'lutris_env', 'sync', 'afmf', 'game_mode', 'system'):
@@ -908,6 +915,14 @@ class Compare(unittest.TestCase):
         m = analyze.compare(old + new)['metrics']['stutters_per_10min']
         self.assertAlmostEqual(m['before'], 600 * 10 / 1800)
         self.assertEqual(m['after'], 0)
+
+    def test_stutters_right_after_loading_do_not_count_in_the_comparison(self):
+        # 'b' has 30 more stutters per visit, all in the first 20 s; after that both have 2 per 280 s.
+        def settled(early):
+            return [dict(visit(300, stut=2 + early), settled_stutters=2, settled_s=280) for _ in range(6)]
+        m = analyze.compare([mk('a', settled(0)), mk('b', settled(30))])['metrics']['stutters_per_10min']
+        self.assertAlmostEqual(m['before'], 600 * 2 / 280, places=1)
+        self.assertEqual(m['before'], m['after'])
 
     def test_other_metrics_are_plain_medians_of_visits_not_time_weighted_or_means(self):
         old = [mk('a', [visit(300, 20), visit(300, 20), visit(300, 20), visit(1200, 100), visit(1200, 100)])]

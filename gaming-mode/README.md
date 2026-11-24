@@ -65,6 +65,8 @@ counts area visits of at least 30 s. Each group needs 30 minutes of such play in
 visits, so one long session is enough but one long visit is not: the range comes from
 resampling visits. A change counts only when the 95% range excludes zero and the change is at
 least 2 fps (1% low), 1 fps (average), 0.3 ms (99th percentile) or 10 stutters per 10 min.
+Its stutter rate leaves out the first 20 s after each loading screen: shaders compile there
+whatever the settings.
 Compare like with like: a group from early acts against one from endgame maps measures the content.
 
 The recorder only reads: the game's log and config, OS counters and MangoHud's log. It never

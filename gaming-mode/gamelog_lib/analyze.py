@@ -291,7 +291,11 @@ def analyze(session):
         idx = zone.pop('_idx')
         if zone['stats']:
             zone['stutters'] = sum(1 for t, _ in stutters if zone['start'] <= t < zone['end'])
-            summary['zones'].append({k: zone[k] for k in ('area', 'name', 'level', 'kind', 'load_s', 'stats', 'stutters', 'start', 'end')})
+            # compare leaves out the first SETTLE_S after loading: shader hitches there are noise no setting fixes.
+            zone['settled_stutters'] = sum(1 for t, _ in stutters if zone['start'] + SETTLE_S <= t < zone['end'])
+            zone['settled_s'] = max(0, zone['stats']['seconds'] - SETTLE_S)
+            summary['zones'].append({k: zone[k] for k in ('area', 'name', 'level', 'kind', 'load_s', 'stats', 'stutters',
+                                                          'settled_stutters', 'settled_s', 'start', 'end')})
             summary['kinds'].setdefault(zone['kind'], []).extend(lengths[i] for i in idx)
     summary['kinds'] = {kind: frame_stats(values) for kind, values in summary['kinds'].items()}
     for kind, stats in summary['kinds'].items():
@@ -471,7 +475,10 @@ def latest_kind(all_summaries):
 
 def metric(vs, key):
     if key == 'stutters_per_10min':     # pooled over play time, so short visits do not count as much as long ones
-        return 600 * sum(z['stutters'] for z in vs) / sum(z['stats']['seconds'] for z in vs)
+        # Without the first SETTLE_S after loading: measured 2026-11-24, fewer false verdicts and more real changes caught.
+        # A summary saved before that has no settled_* fields and counts the whole visit.
+        seconds = sum(z.get('settled_s', z['stats']['seconds']) for z in vs)
+        return 600 * sum(z.get('settled_stutters', z['stutters']) for z in vs) / max(seconds, 1)
     return statistics.median(z['stats'][key] for z in vs)
 
 
@@ -529,7 +536,7 @@ def compare(all_summaries):
         return result
     result['metrics'] = {}
     lines = []
-    for key, label, better in (('stutters_per_10min', 'stutters per 10 min', 'lower'), ('p99_ms', '99th percentile frame time (ms)', 'lower'),
+    for key, label, better in (('stutters_per_10min', 'stutters per 10 min (after the first 20 s in an area)', 'lower'), ('p99_ms', '99th percentile frame time (ms)', 'lower'),
                                ('low1_fps', '1% low fps', 'higher'), ('avg_fps', 'average fps', 'higher')):
         a, b = old['visits'], new['visits']
         low, high = bootstrap(a, b, key)
