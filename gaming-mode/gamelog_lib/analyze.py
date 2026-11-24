@@ -16,7 +16,7 @@ STUTTER_MS = 25           # ...and at least this long
 SETTLE_S = 20             # after a loading screen, slow seconds count as "new area"
 MIN_VISIT_S = 30          # an area visit shorter than this is mostly load-in and is left out of comparisons
 MIN_PLAY_MIN = 30         # each settings group needs this many minutes of such visits, from any number of sessions
-MIN_VISITS = 5            # ...and this many visits: the interval comes from resampling visits, so one long visit has no spread
+MIN_VISITS = 5            # ...and this many visits: the interval comes from resampling visits; false verdicts stop falling at 5
 MIN_EFFECT = {'stutters_per_10min': 5, 'p99_ms': 0.3, 'low1_fps': 2, 'avg_fps': 1}    # smaller changes are noise
 CHOSEN_INI = ('renderer_type', 'vsync', 'framerate_limit', 'framerate_limit_enabled', 'upscale', 'upscale_quality',
               'upscale_resolution', 'use_dynamic_resolution', 'dynamic_resolution_fps', 'shadow_type', 'texture_quality',
