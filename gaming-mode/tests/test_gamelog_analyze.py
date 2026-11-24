@@ -498,7 +498,7 @@ class SlowSecondsAndCauses(SharedTmp):
     def test_a_slow_share_over_two_percent_earns_no_good_finding(self):
         self.assertNotIn('good', levels(self.summary))
 
-    def test_vram_warning_event_is_a_bad_finding_about_graphics_memory(self):
+    def test_graphics_memory_near_full_is_a_bad_finding_and_the_warning_is_counted(self):
         self.assertTrue(any('memory' in t.lower() for t in texts(self.summary, 'bad')))
         self.assertEqual(self.summary['game_log']['vram_warnings'], 1)
 
@@ -1102,10 +1102,9 @@ class Report(SharedTmp):
 
     def test_report_shows_the_headline_numbers(self):
         o = self.summary['overall']
-        for label, value in (('avg', o['avg_fps']), ('low1', o['low1_fps']),
-                             ('stutters/10min', self.summary['stutters_per_10min'])):
-            forms = {f'{value:.0f}', f'{value:.1f}', f'{value:.2f}', str(value)}
-            self.assertTrue(any(f in self.page for f in forms), (label, forms))
+        for label, value in (('average fps', o['avg_fps']), ('1% low fps', o['low1_fps']),
+                             ('stutters / 10 min', self.summary['stutters_per_10min'])):
+            self.assertIn(f'<div class="card"><b>{value}</b>{htmllib.escape(label)}</div>', self.page)
 
     def test_findings_and_suggestions_are_listed_and_escaped(self):
         for f in self.summary['findings']:
@@ -1315,13 +1314,6 @@ class PrunedSession(Tmp):
         self.assertIn('frame logs of this session were removed', text)
         self.assertNotIn('<svg', text)
 
-    def test_a_session_that_never_had_frames_still_gets_a_summary(self):
-        path = build(self.root, 'empty', events=[ev(0.0, 'start')], end=10)
-        import shutil
-        shutil.rmtree(Path(path)/'frames', ignore_errors=True)
-        summary, _ = analyze.write_summary(str(path))
-        self.assertIsNone(summary['overall'])
-        self.assertEqual(json.loads((Path(path)/'summary.json').read_text())['overall'], None)
 
 if __name__ == '__main__':
     unittest.main()

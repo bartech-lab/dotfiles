@@ -77,8 +77,8 @@ summary() {
   local prev="$1" line out=""
   while IFS= read -r line; do
     case "$line" in
-      qdbus6*dodgewindows*) out+="SWITCH " ;;
-      qdbus6*"$prev"*) out+="RESTORE:$prev " ;;
+      qdbus6*"hiding = 'dodgewindows'"*) out+="SWITCH " ;;
+      qdbus6*"hiding = '$prev'"*) out+="RESTORE:$prev " ;;
       qdbus6*) out+="QDBUS? " ;;
       gaming*) out+="GAMING:${line#gaming } " ;;
     esac

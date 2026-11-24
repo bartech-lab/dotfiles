@@ -880,6 +880,8 @@ class Sessions(unittest.TestCase):
         text = (self.S['ok'].session() / 'config.ini').read_text()
         self.assertIn('renderer_type=Vulkan', text)
         self.assertIn('vsync=Off', text)
+        for key in ('account_name', 'login_token', 'user_email', 'password'):
+            self.assertNotIn(key, text)
 
     def test_process_env_has_gaming_vars(self):
         env = self.S['ok'].meta()['process']['env']
