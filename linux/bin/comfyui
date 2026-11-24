@@ -10,7 +10,8 @@ set -euo pipefail
 cd "$HOME/Projects/faceswap/ComfyUI"
 
 ours=0
-if ! gaming status | head -n 1 | grep -q '^Game mode on'; then
+status=$(gaming status) || true
+if [[ "$status" != 'Game mode on'* ]]; then
     gaming on
     ours=1
 fi
@@ -19,4 +20,7 @@ trap ':' INT  # Ctrl+C stops ComfyUI (it handles SIGINT); the script lives on to
 
 systemd-run --user --scope --collect --unit=comfyui --description="ComfyUI in its own memory scope" \
     -p MemoryMax="${COMFYUI_MEM:-32G}" -p MemorySwapMax=0 \
-    .venv/bin/python main.py --disable-pinned-memory "$@" || true
+    .venv/bin/python main.py --disable-pinned-memory "$@" || rc=$?
+# Ctrl+C (130) is the normal way to stop it; any other failure keeps its exit code.
+[ "${rc:-0}" = 130 ] && rc=0
+exit "${rc:-0}"
