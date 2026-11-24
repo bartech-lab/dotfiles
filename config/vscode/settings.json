@@ -16,5 +16,12 @@
   "git.autofetch": true,
   "git.autofetchPeriod": 60,
   "terminal.integrated.enableMultiLinePasteWarning": "never",
-  "editor.accessibilitySupport": "off"
+  "editor.accessibilitySupport": "off",
+  "editor.fontSize": 16,
+  "terminal.integrated.fontSize": 15,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  }
 }
