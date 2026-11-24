@@ -780,6 +780,8 @@ class Sessions(unittest.TestCase):
         S['stuck'] = Sim(cls.tmp, 'stuck', game + [['append', L('Started patching (1 free bytes available)')],
                                                    ['sleep', 1.5], ['rmproc', pid]])
         S['short'] = Sim(cls.tmp, 'short', game + [['sleep', 1.2], ['rmproc', pid]], GAMELOG_MIN_SECONDS='5')
+        S['short_no_notifier'] = Sim(cls.tmp, 'short_no_notifier', game + [['sleep', 1.2], ['rmproc', pid]],
+                                     GAMELOG_MIN_SECONDS='5', GAMELOG_NOTIFY='/nonexistent/notify-command')
         S['nogame'] = Sim(cls.tmp, 'nogame', [], GAMELOG_START_WAIT='1', GAMELOG_LAUNCH='/bin/true')
         S['crash'] = Sim(cls.tmp, 'crash', game + [
             ['append', L('[STARTUP] Game Start')],
@@ -908,6 +910,11 @@ class Sessions(unittest.TestCase):
         self.assertEqual(s.meta()['status'], 'short')
         self.assertTrue(any('short' in ' '.join(n).lower() for n in s.notes()), s.notes())
         self.assertEqual([n for n in s.prio4() if any('mangohud' in a.lower() for a in n)], [])
+
+    def test_a_missing_notifier_does_not_cost_the_session_its_metadata(self):
+        s = self.S['short_no_notifier']
+        self.assertEqual(s.meta()['status'], 'short')
+        self.assertNotIn('Traceback', s.err)
 
     def test_game_never_appears(self):
         s = self.S['nogame']

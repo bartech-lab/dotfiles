@@ -810,13 +810,13 @@ class Compare(unittest.TestCase):
 
     # ---- short visits and ignored sessions --------------------------------------------------------------------
     def test_short_visits_do_not_move_the_median_or_the_stutter_rate(self):
-        old = [mk('a', [visit(500, p, stut=5) for p in (40, 42, 44, 46)])]
-        new = [mk('b', [visit(500, p, stut=1) for p in (20, 22, 24, 26)]
+        old = [mk('a', [visit(500, p, stut=5) for p in (38, 40, 42, 44, 46, 48)])]
+        new = [mk('b', [visit(500, p, stut=1) for p in (18, 20, 22, 24, 26, 28)]
                   + [visit(10, 500, stut=100, low1=1, avg=1) for _ in range(4)])]
         m = analyze.compare(old + new)['metrics']
         self.assertEqual((m['p99_ms']['before'], m['p99_ms']['after']), (43, 23))
         self.assertEqual(m['p99_ms']['verdict'], 'better')
-        self.assertAlmostEqual(m['stutters_per_10min']['after'], 600 * 4 / 2000)
+        self.assertAlmostEqual(m['stutters_per_10min']['after'], 600 * 6 / 3000)
         self.assertAlmostEqual(m['low1_fps']['after'], (1000 / 22 + 1000 / 24) / 2)
         self.assertEqual(m['avg_fps']['verdict'], 'better')
 
@@ -888,16 +888,16 @@ class Compare(unittest.TestCase):
 
     # ---- metric values ----------------------------------------------------------------------------------------
     def test_stutters_are_pooled_over_seconds_not_averaged_per_visit(self):
-        # 200 s with 10 stutters and 1600 s with none: pooled 600*10/1800; mean of per-visit rates would be 15.
-        old = [mk('a', [visit(200, stut=10), visit(1600, stut=0)])]
-        new = [mk('b', [visit(900, stut=0), visit(900, stut=0)])]
+        # 200 s with 10 stutters and 1600 s with none: pooled 600*10/1800; mean of per-visit rates would be 6.
+        old = [mk('a', [visit(200, stut=10)] + [visit(400, stut=0) for _ in range(4)])]
+        new = [mk('b', [visit(360, stut=0) for _ in range(5)])]
         m = analyze.compare(old + new)['metrics']['stutters_per_10min']
         self.assertAlmostEqual(m['before'], 600 * 10 / 1800)
         self.assertEqual(m['after'], 0)
 
     def test_other_metrics_are_plain_medians_of_visits_not_time_weighted_or_means(self):
-        old = [mk('a', [visit(300, 20), visit(300, 20), visit(1200, 100)])]
-        new = [mk('b', [visit(600, 10), visit(600, 12), visit(600, 14)])]
+        old = [mk('a', [visit(300, 20), visit(300, 20), visit(300, 20), visit(1200, 100), visit(1200, 100)])]
+        new = [mk('b', [visit(600, p) for p in (10, 11, 12, 13, 14)])]
         m = analyze.compare(old + new)['metrics']
         self.assertEqual((m['p99_ms']['before'], m['p99_ms']['after']), (20, 12))
         self.assertAlmostEqual(m['low1_fps']['before'], 50.0)
@@ -929,8 +929,8 @@ class Compare(unittest.TestCase):
 
     def test_direction_is_judged_per_metric(self):
         # p99 down (good), avg fps down (bad), stutters up (bad), low1 up (good)
-        old = [mk('a', [visit(600, 30, stut=5, low1=30, avg=60) for _ in range(3)])]
-        new = [mk('b', [visit(600, 20, stut=15, low1=40, avg=40) for _ in range(3)])]
+        old = [mk('a', [visit(600, 30, stut=5, low1=30, avg=60) for _ in range(5)])]
+        new = [mk('b', [visit(600, 20, stut=15, low1=40, avg=40) for _ in range(5)])]
         m = analyze.compare(old + new)['metrics']
         self.assertEqual(m['p99_ms']['verdict'], 'better')
         self.assertEqual(m['avg_fps']['verdict'], 'worse')
@@ -938,8 +938,8 @@ class Compare(unittest.TestCase):
         self.assertEqual(m['low1_fps']['verdict'], 'better')
 
     def test_one_long_session_per_group_is_enough(self):
-        old = [mk('a', [visit(1860, 30, stut=30)])]
-        new = [mk('b', [visit(1860, 20, stut=5)])]
+        old = [mk('a', [visit(372, 30, stut=6) for _ in range(5)])]
+        new = [mk('b', [visit(372, 20, stut=1) for _ in range(5)])]
         m = analyze.compare(old + new)['metrics']
         for name in METRICS:
             self.assertEqual(m[name]['verdict'], 'better', name)
@@ -955,8 +955,8 @@ class Compare(unittest.TestCase):
         self.assertLess(m['avg_fps']['high'], 0)
 
     def test_a_difference_of_exactly_the_minimum_effect_counts(self):
-        old = [mk('a', [visit(600, 20, stut=10, low1=50.0, avg=50.0) for _ in range(3)])]
-        new = [mk('b', [visit(600, 20, stut=5, low1=52.0, avg=51.0) for _ in range(3)])]
+        old = [mk('a', [visit(600, 20, stut=10, low1=50.0, avg=50.0) for _ in range(5)])]
+        new = [mk('b', [visit(600, 20, stut=5, low1=52.0, avg=51.0) for _ in range(5)])]
         m = analyze.compare(old + new)['metrics']
         self.assertEqual(m['stutters_per_10min']['verdict'], 'better')   # 10 -> 5
         self.assertEqual(m['low1_fps']['verdict'], 'better')             # +2
@@ -993,15 +993,17 @@ class EndToEnd(SharedTmp):
         sessions = Path(self.root) / 'sessions'
         sessions.mkdir()
         plan = [('2026-11-01_a', 80, '60', '6.1'), ('2026-11-02_a', 80, '60', '6.2'), ('2026-11-03_a', 80, '60', '6.3'),
-                ('2026-11-04_a', 40, '120', '6.3'), ('2026-11-05_a', 40, '120', '6.4'), ('2026-11-06_a', 40, '120', '6.5')]
+                ('2026-11-04_a', 80, '60', '6.3'), ('2026-11-05_a', 80, '60', '6.3'),
+                ('2026-11-06_a', 40, '120', '6.3'), ('2026-11-07_a', 40, '120', '6.4'), ('2026-11-08_a', 40, '120', '6.5'),
+                ('2026-11-09_a', 40, '120', '6.5'), ('2026-11-10_a', 40, '120', '6.5')]
         for name, ms, cap, kernel in reversed(plan):   # written out of order on purpose
             micro(sessions, name, [(ms, int(620000 / ms))], area='Map_E2E', ini={'framerate_limit': cap},
                   meta={'settings': {'kernel': kernel}})
             analyze.write_summary(str(sessions / name))
         loaded = analyze.summaries(str(sessions))
         self.assertEqual([s['session'] for s in loaded], [p[0] for p in plan])
-        self.assertEqual(len({s['fingerprint'] for s in loaded[:3]}), 1)
-        self.assertNotEqual(loaded[2]['fingerprint'], loaded[3]['fingerprint'])
+        self.assertEqual(len({s['fingerprint'] for s in loaded[:5]}), 1)
+        self.assertNotEqual(loaded[4]['fingerprint'], loaded[5]['fingerprint'])
         self.assertAlmostEqual(loaded[0]['kinds']['map']['seconds'], 620.0, delta=0.2)
         r = analyze.compare(loaded)
         m = r['metrics']
@@ -1243,6 +1245,43 @@ class ZonesAndPauses(unittest.TestCase):
         zones, _ = analyze.zones_and_pauses(self.EVENTS, 100.0)
         self.assertEqual([(z['area'], z['kind'], z['start'], z['end'], z['load_s']) for z in zones],
                          [('MapSwamp', 'map', 18.5, 60.0, 6.0), ('HideoutFelled', 'hideout', 63.5, 100.0, 3.0)])
+
+
+class OverlappingPauses(Tmp):
+    def test_a_loading_screen_inside_an_unfocused_stretch_does_not_end_the_stretch(self):
+        events = [{'kind': 'zone', 't': 10.0, 'area': 'MapSwamp', 'level': 70},
+                  {'kind': 'loading', 't': 18.0, 'seconds': 6.0, 'name': 'Swamp'},
+                  {'kind': 'focus', 't': 100.0, 'value': 'Lost'},
+                  {'kind': 'loading', 't': 210.0, 'seconds': 9.5, 'name': 'Swamp'},
+                  {'kind': 'focus', 't': 500.0, 'value': 'Gained'}]
+        _, pauses = analyze.zones_and_pauses(events, 600.0)
+        self.assertEqual(pauses, [(11.5, 18.5), (100.0, 500.5)])
+
+    def test_pauses_that_touch_are_joined_and_pauses_apart_stay_separate(self):
+        events = [{'kind': 'loading', 't': 20.0, 'seconds': 5.0, 'name': 'A'},
+                  {'kind': 'loading', 't': 40.0, 'seconds': 5.0, 'name': 'B'},
+                  {'kind': 'focus', 't': 40.5, 'value': 'Lost'},
+                  {'kind': 'focus', 't': 50.0, 'value': 'Gained'}]
+        _, pauses = analyze.zones_and_pauses(events, 100.0)
+        self.assertEqual(pauses, [(14.5, 20.5), (34.5, 50.5)])
+
+
+class MinimumVisits(unittest.TestCase):
+    def test_a_group_with_fewer_than_five_visits_gets_no_verdict_however_long_it_played(self):
+        few = [mk('a', [visit(1000, 20.0), visit(1000, 20.0)]), mk('b', [visit(300, 30.0)] * 8)]
+        r = analyze.compare(few)
+        self.assertNotIn('metrics', r)
+        self.assertIn('the earlier settings have 2 area visits', r['verdict'])
+        self.assertIn('need 5 each', r['verdict'])
+        few_new = [mk('a', [visit(300, 20.0)] * 8), mk('b', [visit(600, 30.0)] * 4)]
+        r = analyze.compare(few_new)
+        self.assertNotIn('metrics', r)
+        self.assertIn('the current ones 4;', r['verdict'])
+
+    def test_five_visits_in_each_group_are_enough(self):
+        r = analyze.compare([mk('a', [visit(400, 20.0)] * 5), mk('b', [visit(400, 30.0)] * 5)])
+        self.assertIn('metrics', r)
+        self.assertEqual(r['metrics']['p99_ms']['verdict'], 'worse')
 
 
 class BootstrapInterval(unittest.TestCase):

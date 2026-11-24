@@ -16,6 +16,7 @@ STUTTER_MS = 25           # ...and at least this long
 SETTLE_S = 20             # after a loading screen, slow seconds count as "new area"
 MIN_VISIT_S = 30          # an area visit shorter than this is mostly load-in and is left out of comparisons
 MIN_PLAY_MIN = 30         # each settings group needs this many minutes of such visits, from any number of sessions
+MIN_VISITS = 5            # ...and this many visits: the interval comes from resampling visits, so one long visit has no spread
 MIN_EFFECT = {'stutters_per_10min': 5, 'p99_ms': 0.3, 'low1_fps': 2, 'avg_fps': 1}    # smaller changes are noise
 CHOSEN_INI = ('renderer_type', 'vsync', 'framerate_limit', 'framerate_limit_enabled', 'upscale', 'upscale_quality',
               'upscale_resolution', 'use_dynamic_resolution', 'dynamic_resolution_fps', 'shadow_type', 'texture_quality',
@@ -155,7 +156,13 @@ def zones_and_pauses(events, end):
         pauses.append((lost, end))
     if zones and zones[-1]['end'] is None:
         zones[-1]['end'] = end
-    return zones, sorted(pauses)
+    merged = []
+    for start, stop in sorted(pauses):      # a load during an unfocused stretch must not end the stretch
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], stop))
+        else:
+            merged.append((start, stop))
+    return zones, merged
 
 
 def frame_stats(lengths):
@@ -509,6 +516,10 @@ def compare(all_summaries):
     if minutes(old) < MIN_PLAY_MIN or minutes(new) < MIN_PLAY_MIN:
         result['verdict'] = (f"Not enough data in '{kind}' areas: the earlier settings have {minutes(old):.0f} minutes of play, "
                              f"the current ones {minutes(new):.0f}; need {MIN_PLAY_MIN} each.")
+        return result
+    if min(len(old['visits']), len(new['visits'])) < MIN_VISITS:
+        result['verdict'] = (f"Not enough data in '{kind}' areas: the earlier settings have {len(old['visits'])} area visits, "
+                             f"the current ones {len(new['visits'])}; need {MIN_VISITS} each.")
         return result
     bases = {s.get('frame_basis') for s in old['sessions'] + new['sessions']}
     if len(bases) > 1:

@@ -57,7 +57,11 @@ def run(cmd, timeout=5):
 
 
 def notify(title, message, priority=3):
-    subprocess.run([*NOTIFY, 'notify', title, message, '--priority', str(priority)], check=False)
+    """Best effort: a missing or hanging notifier must never cost a session its data or hold the recorder."""
+    try:
+        subprocess.run([*NOTIFY, 'notify', title, message, '--priority', str(priority)], check=False, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 # ---------------------------------------------------------------- game log
@@ -611,20 +615,23 @@ def record(launch):
     meta['frames'] = sum(f[0] for f in frames)
     meta['frame_seconds'] = round(sum(f[1] for f in frames), 1)
     played = ended - meta['game_start']
+    note = None
     if played < MIN_SECONDS:
         meta['status'] = 'short'
-        notify('PoE2 recorder', f'Session lasted {played:.0f} s: too short to measure.', 2)
+        note = (f'Session lasted {played:.0f} s: too short to measure.', 2)
     elif meta['frame_seconds'] < MIN_SECONDS and 'start' not in kinds:
         meta['status'] = 'not-started'
-        notify('PoE2 recorder', 'Session was not measured: the game never finished starting (stuck at the patch or launch step). '
-               'If that happens again, close it and launch once more.', 4)
+        note = ('Session was not measured: the game never finished starting (stuck at the patch or launch step). '
+                'If that happens again, close it and launch once more.', 4)
     elif meta['frame_seconds'] < MIN_SECONDS:
         meta['status'] = 'no-frames'
-        notify('PoE2 recorder', 'Session was not measured: MangoHud wrote no frame log. '
-               'Check that Lutris still has MANGOHUD=1 for PoE2 (run: gamelog install-env).', 4)
+        note = ('Session was not measured: MangoHud wrote no frame log. '
+                'Check that Lutris still has MANGOHUD=1 for PoE2 (run: gamelog install-env).', 4)
     else:
         meta['status'] = 'ok'
     write_json(session/'meta.json', meta)
+    if note:
+        notify('PoE2 recorder', *note)
     return session
 
 
