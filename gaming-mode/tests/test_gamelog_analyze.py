@@ -906,21 +906,21 @@ class Compare(unittest.TestCase):
 
     # ---- verdicts ---------------------------------------------------------------------------------------------
     def test_clear_improvement_is_better_on_all_four_metrics(self):
-        old = group('a', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0], stut=6)      # 12 per 10 min
+        old = group('a', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0], stut=8)      # 16 per 10 min
         new = group('b', [20.0, 20.1, 19.9, 20.2, 19.8, 20.0], stut=2)      # 4 per 10 min
         m = analyze.compare(old + new)['metrics']
         self.assertEqual(set(m), set(METRICS))
         for name in METRICS:
             self.assertEqual(m[name]['verdict'], 'better', name)
             self.assertLessEqual(m[name]['low'], m[name]['high'], name)
-        self.assertAlmostEqual(m['stutters_per_10min']['before'], 12.0)
+        self.assertAlmostEqual(m['stutters_per_10min']['before'], 16.0)
         self.assertAlmostEqual(m['stutters_per_10min']['after'], 4.0)
         self.assertLess(m['p99_ms']['high'], 0)
         self.assertGreater(m['low1_fps']['low'], 0)
 
     def test_clear_regression_is_worse_on_all_four_metrics(self):
         old = group('a', [20.0, 20.1, 19.9, 20.2, 19.8, 20.0], stut=2)
-        new = group('b', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0], stut=6)
+        new = group('b', [30.0, 30.2, 29.8, 30.1, 29.9, 30.0], stut=8)
         m = analyze.compare(old + new)['metrics']
         for name in METRICS:
             self.assertEqual(m[name]['verdict'], 'worse', name)
@@ -938,7 +938,7 @@ class Compare(unittest.TestCase):
         self.assertEqual(m['low1_fps']['verdict'], 'better')
 
     def test_one_long_session_per_group_is_enough(self):
-        old = [mk('a', [visit(372, 30, stut=6) for _ in range(5)])]
+        old = [mk('a', [visit(372, 30, stut=10) for _ in range(5)])]
         new = [mk('b', [visit(372, 20, stut=1) for _ in range(5)])]
         m = analyze.compare(old + new)['metrics']
         for name in METRICS:
@@ -947,7 +947,7 @@ class Compare(unittest.TestCase):
     def test_a_consistent_difference_below_the_minimum_effect_is_no_clear_change(self):
         # Every visit identical inside a group, so the interval is a single point that excludes zero.
         old = [mk('a', [visit(300, 20.0, stut=6, low1=50.0, avg=75.0) for _ in range(6)])]
-        new = [mk('b', [visit(300, 20.1, stut=7, low1=49.8, avg=74.5) for _ in range(6)])]
+        new = [mk('b', [visit(300, 20.1, stut=10, low1=49.8, avg=74.5) for _ in range(6)])]   # 12 -> 20 stutters per 10 min
         m = analyze.compare(old + new)['metrics']
         for name in METRICS:
             self.assertEqual(m[name]['verdict'], 'no clear change', name)
@@ -955,10 +955,10 @@ class Compare(unittest.TestCase):
         self.assertLess(m['avg_fps']['high'], 0)
 
     def test_a_difference_of_exactly_the_minimum_effect_counts(self):
-        old = [mk('a', [visit(600, 20, stut=10, low1=50.0, avg=50.0) for _ in range(5)])]
+        old = [mk('a', [visit(600, 20, stut=15, low1=50.0, avg=50.0) for _ in range(5)])]
         new = [mk('b', [visit(600, 20, stut=5, low1=52.0, avg=51.0) for _ in range(5)])]
         m = analyze.compare(old + new)['metrics']
-        self.assertEqual(m['stutters_per_10min']['verdict'], 'better')   # 10 -> 5
+        self.assertEqual(m['stutters_per_10min']['verdict'], 'better')   # 15 -> 5
         self.assertEqual(m['low1_fps']['verdict'], 'better')             # +2
         self.assertEqual(m['avg_fps']['verdict'], 'better')              # +1
         self.assertEqual(m['p99_ms']['verdict'], 'no clear change')      # 0
