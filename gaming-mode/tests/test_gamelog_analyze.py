@@ -1252,5 +1252,37 @@ class BootstrapInterval(unittest.TestCase):
         group = [{'stats': {'avg_fps': v, 'seconds': 60}, 'stutters': 0} for v in (10, 10, 20, 20)]
         self.assertEqual(analyze.bootstrap(group, list(group), 'avg_fps'), (-10, 10))
 
+class PrunedSession(Tmp):
+    def test_rebuilding_a_session_whose_frame_logs_were_pruned_keeps_its_saved_numbers(self):
+        import shutil
+        path = micro(self.root, 'old', [(10, 500), (20, 100)])
+        saved, _ = analyze.write_summary(str(path))
+        self.assertEqual(saved['overall']['frames'], 600)
+        before = (Path(path)/'summary.json').read_text()
+        shutil.rmtree(Path(path)/'frames')
+        again, _ = analyze.write_summary(str(path))
+        self.assertEqual((Path(path)/'summary.json').read_text(), before)
+        self.assertEqual(again['overall'], saved['overall'])
+
+    def test_the_report_of_a_pruned_session_shows_the_saved_numbers_and_says_why_there_are_no_charts(self):
+        import shutil
+        path = micro(self.root, 'old', [(10, 500), (20, 100)])
+        saved, _ = analyze.write_summary(str(path))
+        shutil.rmtree(Path(path)/'frames')
+        summary, detail = analyze.write_summary(str(path))
+        out = analyze.report(Path(path), summary, detail, analyze.compare([summary]), [])
+        text = Path(out).read_text()
+        self.assertIn(f"<b>{saved['overall']['avg_fps']}</b>average fps", text)
+        self.assertIn('frame logs of this session were removed', text)
+        self.assertNotIn('<svg', text)
+
+    def test_a_session_that_never_had_frames_still_gets_a_summary(self):
+        path = build(self.root, 'empty', events=[ev(0.0, 'start')], end=10)
+        import shutil
+        shutil.rmtree(Path(path)/'frames', ignore_errors=True)
+        summary, _ = analyze.write_summary(str(path))
+        self.assertIsNone(summary['overall'])
+        self.assertEqual(json.loads((Path(path)/'summary.json').read_text())['overall'], None)
+
 if __name__ == '__main__':
     unittest.main()

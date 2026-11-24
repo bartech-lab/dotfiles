@@ -422,7 +422,13 @@ def findings(s, meta):
 
 def write_summary(session):
     summary, detail = analyze(session)
-    (Path(session)/'summary.json').write_text(json.dumps(summary, indent=1, sort_keys=True) + '\n')
+    path = Path(session)/'summary.json'
+    if path.exists() and not (Path(session)/'frames').is_dir():
+        # The frame logs were pruned: the saved numbers are all that is left, so they are kept.
+        return json.loads(path.read_text()), detail
+    temp = path.with_name('summary.json.tmp')
+    temp.write_text(json.dumps(summary, indent=1, sort_keys=True) + '\n')
+    temp.replace(path)
     return summary, detail
 
 
@@ -654,7 +660,9 @@ def report(session, summary, detail, comparison, suggestions):
                  ('stutters / 10 min', summary['stutters_per_10min']), ('worst frame, ms', o['max_ms'])]
         doc.append('<div class="cards">' + ''.join(f'<div class="card"><b>{v}</b>{e(k)}</div>' for k, v in cards) + '</div>')
     doc.append('<h2>Findings</h2><ul class="f">' + (''.join(f'<li class="{f["level"]}">{e(f["text"])}</li>' for f in summary['findings']) or '<li>Nothing unusual.</li>') + '</ul>')
-    if o:
+    if o and not len(detail['times']):
+        doc.append("<p class='muted'>The frame logs of this session were removed by the retention rules, so there are no charts. The numbers above are the saved ones.</p>")
+    if o and len(detail['times']):
         t0, t1 = detail['times'][0], detail['times'][-1]
         per_second = {}
         for t, length in zip(detail['times'], detail['lengths']):
