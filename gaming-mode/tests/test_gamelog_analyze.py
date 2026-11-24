@@ -657,6 +657,20 @@ class Fingerprint(Tmp):
         self.assertEqual(old['fingerprint'], new['fingerprint'])
         self.assertEqual(new['ambient']['proton'], 'GE-Proton10-27')
 
+    def test_a_path_inside_the_proton_folder_moves_with_the_build(self):
+        # Seen 2026-11-24: PROTON_PIPEWIRE_ALSA_PLUGIN names a file in the GE-Proton folder, so 11-12 -> 11-14 split the group.
+        def run(build, extra=None):
+            root = f'/home/u/.local/share/umu/compatibilitytools/{build}'
+            env = {'PROTON_PIPEWIRE_ALSA_PLUGIN': f'{root}/files/lib/alsa-lib/libasound_module_pcm_pipewire.so',
+                   'PROTON_ENABLE_WAYLAND': '1', **(extra or {})}
+            return self.fp(meta={'process': {'proton_version': build, 'proton_dir': root, 'env': env}})
+        old, new = run('GE-Proton11-12'), run('GE-Proton11-14')
+        self.assertEqual(old['fingerprint'], new['fingerprint'])
+        self.assertEqual(new['chosen']['game_env'], {'PROTON_ENABLE_WAYLAND': '1'})
+        # A chosen setting next to it still counts, and so does a path outside the Proton folder.
+        self.assertNotEqual(old['fingerprint'], run('GE-Proton11-14', {'PROTON_ENABLE_WAYLAND': '0'})['fingerprint'])
+        self.assertNotEqual(old['fingerprint'], run('GE-Proton11-14', {'DXVK_CONFIG_FILE': '/home/u/dxvk.conf'})['fingerprint'])
+
     def test_chosen_has_the_documented_parts(self):
         c = self.fp(meta={'settings': {'lutris_env': {'AFMF_ENABLE': '1'}}})['chosen']
         for key in ('ini', 'lutris_env', 'sync', 'afmf', 'game_mode', 'system'):

@@ -200,7 +200,9 @@ def find_stutters(times, lengths):
 def fingerprint(meta, ini):
     """The settings somebody chose. Updates (kernel, driver, packages) are kept apart as 'ambient'."""
     settings, process = meta.get('settings', {}), meta.get('process', {})
-    env = process.get('env', {})
+    # A path inside the Proton folder changes with every build, which is an update (see ambient below).
+    proton_dir = process.get('proton_dir')
+    env = {k: v for k, v in process.get('env', {}).items() if not (proton_dir and str(v).startswith(proton_dir + '/'))}
     # The whole display section when the file has one, so no graphics key is missed.
     graphics = dict(ini.get('[DISPLAY]') or {k: ini[k] for k in CHOSEN_INI if k in ini})
     graphics.update({k: ini[k] for k in ('engine_multithreading_mode', 'networking_type') if k in ini})
