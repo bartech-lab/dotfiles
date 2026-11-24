@@ -1226,5 +1226,31 @@ class FingerprintCmdlineAndSections(Tmp):
         self.assertEqual(self.summ(FLAT)['fps_cap'], 60)
 
 
+class ZonesAndPauses(unittest.TestCase):
+    EVENTS = [
+        {'kind': 'zone', 't': 10.0, 'area': 'MapSwamp', 'level': 70},
+        {'kind': 'loading', 't': 18.0, 'seconds': 6.0, 'name': 'Swamp'},
+        {'kind': 'loading', 't': 40.0, 'seconds': 2.0, 'name': 'Swamp'},
+        {'kind': 'zone', 't': 60.0, 'area': 'HideoutFelled', 'level': 1},
+        {'kind': 'loading', 't': 63.0, 'seconds': 3.0, 'name': 'Hideout'},
+    ]
+
+    def test_a_loading_screen_is_left_out_from_its_start_to_half_a_second_after_its_end(self):
+        _, pauses = analyze.zones_and_pauses(self.EVENTS, 100.0)
+        self.assertEqual(pauses, [(11.5, 18.5), (37.5, 40.5), (59.5, 63.5)])
+
+    def test_a_zone_runs_from_half_a_second_after_its_load_to_the_next_area_change(self):
+        zones, _ = analyze.zones_and_pauses(self.EVENTS, 100.0)
+        self.assertEqual([(z['area'], z['kind'], z['start'], z['end'], z['load_s']) for z in zones],
+                         [('MapSwamp', 'map', 18.5, 60.0, 6.0), ('HideoutFelled', 'hideout', 63.5, 100.0, 3.0)])
+
+
+class BootstrapInterval(unittest.TestCase):
+    def test_the_interval_covers_95_percent_of_the_resampled_differences(self):
+        # Medians of 4 draws from two 10s and two 20s are 10, 15 or 20; a difference of -10 or +10
+        # has probability (5/16)^2 = 9.8% each, so both lie inside the central 95% and outside the central 50%.
+        group = [{'stats': {'avg_fps': v, 'seconds': 60}, 'stutters': 0} for v in (10, 10, 20, 20)]
+        self.assertEqual(analyze.bootstrap(group, list(group), 'avg_fps'), (-10, 10))
+
 if __name__ == '__main__':
     unittest.main()
