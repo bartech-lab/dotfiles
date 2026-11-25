@@ -222,6 +222,30 @@ def normalize_responses(payload):
     return payload
 
 
+# Claude Code effort -> the three levels the Bonsai chat template accepts.
+EFFORT_MAP = {"low": "low", "medium": "medium", "high": "medium", "xhigh": "xhigh", "max": "xhigh"}
+
+
+def apply_effort(payload):
+    """Anthropic /v1/messages: pass Claude Code's effort on to the chat template.
+
+    Claude Code sends `output_config.effort`; llama-server ignores it, so /effort
+    did nothing (measured 2026-11-25: medium 2,441 tokens, xhigh 2,700, against
+    15,470 with chat_template_kwargs). An effort the caller already put into
+    chat_template_kwargs wins.
+    """
+    cfg = payload.get("output_config")
+    effort = EFFORT_MAP.get(cfg.get("effort")) if isinstance(cfg, dict) and isinstance(cfg.get("effort"), str) else None
+    if not effort:
+        return payload
+    kwargs = payload.get("chat_template_kwargs")
+    if kwargs is None:
+        kwargs = payload["chat_template_kwargs"] = {}
+    if isinstance(kwargs, dict):
+        kwargs.setdefault("reasoning_effort", effort)
+    return payload
+
+
 def normalize(payload):
     messages = payload.get("messages")
     if not isinstance(messages, list):
@@ -365,6 +389,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 payload = normalize_chat(payload)
             else:
                 payload = normalize(payload)
+                if self.path.startswith("/v1/messages") and isinstance(payload, dict):
+                    payload = apply_effort(payload)
             raw = json.dumps(payload).encode()
         except (ValueError, TypeError, AttributeError):
             payload = None  # not JSON we understand — forward verbatim

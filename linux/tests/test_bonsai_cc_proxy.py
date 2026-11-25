@@ -323,6 +323,45 @@ class AnthropicSystemTest(ProxyCase):
         self.assertEqual(got, body)
 
 
+class AnthropicEffortTest(ProxyCase):
+    """Claude Code sends its effort as output_config.effort, which llama-server ignores."""
+
+    def effort_sent(self, body, path="/v1/messages"):
+        port = self.start()
+        before = len(self.up.inference())
+        status, _, _ = call(port, "POST", path, body)
+        self.assertEqual(status, 200)
+        recs = self.up.inference()[before:]
+        self.assertEqual([r["path"] for r in recs], [path])
+        return json.loads(recs[0]["body"]).get("chat_template_kwargs")
+
+    def body(self, **extra):
+        return dict({"messages": [{"role": "user", "content": "q"}]}, **extra)
+
+    def test_each_claude_code_level_maps_to_a_level_the_chat_template_accepts(self):
+        for sent, want in (("low", "low"), ("medium", "medium"), ("high", "medium"), ("xhigh", "xhigh"), ("max", "xhigh")):
+            with self.subTest(sent=sent):
+                got = self.effort_sent(self.body(output_config={"effort": sent}))
+                self.assertEqual(got, {"reasoning_effort": want})
+
+    def test_effort_set_by_the_caller_in_chat_template_kwargs_wins(self):
+        body = self.body(output_config={"effort": "xhigh"}, chat_template_kwargs={"reasoning_effort": "low"})
+        self.assertEqual(self.effort_sent(body), {"reasoning_effort": "low"})
+
+    def test_other_chat_template_kwargs_are_kept_beside_the_effort(self):
+        body = self.body(output_config={"effort": "low"}, chat_template_kwargs={"preserve_thinking": True})
+        self.assertEqual(self.effort_sent(body), {"preserve_thinking": True, "reasoning_effort": "low"})
+
+    def test_unknown_or_malformed_effort_adds_nothing(self):
+        for cfg in ({"effort": "turbo"}, {"effort": 3}, {}, "medium", None):
+            with self.subTest(cfg=cfg):
+                self.assertIsNone(self.effort_sent(self.body(output_config=cfg)))
+
+    def test_chat_completions_body_is_not_touched(self):
+        got = self.effort_sent(self.body(output_config={"effort": "xhigh"}), "/v1/chat/completions")
+        self.assertIsNone(got)
+
+
 class ChatCompletionsSystemTest(ProxyCase):
     def test_scattered_system_messages_merge_into_one_leading_message_keeping_other_order(self):
         port = self.start()
