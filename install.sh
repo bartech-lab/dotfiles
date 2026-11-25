@@ -786,8 +786,8 @@ if [[ "$DOTFILES_OS" == macos ]]; then
     config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json" "VS Code settings"
     config_symlinks "$DOTFILES_DIR/config/vscode/keybindings.json" "$HOME/Library/Application Support/Code/User/keybindings.json" "VS Code keybindings"
 else
-    config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/.config/Code/User/settings.json" "VS Code settings"
     # Arch's `code` package is the OSS build and reads ~/.config/Code - OSS
+    config_symlinks "$DOTFILES_DIR/config/vscode/settings.json" "$HOME/.config/Code - OSS/User/settings.json" "VS Code settings"
     config_symlinks "$DOTFILES_DIR/config/vscode/keybindings.json" "$HOME/.config/Code - OSS/User/keybindings.json" "VS Code keybindings"
 fi
 
