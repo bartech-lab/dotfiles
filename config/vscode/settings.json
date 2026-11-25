@@ -56,7 +56,7 @@
   "extensions.autoCheckUpdates": false,
   "extensions.autoUpdate": "off",
   "extensions.ignoreRecommendations": true,
-  "git.autorefresh": false,
+  "git.autorefresh": true,
   "git.autofetch": true,
   "telemetry.telemetryLevel": "off",
   "git.autofetchPeriod": 60,
