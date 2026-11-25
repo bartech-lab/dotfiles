@@ -889,6 +889,65 @@ def system_texts(system):
     return [b["text"] for b in system]
 
 
+class AnthropicLaterSystemTest(ProxyCase):
+    """A system message after the first assistant turn must not reach the top-level system:
+    Claude Code sends one after every user turn, so lifting them changed the system prompt on
+    every request and the server re-read the whole conversation each turn."""
+
+    REMINDER = "<system-reminder>\nbe brief\n</system-reminder>"
+
+    def turn(self, n):
+        msgs = [{"role": "user", "content": "task"}, {"role": "system", "content": "env"}]
+        for i in range(n):
+            msgs += [
+                {"role": "assistant", "content": [{"type": "tool_use", "id": f"t{i}", "name": "Read", "input": {}}]},
+                {"role": "user", "content": [{"type": "tool_result", "tool_use_id": f"t{i}", "content": f"out{i}"}]},
+                {"role": "system", "content": "be brief"},
+            ]
+        return {"system": "base", "messages": msgs}
+
+    def test_the_system_and_all_earlier_messages_are_identical_on_the_next_turn(self):
+        port = self.start()
+        for n in (1, 2):
+            self.assertEqual(call(port, "POST", "/v1/messages", self.turn(n))[0], 200)
+        one, two = (json.loads(r["body"]) for r in self.up.inference() if r["path"] == "/v1/messages")
+        self.assertEqual(one["system"], two["system"])
+        self.assertEqual(one["messages"], two["messages"][: len(one["messages"])])
+        self.assertEqual(system_texts(one["system"]), ["base", "env"])
+
+    def test_a_later_system_message_becomes_a_reminder_block_on_the_user_message_before_it(self):
+        port = self.start()
+        got = self.forwarded_json(port, "/v1/messages", self.turn(1))
+        self.assertEqual([m["role"] for m in got["messages"]], ["user", "assistant", "user"])
+        self.assertEqual(
+            got["messages"][2]["content"],
+            [{"type": "tool_result", "tool_use_id": "t0", "content": "out0"}, {"type": "text", "text": self.REMINDER}],
+        )
+
+    def test_a_later_system_message_after_a_string_user_message_keeps_the_user_text(self):
+        port = self.start()
+        body = {"messages": [{"role": "user", "content": "a"}, {"role": "assistant", "content": "b"},
+                             {"role": "user", "content": "c"}, {"role": "system", "content": "be brief"}]}
+        got = self.forwarded_json(port, "/v1/messages", body)
+        self.assertNotIn("system", got)
+        self.assertEqual(got["messages"][2], {"role": "user", "content": [{"type": "text", "text": "c"}, {"type": "text", "text": self.REMINDER}]})
+
+    def test_a_later_system_message_right_after_an_assistant_becomes_its_own_user_message(self):
+        port = self.start()
+        body = {"messages": [{"role": "user", "content": "a"}, {"role": "assistant", "content": "b"},
+                             {"role": "system", "content": "be brief"}, {"role": "user", "content": "c"}]}
+        got = self.forwarded_json(port, "/v1/messages", body)
+        self.assertEqual(got["messages"][2], {"role": "user", "content": [{"type": "text", "text": self.REMINDER}]})
+        self.assertEqual(got["messages"][3], {"role": "user", "content": "c"})
+
+    def test_an_empty_later_system_message_is_dropped(self):
+        port = self.start()
+        body = {"messages": [{"role": "user", "content": "a"}, {"role": "assistant", "content": "b"},
+                             {"role": "user", "content": "c"}, {"role": "system", "content": ""}]}
+        got = self.forwarded_json(port, "/v1/messages", body)
+        self.assertEqual(got["messages"], body["messages"][:3])
+
+
 class EmptySystemTest(ProxyCase):
     def test_anthropic_empty_string_system_adds_no_block(self):
         port = self.start()

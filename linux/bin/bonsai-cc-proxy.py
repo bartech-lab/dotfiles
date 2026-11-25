@@ -249,15 +249,20 @@ def apply_effort(payload):
 
 
 def normalize(payload):
+    """Anthropic /v1/messages: move system-role messages to where the chat template takes them.
+
+    A system message before the first assistant turn goes into the top-level `system`.
+    A later one stays in place as a <system-reminder> text block on the user message
+    before it. Claude Code sends one after every user turn; lifting those too changed
+    the system prompt on every request, so llama-server kept only the first 12k tokens
+    of its prompt cache and re-read the rest each turn (measured 2026-11-25: 43,667 of
+    44,172 prompt tokens processed again).
+    """
     messages = payload.get("messages")
     if not isinstance(messages, list):
         return payload
-
-    strays = [m for m in messages if m.get("role") == "system"]
-    if not strays:
+    if not any(m.get("role") == "system" for m in messages):
         return payload
-
-    payload["messages"] = [m for m in messages if m.get("role") != "system"]
 
     system = payload.get("system")
     blocks = []
@@ -265,11 +270,33 @@ def normalize(payload):
         blocks.append({"type": "text", "text": system})
     elif isinstance(system, list):
         blocks.extend(system)
-    for m in strays:
+
+    kept, lifted, seen_assistant = [], False, False
+    for m in messages:
+        role = m.get("role")
+        if role != "system":
+            seen_assistant = seen_assistant or role == "assistant"
+            kept.append(m)
+            continue
         t = text_of(m.get("content"))
-        if t:
+        if not t:
+            continue
+        if not seen_assistant:
             blocks.append({"type": "text", "text": t})
-    payload["system"] = blocks
+            lifted = True
+            continue
+        note = {"type": "text", "text": f"<system-reminder>\n{t}\n</system-reminder>"}
+        prev = kept[-1] if kept else None
+        if prev is not None and prev.get("role") == "user":
+            content = prev.get("content")
+            parts = [{"type": "text", "text": content}] if isinstance(content, str) else list(content or [])
+            kept[-1] = {**prev, "content": parts + [note]}
+        else:
+            kept.append({"role": "user", "content": [note]})
+
+    payload["messages"] = kept
+    if lifted or "system" in payload:
+        payload["system"] = blocks
     return payload
 
 
