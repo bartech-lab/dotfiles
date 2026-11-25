@@ -396,7 +396,7 @@ Installed by `gaming-mode/setup.sh`; see [gaming-mode README](../gaming-mode/REA
 ### gamelog
 
 Linux only. Records every Path of Exile 2 session started from the desktop icon (`poe2-session`): each frame's length, system load once per second, and the game's own log events. After the game exits it writes `report.html` and sends a notification.
-`gamelog list` shows sessions, `gamelog report` rebuilds the latest report, `gamelog compare` judges a settings change once both sides have 3 sessions, and `gamelog next` names what is worth testing next. It changes no setting.
+`gamelog list` shows sessions, `gamelog report` rebuilds the latest report, `gamelog compare` judges a settings change once both sides have 30 minutes of play in 5 area visits, and `gamelog next` names what is worth testing next. It changes no setting.
 See [gaming-mode README](../gaming-mode/README.md#path-of-exile-2-session-recorder).
 
 ### extract
