@@ -46,6 +46,8 @@ author_calls=$(rg -c '^/users/' "$GLAB_LOG" || true)
 discussion_pages=$(rg -c '/merge_requests/.*/discussions' "$GLAB_LOG" || true)
 [[ "$discussion_pages" -eq 3 ]] || fail "expected paginated discussion calls, got $discussion_pages"
 
+# stat_comments reads these globals.
+# shellcheck disable=SC2034
 MR_DATA="$enriched" TOP_N=0 EXCLUDE_BOTS=true FORMAT=json
 comments_output=$(stat_comments)
 comments_json=$(sed -n '/^\[/,$p' <<< "$comments_output")
@@ -54,7 +56,7 @@ comments_json=$(sed -n '/^\[/,$p' <<< "$comments_output")
 
 export GLAB_MODE=retry-discussion
 export GLAB_RETRY_FILE="$TMP_DIR/retry.count"
-retry_data=$(fetch_discussion_data org/group/repo '[{"iid":"102"}]') || fail "retry fetch failed"
+(fetch_discussion_data org/group/repo '[{"iid":"102"}]') >/dev/null || fail "retry fetch failed"
 [[ "$(<"$GLAB_RETRY_FILE")" -eq 4 ]] || fail "expected three retries before success"
 unset GLAB_MODE GLAB_RETRY_FILE
 

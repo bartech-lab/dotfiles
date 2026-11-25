@@ -75,6 +75,7 @@ source "$SCRIPT_DIR/lib/api.sh"
 
 # Source stat functions
 for f in "$SCRIPT_DIR"/stats/*.sh; do
+  # shellcheck source=/dev/null
   source "$f"
 done
 
