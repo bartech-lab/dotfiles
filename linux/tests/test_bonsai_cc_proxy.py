@@ -339,7 +339,7 @@ class AnthropicEffortTest(ProxyCase):
         return dict({"messages": [{"role": "user", "content": "q"}]}, **extra)
 
     def test_each_claude_code_level_maps_to_a_level_the_chat_template_accepts(self):
-        for sent, want in (("low", "low"), ("medium", "medium"), ("high", "medium"), ("xhigh", "xhigh"), ("max", "xhigh")):
+        for sent, want in (("low", "low"), ("medium", "medium"), ("high", "medium"), ("xhigh", "medium"), ("max", "medium")):
             with self.subTest(sent=sent):
                 got = self.effort_sent(self.body(output_config={"effort": sent}))
                 self.assertEqual(got, {"reasoning_effort": want})

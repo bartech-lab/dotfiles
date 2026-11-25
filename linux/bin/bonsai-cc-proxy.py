@@ -222,8 +222,10 @@ def normalize_responses(payload):
     return payload
 
 
-# Claude Code effort -> the three levels the Bonsai chat template accepts.
-EFFORT_MAP = {"low": "low", "medium": "medium", "high": "medium", "xhigh": "xhigh", "max": "xhigh"}
+# Claude Code effort -> the Bonsai chat template's levels, capped at medium: Bonsai gets
+# simple tasks, and xhigh makes a job several times slower. A caller that wants xhigh
+# sets chat_template_kwargs.reasoning_effort itself.
+EFFORT_MAP = {"low": "low", "medium": "medium", "high": "medium", "xhigh": "medium", "max": "medium"}
 
 
 def apply_effort(payload):
