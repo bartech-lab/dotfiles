@@ -829,7 +829,7 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/bin/wezterm-mem-guard" "$HOME/.local/bin/wezterm-mem-guard" "WezTerm memory guard"
 
 
-    # Autoclicker (Ctrl+. toggles it through the desktop entry)
+    # Autoclicker (Ctrl+Alt+. toggles it through the desktop entry)
     config_symlinks "$DOTFILES_DIR/linux/systemd/autoclicker.service" "$HOME/.config/systemd/user/autoclicker.service" "Autoclicker unit"
     config_symlinks "$DOTFILES_DIR/linux/bin/ydotool-autoclick-toggle" "$HOME/.local/bin/ydotool-autoclick-toggle" "Autoclicker toggle"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/autoclicker-toggle.desktop" "$HOME/.local/share/applications/autoclicker-toggle.desktop" "Autoclicker desktop entry"

@@ -53,7 +53,7 @@ kglobalshortcutsrc	kwin	Window Quick Tile Top	none,Meta+Up,Quick Tile Window to 
 kglobalshortcutsrc	plasmashell	manage activities	none,Meta+Q,Show Activity Switcher
 kglobalshortcutsrc	plasmashell	next activity	Meta+A,none,Walk through activities
 kglobalshortcutsrc	plasmashell	previous activity	Meta+Shift+A,none,Walk through activities (Reverse)
-kglobalshortcutsrc	services>autoclicker-toggle.desktop	_launch	Ctrl+.
+kglobalshortcutsrc	services>autoclicker-toggle.desktop	_launch	Ctrl+Alt+.
 kglobalshortcutsrc	services>com.mitchellh.ghostty.desktop	_launch	none
 kglobalshortcutsrc	services>org.kde.spectacle.desktop	RecordRegion	Ctrl+%
 kglobalshortcutsrc	services>org.kde.spectacle.desktop	RectangularRegionScreenShot	Ctrl+$
