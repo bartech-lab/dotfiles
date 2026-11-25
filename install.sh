@@ -809,6 +809,8 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/brave-flags.conf" "$HOME/.config/brave-flags.conf" "Brave flags"
     config_symlinks "$DOTFILES_DIR/linux/chrome-flags.conf" "$HOME/.config/chrome-flags.conf" "Chrome flags"
     config_symlinks "$DOTFILES_DIR/linux/chromium-flags.conf" "$HOME/.config/chromium-flags.conf" "Chromium flags (CDP port 9222)"
+    config_symlinks "$DOTFILES_DIR/linux/code-flags.conf" "$HOME/.config/code-flags.conf" "VS Code flags"
+    config_symlinks "$DOTFILES_DIR/linux/spotify-flags.conf" "$HOME/.config/spotify-flags.conf" "Spotify flags"
 
     # Bonsai units (archpc only; After= only: starting the proxy must not start Bonsai)
     config_symlinks "$DOTFILES_DIR/linux/systemd/bonsai.service" "$HOME/.config/systemd/user/bonsai.service" "Bonsai unit"
