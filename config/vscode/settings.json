@@ -71,8 +71,6 @@
   "chat.titleBar.signIn.enabled": false,
   "terminal.integrated.enableMultiLinePasteWarning": "never",
   "editor.accessibilitySupport": "off",
-  "editor.fontSize": 16,
-  "terminal.integrated.fontSize": 15,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
