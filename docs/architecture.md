@@ -37,7 +37,6 @@ dotfiles/
 │   └── yt-dlp/config
 ├── linux/                    # Linux-only setup
 │   ├── pkglist/              # pacman and AUR package lists
-│   ├── kwin/                 # KWin scripts (`no-attention`: no panel pop-up on attention requests)
 │   └── plasma/               # Plasma panel script (`kde-panel`) and settings table (`kde-settings`)
 ├── brew-autoupdate/          # Daily Homebrew formula updates (macOS LaunchAgent)
 ├── git-auto-pull/            # Automatic git repo syncing

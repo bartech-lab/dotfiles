@@ -38,7 +38,7 @@ add("org.kde.plasma.icontasks", ["General"], { launchers: [
     "applications:io.missioncenter.MissionCenter.desktop",
     "applications:org.wezfurlong.wezterm.desktop",
     "applications:code-oss.desktop"
-] });
+], unhideOnAttention: false });
 add("org.kde.plasma.panelspacer", ["General"], { expanding: true });
 add("org.kde.plasma.marginsseparator");
 add("org.kde.plasma.systemtray", ["General"], {

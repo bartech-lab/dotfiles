@@ -24,7 +24,6 @@ krunnerrc	Plugins>Favorites	plugins	krunner_sessions,krunner_powerdevil,krunner_
 kwinrc	NightColor	Active	true
 kwinrc	Desktops	Number	1
 kwinrc	Desktops	Rows	1
-kwinrc	Plugins	no-attentionEnabled	true
 kdeglobals	General	BrowserApplication	brave-browser.desktop
 kdeglobals	General	TerminalApplication	ghostty
 kdeglobals	General	TerminalService	com.mitchellh.ghostty.desktop
