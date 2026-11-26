@@ -853,6 +853,9 @@ if [[ "$DOTFILES_OS" == linux ]]; then
     config_symlinks "$DOTFILES_DIR/linux/bin/plasma-shutdown-browsers" "$HOME/.local/bin/plasma-shutdown-browsers" "Browser logout hook"
     config_symlinks "$DOTFILES_DIR/linux/dbus/org.kde.Shutdown.service" "$HOME/.local/share/dbus-1/services/org.kde.Shutdown.service" "org.kde.Shutdown override"
 
+    # KWin script: ignore "needs attention" so the auto-hide panel stays hidden
+    config_symlinks "$DOTFILES_DIR/linux/kwin/no-attention" "$HOME/.local/share/kwin/scripts/no-attention" "KWin no-attention script"
+
     # Desktop overrides (Wayland for Electron apps)
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/code-oss.desktop" "$HOME/.local/share/applications/code-oss.desktop" "Code - OSS desktop"
     config_symlinks "$DOTFILES_DIR/linux/desktop-overrides/standard-notes.desktop" "$HOME/.local/share/applications/standard-notes.desktop" "Standard Notes desktop"

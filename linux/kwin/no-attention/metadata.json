@@ -1,0 +1,11 @@
+{
+    "KPlugin": {
+        "Id": "no-attention",
+        "Name": "No attention requests",
+        "Description": "Clear every window's demands-attention flag so the auto-hide panel stays hidden",
+        "License": "MIT",
+        "EnabledByDefault": false
+    },
+    "X-Plasma-API": "javascript",
+    "KPackageStructure": "KWin/Script"
+}
