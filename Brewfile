@@ -114,7 +114,6 @@ cask "shutter-encoder"          # Media converter GUI
 cask "slack"                    # Team chat
 cask "spotify"                  # Music player
 cask "standard-notes"           # Encrypted notes
-cask "joplin"                   # Notes: open source, end-to-end encrypted, Dropbox sync
 cask "webcatalog"               # Web apps as desktop apps
 cask "whatsapp"                 # Messenger
 cask "telegram-desktop"         # Messenger (official Telegram Desktop, the same client as archpc)
