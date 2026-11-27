@@ -128,3 +128,7 @@ vscode "tombi-toml.tombi"                 # TOML support (successor of unmaintai
 vscode "ms-playwright.playwright"         # Playwright test support
 vscode "eamodio.gitlens"                  # Git history and blame
 vscode "ms-azuretools.vscode-containers"  # Container tooling
+vscode "anthropic.claude-code"             # Claude Code in the editor
+vscode "dbaeumer.vscode-eslint"            # ESLint
+vscode "esbenp.prettier-vscode"            # Prettier formatter
+vscode "golang.go"                         # Go language support
