@@ -8,6 +8,10 @@ import tempfile
 import time
 import unittest
 
+if not sys.platform.startswith('linux'):
+    print('skip: Linux only')
+    raise SystemExit(0)
+
 GUARD = Path(__file__).resolve().parents[1] / "bin" / "wezterm-mem-guard"
 GIB = 1 << 30
 HIGH = 32 * GIB

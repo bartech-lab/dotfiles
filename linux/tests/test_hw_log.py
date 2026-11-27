@@ -4,8 +4,13 @@ import csv
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
+
+if not sys.platform.startswith('linux'):
+    print('skip: Linux only')
+    raise SystemExit(0)
 
 SCRIPT = Path(__file__).resolve().parents[1] / "bin" / "hw-log"
 HEADER = (
