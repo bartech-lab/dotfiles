@@ -818,13 +818,16 @@ if [[ "$DOTFILES_OS" == macos ]]; then
     fi
 fi
 
-# Brave settings (new tab page, toolbar buttons, privacy, extensions on macOS):
-# written into Brave's own files, so only while Brave is closed.
-if [[ "$DRY_RUN" == true ]]; then
-    python3 "$DOTFILES_DIR/scripts/brave-prefs.py" --dry-run || true
-else
-    python3 "$DOTFILES_DIR/scripts/brave-prefs.py" || true
-fi
+# Browser settings from config/<browser>/preferences.json (Brave: new tab page, toolbar
+# buttons, privacy; both: extensions on macOS), written into the browser's own files,
+# so only while that browser is closed.
+for browser in brave chrome; do
+    if [[ "$DRY_RUN" == true ]]; then
+        python3 "$DOTFILES_DIR/scripts/browser-prefs.py" "$browser" --dry-run || true
+    else
+        python3 "$DOTFILES_DIR/scripts/browser-prefs.py" "$browser" || true
+    fi
+done
 
 # ============================================================================
 # Linux-Specific Config Symlinks

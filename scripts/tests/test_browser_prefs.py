@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""brave-prefs.py merges tracked values into Brave's files and never writes while Brave is open."""
+"""browser-prefs.py merges tracked values into the browser's files and never writes while it is open."""
 import json
 import os
 import platform
@@ -8,8 +8,8 @@ import sys
 import tempfile
 import unittest
 
-SCRIPT = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brave-prefs.py")
-TRACKED_JSON = os.path.join(os.path.dirname(SCRIPT), "..", "config", "brave", "preferences.json")
+SCRIPT = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "browser-prefs.py")
+CONFIG = os.path.join(os.path.dirname(SCRIPT), "..", "config")
 
 
 class BravePrefs(unittest.TestCase):
@@ -24,7 +24,7 @@ class BravePrefs(unittest.TestCase):
     def run_script(self, tracked, *extra):
         with open(self.src, "w") as f:
             json.dump(tracked, f)
-        return subprocess.run([sys.executable, SCRIPT, *extra, "--user-data-dir", self.udd, self.src],
+        return subprocess.run([sys.executable, SCRIPT, "brave", *extra, "--user-data-dir", self.udd, self.src],
                               capture_output=True, text=True)
 
     def prefs(self, name="Default/Preferences"):
@@ -80,11 +80,23 @@ class BravePrefs(unittest.TestCase):
         with open(os.path.join(self.udd, "External Extensions", "a" * 32 + ".json")) as f:
             self.assertEqual(json.load(f), {"external_update_url": "https://clients2.google.com/service/update2/crx"})
 
-    def test_tracked_file_applies_cleanly(self):
-        with open(TRACKED_JSON) as f:
-            tracked = json.load(f)
-        r = self.run_script(tracked, "--dry-run")
+    @unittest.skipUnless(platform.system() == "Darwin", "per-user External Extensions is a macOS location")
+    def test_extensions_alone_are_added_while_the_browser_is_open(self):
+        os.symlink(f"{platform.node()}-{os.getpid()}", os.path.join(self.udd, "SingletonLock"))
+        r = self.run_script({"external_extensions": {"a" * 32: "Ext"}})
         self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(os.path.exists(os.path.join(self.udd, "External Extensions", "a" * 32 + ".json")))
+
+    def test_tracked_files_apply_cleanly(self):
+        for browser in ("brave", "chrome"):
+            with open(os.path.join(CONFIG, browser, "preferences.json")) as f:
+                tracked = json.load(f)
+            r = self.run_script(tracked, "--dry-run")
+            self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_an_unknown_browser_is_refused(self):
+        r = subprocess.run([sys.executable, SCRIPT, "firefox"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 2)
 
 
 if __name__ == "__main__":

@@ -1,36 +1,42 @@
 #!/usr/bin/env python3
-"""Write the tracked Brave settings into Brave's own preference files.
+"""Write the tracked browser settings into the browser's own preference files.
 
-    brave-prefs.py [--dry-run] [--user-data-dir DIR] [PREFS_JSON]
+    browser-prefs.py brave|chrome [--dry-run] [--user-data-dir DIR] [PREFS_JSON]
 
-PREFS_JSON (default config/brave/preferences.json) maps a file inside the Brave
-user data directory ("Default/Preferences", "Local State") to the values to set
-there. Each value is merged in key by key; every other setting stays as it is.
-Brave has no policy for most of these (new tab widgets, toolbar buttons, sidebar),
-so they go straight into the files Brave reads at start.
+PREFS_JSON (default config/<browser>/preferences.json) maps a file inside the
+browser's user data directory ("Default/Preferences", "Local State") to the values
+to set there. Each value is merged in key by key; every other setting stays as it
+is. Brave has no policy for most of its settings (new tab widgets, toolbar buttons,
+sidebar), so they go straight into the files the browser reads at start.
 
 "external_extensions" maps extension IDs to names. On macOS each one gets an
-"External Extensions/<id>.json" file, so Brave offers to install it from the
+"External Extensions/<id>.json" file, so the browser offers to install it from the
 Chrome Web Store at the next start; the user still enables it.
 
-Brave rewrites these files while it runs, so nothing is written while it is open.
+The browser rewrites its preference files while it runs, so they are never written
+while it is open.
 """
 import json
 import os
 import platform
 import sys
 
-DEFAULT_JSON = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "config", "brave", "preferences.json")
+CONFIG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "config")
+BROWSERS = {  # name: (macOS folder under Application Support, Linux folder under ~/.config, display name)
+    "brave": ("BraveSoftware/Brave-Browser", "BraveSoftware/Brave-Browser", "Brave"),
+    "chrome": ("Google/Chrome", "google-chrome", "Chrome"),
+}
 WEB_STORE = "https://clients2.google.com/service/update2/crx"
 
 
-def default_user_data_dir():
+def default_user_data_dir(browser):
+    mac, linux, _ = BROWSERS[browser]
     if platform.system() == "Darwin":
-        return os.path.expanduser("~/Library/Application Support/BraveSoftware/Brave-Browser")
-    return os.path.expanduser("~/.config/BraveSoftware/Brave-Browser")
+        return os.path.expanduser("~/Library/Application Support/" + mac)
+    return os.path.expanduser("~/.config/" + linux)
 
 
-def brave_running(user_data_dir):
+def browser_running(user_data_dir):
     """Chromium keeps SingletonLock -> "<host>-<pid>" while the profile is open."""
     try:
         target = os.readlink(os.path.join(user_data_dir, "SingletonLock"))
@@ -64,7 +70,7 @@ def merge(dst, src):
 
 def write_json(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".brave-prefs-tmp"
+    tmp = path + ".browser-prefs-tmp"
     with open(tmp, "w") as f:
         json.dump(data, f, separators=(",", ":"))
     os.replace(tmp, path)
@@ -73,17 +79,24 @@ def write_json(path, data):
 def main(argv):
     dry_run = "--dry-run" in argv
     args = [a for a in argv if a != "--dry-run"]
-    user_data_dir = default_user_data_dir()
+    if not args or args[0] not in BROWSERS:
+        print("usage: browser-prefs.py brave|chrome [--dry-run] [--user-data-dir DIR] [PREFS_JSON]", file=sys.stderr)
+        return 2
+    browser = args.pop(0)
+    label = BROWSERS[browser][2]
+    user_data_dir = default_user_data_dir(browser)
     if "--user-data-dir" in args:
         i = args.index("--user-data-dir")
         user_data_dir = args[i + 1]
         del args[i:i + 2]
-    with open(args[0] if args else DEFAULT_JSON) as f:
+    with open(args[0] if args else os.path.join(CONFIG_DIR, browser, "preferences.json")) as f:
         tracked = json.load(f)
     extensions = tracked.pop("external_extensions", {})
 
-    if brave_running(user_data_dir):
-        print("⚠️  Brave is open; quit it and rerun: python3 ~/dotfiles/scripts/brave-prefs.py", file=sys.stderr)
+    # Extension files are read only at start, so they are safe to add while the browser runs.
+    if tracked and browser_running(user_data_dir):
+        print(f"⚠️  {label} is open; quit it and rerun: python3 ~/dotfiles/scripts/browser-prefs.py {browser}",
+              file=sys.stderr)
         return 1
 
     for name, values in tracked.items():
@@ -98,7 +111,7 @@ def main(argv):
                 print(f"  → Would set in {name}: {key}")
         elif changed:
             write_json(path, current)
-            print(f"✓ Brave {name}: {len(changed)} setting(s) set")
+            print(f"✓ {label} {name}: {len(changed)} setting(s) set")
 
     if platform.system() == "Darwin":
         for ext_id, ext_name in extensions.items():
@@ -109,7 +122,7 @@ def main(argv):
                 print(f"  → Would offer extension: {ext_name}")
             else:
                 write_json(path, {"external_update_url": WEB_STORE})
-                print(f"✓ Brave will offer the extension {ext_name} at next start")
+                print(f"✓ {label} will offer the extension {ext_name} at next start")
     return 0
 
 

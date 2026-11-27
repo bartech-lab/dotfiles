@@ -23,7 +23,8 @@ dotfiles/
 ├── config/                   # One directory per application config
 │   ├── aria2/aria2.conf
 │   ├── bottom/bottom.toml
-│   ├── brave/preferences.json  # Brave settings and extensions, written by scripts/brave-prefs.py
+│   ├── brave/preferences.json  # Brave settings and extensions, written by scripts/browser-prefs.py
+│   ├── chrome/preferences.json # Chrome extensions offered on macOS, same script
 │   ├── curl/curlrc
 │   ├── gh/config.yml
 │   ├── ghostty/config

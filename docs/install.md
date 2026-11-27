@@ -30,7 +30,7 @@ source ~/.zshrc
 The installer will:
 - On macOS: Install Homebrew, install all dependencies via `brew bundle`
 - On macOS: Write the Chrome recommended policies (the same file Linux installs) into the `com.google.Chrome` defaults. macOS Chrome blocks three of them outside MDM (search engine, startup pages, usage statistics); the script names them to set once by hand
-- Write the Brave settings from `config/brave/preferences.json` into Brave's own files (only while Brave is closed; rerun `python3 ~/dotfiles/scripts/brave-prefs.py` after quitting it). On macOS it also offers the tracked extensions at the next Brave start
+- Write the browser settings from `config/brave/` and `config/chrome/` into each browser's own files, only while that browser is closed (rerun `python3 ~/dotfiles/scripts/browser-prefs.py brave` or `chrome` after quitting it). On macOS the browser also offers the tracked extensions at its next start
 - On macOS: Run `macos-defaults` (asks for the sudo password), `macos-dock` and `macos-debloat --yes`, which deletes GarageBand, iMovie, Keynote, Pages and Numbers
 - On Linux: Install yay AUR helper, install packages via `pacman` and `yay`
 - Enable daily Homebrew autoupdate for formulae (macOS) or systemd timers (Linux)
