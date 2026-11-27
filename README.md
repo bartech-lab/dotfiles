@@ -175,6 +175,7 @@ dotfiles-doctor
 - `macos-defaults` - Apply comprehensive system preferences (Dock, Finder, Screenshots/Screen Recording, Keyboard, UI)
 - `macos-defaults-export` - Export current macOS settings to a backup script
 - `macos-dock` - Set the pinned Dock apps from `MACOS_DOCK_APPS`
+- `macos-sidebar` - Set the Finder sidebar favorites from `MACOS_SIDEBAR`
 - `macos-app-settings apply|export DOMAIN` - Write the tracked app settings (`config/macos-apps`), or save an app's current ones
 - `macos-debloat [--yes]` - Delete optional Apple apps and turn off Siri, Tips and Game Center
 - `macos-disable-notification-sounds` - Turn off notification sounds across apps, skipping locked entries

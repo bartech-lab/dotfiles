@@ -382,6 +382,37 @@ MACOS_DOCK_APPS=(
     "/Applications/WezTerm.app"
 )
 
+# Finder sidebar favorites, in order; the same places as the archpc Dolphin sidebar.
+MACOS_SIDEBAR=(
+    "$HOME"
+    "$HOME/logbook"
+    "$HOME/dotfiles"
+    "$HOME/Documents"
+    "$HOME/Downloads"
+    "$HOME/Projects"
+    "$HOME/Pictures"
+    "/Applications"
+)
+
+# Replace the Finder sidebar favorites with MACOS_SIDEBAR. Missing folders are skipped and named.
+# Builds scripts/macos/finder-sidebar.c once into ~/.cache/dotfiles (needs the Command Line Tools).
+macos-sidebar() {
+    local src="$HOME/dotfiles/scripts/macos/finder-sidebar.c" bin="$HOME/.cache/dotfiles/finder-sidebar"
+    if [[ ! -x "$bin" || "$src" -nt "$bin" ]]; then
+        mkdir -p "${bin:h}"
+        clang -framework CoreServices -framework CoreFoundation -o "$bin" "$src" || return 1
+    fi
+    local dir places=()
+    for dir in "${MACOS_SIDEBAR[@]}"; do
+        if [[ -d "$dir" ]]; then
+            places+=("$dir")
+        else
+            echo "  skipped, missing: $dir"
+        fi
+    done
+    "$bin" set "${places[@]}" && echo "✅ Finder sidebar set from MACOS_SIDEBAR"
+}
+
 # Replace the Dock with MACOS_DOCK_APPS. Missing apps are skipped and named.
 macos-dock() {
     if ! command -v dockutil >/dev/null 2>&1; then
