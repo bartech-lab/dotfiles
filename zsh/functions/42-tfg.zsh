@@ -2,7 +2,7 @@ tfg() {
   emulate -L zsh
   unsetopt XTRACE VERBOSE
 
-  local agent=claude cycles usage='Usage: tfg [--codex] [--ignore-weekly] [--ignore-5h] [cycles]'
+  local agent=claude cycles usage='Usage: tfg [--codex] [--ignore-weekly] [--ignore-5h] [--until HH:MM] [cycles]'
   local -a limit_args=()
   while (( $# )); do
     case $1 in
@@ -12,12 +12,17 @@ tfg() {
         print -r -- 'Each cycle is a fresh headless session. Without a count it runs until 90% 5h or 95% weekly usage, or Ctrl-C.'
         print -r -- '--ignore-weekly  this run only: skip the 95% weekly stop and run until the weekly limit.'
         print -r -- '--ignore-5h      this run only: skip the 90% 5h stop and run until the 5h limit.'
+        print -r -- '--until HH:MM    start no new cycle at or after this time (next occurrence); the running cycle finishes.'
         print -r -- 'Paid extra usage always stops the run at once.'
         print -r -- 'First run saves your Tokens for Good key in ~/.zshenv (mode 600).'
         return 0 ;;
       --codex) agent=codex ;;
       --ignore-weekly) limit_args+=(--long-limit 100) ;;
       --ignore-5h) limit_args+=(--short-limit 100) ;;
+      --until)
+        [[ $2 == <0-23>:<0-59> ]] || { print -u2 -- $usage; return 2 }
+        limit_args+=(--until $2)
+        shift ;;
       <1->)
         [[ -z $cycles ]] || { print -u2 -- $usage; return 2 }
         cycles=$1 ;;

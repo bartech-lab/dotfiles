@@ -52,7 +52,7 @@ mkdir -p "$work/app/src" "$HOME/volunteer/bin"
 
 out=$(tfg --help) || fail "tfg --help failed"
 [[ $out == Usage:* ]] || fail "tfg --help prints usage"
-for bad in "1 2" abc 0 -1 "--codex x"; do
+for bad in "1 2" abc 0 -1 "--codex x" --until "--until 2" "--until 24:00" "--until 2:60"; do
   tfg ${(z)bad} 2>/dev/null && fail "tfg $bad succeeded"
   (( $? == 2 )) || fail "tfg $bad exits 2"
 done
@@ -85,6 +85,8 @@ TFG_API_KEY=k2 tfg 3 || fail "tfg 3 failed"
 [[ $(<"$TEST_ROOT/ran") == "k2|3" ]] || fail "count is passed through"
 TFG_API_KEY=k3 tfg --codex 12 || fail "tfg --codex 12 failed"
 [[ $(<"$TEST_ROOT/ran") == "k3|--codex 12" ]] || fail "codex flag and count are passed through"
+TFG_API_KEY=k4 tfg --until 02:00 5 || fail "tfg --until 02:00 5 failed"
+[[ $(<"$TEST_ROOT/ran") == "k4|--until 02:00 5" ]] || fail "until time is passed through"
 
 source "$REPO_ROOT/zsh/functions/61-discord.zsh"
 
