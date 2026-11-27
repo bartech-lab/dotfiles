@@ -779,9 +779,10 @@ config_symlinks "$DOTFILES_DIR/config/bottom/bottom.toml" "$HOME/.config/bottom/
 # GitHub CLI
 config_symlinks "$DOTFILES_DIR/config/gh/config.yml" "$HOME/.config/gh/config.yml" "gh config"
 
-# Spicetify extension. The link alone does not activate it: a new machine also needs
-# `spicetify config extensions startLikedSongs.js && spicetify apply` once.
+# Spicetify extensions. noHomeRedirect.js is the one enabled (Liked Songs at start, no Home redirect).
+# The links alone do not activate anything: run `bash ~/dotfiles/scripts/spicetify-setup.sh` once.
 config_symlinks "$DOTFILES_DIR/config/spicetify/Extensions/startLikedSongs.js" "$HOME/.config/spicetify/Extensions/startLikedSongs.js" "spicetify startLikedSongs extension"
+config_symlinks "$DOTFILES_DIR/config/spicetify/Extensions/noHomeRedirect.js" "$HOME/.config/spicetify/Extensions/noHomeRedirect.js" "spicetify noHomeRedirect extension"
 
 # VS Code (shared settings.json, different target per platform)
 if [[ "$DOTFILES_OS" == macos ]]; then

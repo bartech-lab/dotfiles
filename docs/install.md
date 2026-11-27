@@ -214,6 +214,12 @@ bash setup.sh
 
 See [ai-caffeine README](../ai-caffeine/README.md) for mechanisms and tuning.
 
+## Optional: Spicetify (Spotify theme and extensions)
+
+`install.sh` links the extensions from `config/spicetify/Extensions/` but changes nothing in Spotify. After installing
+Spicetify's Marketplace (it provides the `marketplace` theme), run `bash ~/dotfiles/scripts/spicetify-setup.sh` once:
+it sets the archpc settings (Marketplace theme, Deep colours, `noHomeRedirect.js`) and applies them.
+
 ## Optional: Game Mode (gaming-mode, Linux only)
 
 Not installed by `./install.sh`. `gaming` (or Meta+Shift+G) stops Bonsai, Docker, heavy
