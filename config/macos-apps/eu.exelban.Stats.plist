@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Battery_state</key>
+	<false/>
+	<key>CPU_state</key>
+	<false/>
+	<key>CombinedModules</key>
+	<false/>
+	<key>Disk_state</key>
+	<false/>
+	<key>LaunchAtLoginNext</key>
+	<true/>
+	<key>NSStatusItem Preferred Position Network_speed</key>
+	<integer>254</integer>
+	<key>RAM_state</key>
+	<false/>
+	<key>Sensors_barChart_position</key>
+	<integer>3</integer>
+	<key>Sensors_hid</key>
+	<false/>
+	<key>Sensors_icon_position</key>
+	<integer>4</integer>
+	<key>Sensors_label_position</key>
+	<integer>2</integer>
+	<key>Sensors_mini_label</key>
+	<false/>
+	<key>Sensors_mini_position</key>
+	<integer>0</integer>
+	<key>Sensors_sensor</key>
+	<string>PSTR</string>
+	<key>Sensors_stack_position</key>
+	<integer>1</integer>
+	<key>Sensors_state</key>
+	<true/>
+	<key>Sensors_widget</key>
+	<string>mini</string>
+	<key>dockIcon</key>
+	<false/>
+	<key>keep_menubar_positions</key>
+	<false/>
+	<key>runAtLoginInitialized</key>
+	<true/>
+	<key>sensor_PDTR</key>
+	<false/>
+	<key>setupProcess</key>
+	<true/>
+</dict>
+</plist>
