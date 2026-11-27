@@ -240,4 +240,4 @@ See [Installation Guide](docs/install.md#migrating-to-a-new-mac) for details.
 
 ## License
 
-Apache 2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE). Feel free to use these dotfiles as inspiration for your own setup.
+Apache 2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE).
