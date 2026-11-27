@@ -11,7 +11,7 @@
 # - Dock: auto-hide with immediate appearance, tile size 66, process indicators
 # - Dock: disable all hot corners, translucent hidden apps, no recent apps
 # - Finder: show path bar, status bar, all extensions, folders first
-# - Finder: new window opens to ~/timac/, show Library folder
+# - Finder: new window opens to the home folder, show Library folder
 # - Finder: disable animations, extension change warnings
 # - Finder: no .DS_Store on network/USB volumes
 # - Screenshots: save to Downloads, disable shadow, PNG format
@@ -59,6 +59,12 @@ macos-defaults() {
     
     # Dock: speed up Mission Control animations
     defaults write com.apple.dock expose-animation-duration -float 0.1
+
+    # Dock: no Launchpad/Apps open, close or page animation; no swoosh between Spaces
+    defaults write com.apple.dock springboard-show-duration -float 0
+    defaults write com.apple.dock springboard-hide-duration -float 0
+    defaults write com.apple.dock springboard-page-duration -float 0
+    defaults write com.apple.dock workspaces-swoosh-animation-off -bool true
     
     # Dock: don't automatically rearrange Spaces based on most recent use
     defaults write com.apple.dock mru-spaces -bool false
@@ -194,6 +200,11 @@ macos-defaults() {
     
     # UI: increase window resize speed for Cocoa applications
     defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
+
+    # UI: no full-screen toolbar slide; Mail sends and replies without animation
+    defaults write -g NSToolbarFullScreenAnimationDuration -float 0
+    defaults write com.apple.Mail DisableSendAnimations -bool true
+    defaults write com.apple.Mail DisableReplyAnimations -bool true
     
     # UI: disable QuickLook panel animations
     defaults write -g QLPanelAnimationDuration -float 0
@@ -337,6 +348,42 @@ macos-defaults() {
 # Debloat macOS by removing unnecessary apps and disabling services
 # WARNING: This function makes destructive changes. Review carefully before running.
 # Apps can be re-downloaded from App Store if needed.
+# Pinned Dock apps, left to right. Finder always stays first.
+# Apps in /System/Applications cannot be deleted; they are only left out of the Dock.
+MACOS_DOCK_APPS=(
+    "/System/Applications/Calendar.app"
+    "/Applications/Proton Mail.app"
+    "/Applications/Standard Notes.app"
+    "/Applications/WhatsApp.app"
+    "/Applications/Telegram.app"
+    "/Applications/Slack.app"
+    "/Applications/Google Chrome.app"
+    "/Applications/Brave Browser.app"
+    "/Applications/Spotify.app"
+    "/System/Applications/Utilities/Activity Monitor.app"
+    "/Applications/Visual Studio Code.app"
+    "/Applications/WezTerm.app"
+)
+
+# Replace the Dock with MACOS_DOCK_APPS. Missing apps are skipped and named.
+macos-dock() {
+    if ! command -v dockutil >/dev/null 2>&1; then
+        echo "dockutil missing: brew install dockutil" >&2
+        return 1
+    fi
+    dockutil --remove all --no-restart >/dev/null
+    local app
+    for app in "${MACOS_DOCK_APPS[@]}"; do
+        if [[ -d "$app" ]]; then
+            dockutil --add "$app" --no-restart >/dev/null
+        else
+            echo "  skipped, not installed: ${${app:t}%.app}"
+        fi
+    done
+    killall Dock 2>/dev/null || true
+    echo "✅ Dock set from MACOS_DOCK_APPS"
+}
+
 macos-debloat() {
     echo "⚠️  macOS Debloat - Destructive Operations"
     echo "=========================================="
@@ -352,9 +399,14 @@ macos-debloat() {
     echo "  • Networking (mDNSResponder, apsd)"
     echo ""
     
-    local confirm
-    echo -n "Continue? (y/N): "
-    read confirm
+    local confirm=n assume_yes=false
+    [[ "${1:-}" == --yes ]] && assume_yes=true
+    if [[ "$assume_yes" == true ]]; then
+        confirm=y
+    else
+        echo -n "Continue? (y/N): "
+        read confirm
+    fi
     
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         echo "Cancelled."
@@ -377,6 +429,9 @@ macos-debloat() {
         "Keynote.app"
         "Pages.app"
         "Numbers.app"
+        "Keynote Creator Studio.app"
+        "Pages Creator Studio.app"
+        "Numbers Creator Studio.app"
         "TV.app"
         "Podcasts.app"
         "Home.app"
@@ -450,9 +505,11 @@ macos-debloat() {
         echo "  3. Unavailable simulators"
         echo ""
         
-        local xcode_choice
-        echo -n "Run Xcode cleanup? (y/N): "
-        read xcode_choice
+        local xcode_choice=n
+        if [[ "$assume_yes" != true ]]; then
+            echo -n "Run Xcode cleanup? (y/N): "
+            read xcode_choice
+        fi
         
         if [[ "$xcode_choice" =~ ^[Yy]$ ]]; then
             echo ""

@@ -78,6 +78,8 @@ brew "docker-credential-helper"  # docker-credential-osxkeychain (was bundled wi
 brew "shellcheck"       # Static analysis for Bash and POSIX sh scripts
 brew "bitwarden-cli"    # Bitwarden vault CLI
 brew "htop"             # Interactive process viewer
+brew "dockutil"         # Sets the Dock from MACOS_DOCK_APPS (macos-dock)
+brew "poppler"          # pdfinfo, pdftotext for the job-offer CV checks
 brew "uv"               # Python tool runner; agents skills (job-offer, interview-prep) call it. Replaced pipx 2026-07
 
 # ============================================================================
@@ -114,6 +116,7 @@ cask "spotify"                  # Music player
 cask "standard-notes"           # Encrypted notes
 cask "webcatalog"               # Web apps as desktop apps
 cask "whatsapp"                 # Messenger
+cask "telegram"                 # Messenger (official native macOS app)
 
 # ============================================================================
 # VS Code Extensions

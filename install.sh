@@ -958,6 +958,7 @@ else
     echo "Run: dotfiles-doctor if anything fails"
     if [[ "$DOTFILES_OS" == macos ]]; then
         echo "Run: macos-defaults to apply system preferences"
+        echo "Run: macos-dock to set the pinned Dock apps"
         echo "Run: macos-debloat to remove bloatware (destructive)"
         echo "Run: macos-system-analysis to review services"
         echo ""
