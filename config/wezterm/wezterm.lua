@@ -132,12 +132,12 @@ table.insert(config.keys, { key = 'RightArrow', mods = move_tab_mod, action = ac
 config.send_composed_key_when_left_alt_is_pressed = true
 config.send_composed_key_when_right_alt_is_pressed = false
 
--- Match Ghostty's selection copy behavior.
+-- Match Ghostty's selection copy behavior; a plain click on a link still opens it.
 config.mouse_bindings = {
   {
     event = { Up = { streak = 1, button = 'Left' } },
     mods = 'NONE',
-    action = act.CompleteSelection 'Clipboard',
+    action = act.CompleteSelectionOrOpenLinkAtMouseCursor 'Clipboard',
   },
 }
 
