@@ -21,7 +21,7 @@
 # - UI: faster window resize, expanded save panels, always show scrollbars
 # - Security: application firewall on, disable quarantine dialog, login window info
 # - System: disable boot sound, Photos auto-open
-# - Sound: no interface sound effects, no feedback beep on volume change
+# - Sound: no interface sound effects
 # - Apps: VS Code, Spotify, Docker, Slack defaults
 macos-defaults() {
     echo "Applying macOS system defaults..."
@@ -41,8 +41,6 @@ macos-defaults() {
 
     # Sound: turn off "Play user interface sound effects" (Trash, screenshot, etc.)
     defaults write NSGlobalDomain com.apple.sound.uiaudio.enabled -int 0
-    # Sound: turn off "Play feedback when volume is changed"
-    defaults write NSGlobalDomain com.apple.sound.beep.feedback -int 0
     
     # ============================================
     # DOCK SETTINGS
@@ -392,7 +390,7 @@ macos-defaults() {
     echo "  • Window animations disabled globally"
     echo "  • Stage Manager disabled"
     echo "  • Boot sound disabled"
-    echo "  • Interface sound effects and volume feedback off"
+    echo "  • Interface sound effects off"
     echo "  • Chrome backswipe disabled"
     echo "  • Photos won't auto-open on device connect"
 }
