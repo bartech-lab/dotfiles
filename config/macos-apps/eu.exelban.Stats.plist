@@ -3,46 +3,66 @@
 <plist version="1.0">
 <dict>
 	<key>Battery_state</key>
-	<false/>
+	<true/>
 	<key>CPU_state</key>
 	<false/>
 	<key>CombinedModules</key>
-	<false/>
+	<true/>
 	<key>Disk_state</key>
 	<false/>
 	<key>LaunchAtLoginNext</key>
 	<true/>
-	<key>NSStatusItem Preferred Position Network_speed</key>
-	<integer>254</integer>
+	<key>NSStatusItem Preferred Position CombinedModules</key>
+	<real>175.0</real>
+	<key>NSStatusItem Restore Position Battery_battery</key>
+	<integer>207</integer>
+	<key>NSStatusItem Restore Position Network_speed</key>
+	<integer>329</integer>
+	<key>NSStatusItem Restore Position Sensors_sensors</key>
+	<integer>249</integer>
+	<key>Network_speed_icon</key>
+	<string>arrows</string>
+	<key>Network_speed_iconColor</key>
+	<string>constant</string>
 	<key>RAM_state</key>
 	<false/>
 	<key>Sensors_barChart_position</key>
-	<integer>3</integer>
+	<integer>1</integer>
 	<key>Sensors_hid</key>
 	<false/>
 	<key>Sensors_icon_position</key>
 	<integer>4</integer>
 	<key>Sensors_label_position</key>
-	<integer>2</integer>
+	<integer>3</integer>
 	<key>Sensors_mini_label</key>
 	<false/>
 	<key>Sensors_mini_position</key>
-	<integer>0</integer>
+	<integer>2</integer>
 	<key>Sensors_sensor</key>
 	<string>PSTR</string>
 	<key>Sensors_stack_position</key>
-	<integer>1</integer>
+	<integer>0</integer>
 	<key>Sensors_state</key>
 	<true/>
 	<key>Sensors_widget</key>
-	<string>mini</string>
+	<string>sensors</string>
 	<key>dockIcon</key>
 	<false/>
 	<key>keep_menubar_positions</key>
 	<false/>
 	<key>runAtLoginInitialized</key>
 	<true/>
+	<key>sensor_Average CPU</key>
+	<true/>
+	<key>sensor_Average System Total</key>
+	<false/>
+	<key>sensor_Hottest CPU</key>
+	<true/>
 	<key>sensor_PDTR</key>
+	<false/>
+	<key>sensor_PSTR</key>
+	<true/>
+	<key>sensor_Total System Consumption</key>
 	<false/>
 	<key>setupProcess</key>
 	<true/>
