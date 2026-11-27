@@ -161,6 +161,9 @@ macos-defaults() {
     # Keyboard: disable press-and-hold for keys in favor of key repeat
     # This allows keys to repeat when held down instead of showing accent menu
     defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+
+    # Menu bar: hide the keyboard input-source menu
+    defaults write com.apple.TextInputMenu visible -bool false
     
     # Keyboard: set fast but comfortable key repeat rate (2 = fast, 6 = default)
     defaults write NSGlobalDomain KeyRepeat -int 5
@@ -322,6 +325,7 @@ macos-defaults() {
     
     # Restart SystemUIServer for some UI changes
     killall SystemUIServer 2>/dev/null || true
+    killall TextInputMenuAgent 2>/dev/null || true
     
     echo ""
     echo "✅ macOS defaults applied successfully!"

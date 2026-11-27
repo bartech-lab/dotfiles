@@ -224,6 +224,7 @@ macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 - Minimize to application icon
 - No launch animation
 
+- No Launchpad/Apps or Spaces-switch animation
 #### Finder
 - Show path bar and status bar
 - Show all filename extensions
@@ -245,6 +246,7 @@ macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 - No floating thumbnail (captures immediately)
 
 #### Keyboard & Typing
+- Hide the input-source menu in the menu bar
 - Disable press-and-hold (enables key repeat)
 - Fast key repeat rate (2 = fast, between default and blazing)
 - Short delay before repeat (10 = shortest)
@@ -257,6 +259,7 @@ macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 
 #### UI/UX
 - Fast window resizing (0.001s)
+- No full-screen toolbar or Mail send/reply animation
 - Expanded save and print panels
 - Always show scrollbars
 - Disable focus ring animation
