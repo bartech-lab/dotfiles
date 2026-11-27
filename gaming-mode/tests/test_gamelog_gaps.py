@@ -6,6 +6,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+if not sys.platform.startswith('linux'):
+    print('skip: Linux only')
+    raise SystemExit(0)
 from datetime import datetime, timedelta
 from pathlib import Path
 

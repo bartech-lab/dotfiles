@@ -10,6 +10,10 @@ import tempfile
 import time
 import unittest
 
+if not sys.platform.startswith('linux'):
+    print('skip: Linux only')
+    raise SystemExit(0)
+
 FILTER = Path(__file__).resolve().parents[1] / "bin" / "drkonqi-launcher-filter"
 HEADLESS = ("/home/u/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/"
             "chrome-headless-shell --type=renderer --enable-automation")
