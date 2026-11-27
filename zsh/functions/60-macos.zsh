@@ -18,7 +18,7 @@
 # - Keyboard: disable press-and-hold, enable fast key repeat
 # - Keyboard: disable auto-capitalization, smart quotes, auto-correct
 # - UI: faster window resize, expanded save panels, always show scrollbars
-# - Security: disable quarantine dialog, login window info
+# - Security: application firewall on, disable quarantine dialog, login window info
 # - System: disable boot sound, Photos auto-open
 # - Apps: VS Code, Spotify, Docker, Slack defaults
 macos-defaults() {
@@ -33,6 +33,9 @@ macos-defaults() {
     
     # System: show IP address, hostname, OS version when clicking clock at login
     sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
+
+    # Security: application firewall on; Apple-signed services (sshd, used for SSH over Tailscale) stay allowed
+    sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on >/dev/null
     
     # ============================================
     # DOCK SETTINGS
@@ -418,6 +421,32 @@ macos-sidebar() {
         fi
     done
     "$bin" set "${places[@]}" && echo "✅ Finder sidebar set from MACOS_SIDEBAR"
+}
+
+# Apps opened at login; the same set archpc autostarts, plus Mac-only menu bar apps.
+MACOS_LOGIN_ITEMS=(
+    "/Applications/Filen.app"
+    "/Applications/Standard Notes.app"
+    "/Applications/Google Chrome.app"
+    "/Applications/Bitwarden.app"
+    "/Applications/LocalSend.app"
+    "/Applications/Stats.app"
+    "/Applications/Tailscale.app"
+)
+
+# Add MACOS_LOGIN_ITEMS as login items; existing ones and other items stay. Missing apps are named.
+macos-login-items() {
+    local app name
+    for app in "${MACOS_LOGIN_ITEMS[@]}"; do
+        name="${${app:t}%.app}"
+        if [[ ! -d "$app" ]]; then
+            echo "  skipped, not installed: $name"
+            continue
+        fi
+        osascript -e "tell application \"System Events\" to if not (exists login item \"$name\") then make login item at end with properties {path:\"$app\", hidden:false}" >/dev/null \
+            || echo "  could not add: $name"
+    done
+    echo "✅ Login items: $(osascript -e 'tell application "System Events" to get the name of every login item')"
 }
 
 # Replace the Dock with MACOS_DOCK_APPS. Missing apps are skipped and named.

@@ -33,7 +33,7 @@ The installer will:
 - Write the browser settings from `config/brave/` and `config/chrome/` into each browser's own files, only while that browser is closed (rerun `python3 ~/dotfiles/scripts/browser-prefs.py brave` or `chrome` after quitting it). On macOS the browser also offers the tracked extensions at its next start
 - On macOS: Point the Docker CLI at the Homebrew compose plugin and the keychain credential helper (`~/.docker/config.json`, existing keys kept)
 - On macOS: Write the tracked app settings from `config/macos-apps` (a sandboxed app, such as LocalSend, only after its first start)
-- On macOS: Run `macos-defaults` (asks for the sudo password), `macos-dock`, `macos-sidebar` and `macos-debloat --yes`, which deletes GarageBand, iMovie, Keynote, Pages and Numbers
+- On macOS: Run `macos-defaults` (asks for the sudo password), `macos-dock`, `macos-sidebar`, `macos-login-items` and `macos-debloat --yes`, which deletes GarageBand, iMovie, Keynote, Pages and Numbers
 - On Linux: Install yay AUR helper, install packages via `pacman` and `yay`
 - Enable daily Homebrew autoupdate for formulae (macOS) or systemd timers (Linux)
 - Link dotfiles functions loader
