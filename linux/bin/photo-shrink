@@ -1,0 +1,195 @@
+#!/usr/bin/env -S python3 -I
+"""photo-shrink: shrink a folder of phone photos to JPG, keeping HDR gain maps.
+
+  photo-shrink DIR...           dry run: print the plan, change nothing
+  photo-shrink --apply DIR...   do it; replaced originals go to the trash
+
+Per file (non-recursive, extensions case-insensitive):
+  .dng that is really a JPEG     RENAME to .jpg (bytes unchanged)
+  .dng (iPhone ProRAW)           EXTRACT the phone's own JPEG from IFD0, byte for byte
+                                 (it carries the HDR gain map), then trash the DNG
+  .jpg quality >= 98             RECOMPRESS at quality 90, 4:4:4, metadata kept
+  .png / .heic / .heif           CONVERT to .jpg at quality 90, 4:4:4, metadata kept
+  any file with an HDR gain map  SKIP: re-encoding would drop the HDR
+Never overwrites; verifies every new file before the original is trashed.
+PHOTO_SHRINK_TRASH_DIR=<dir> moves originals there instead of `gio trash`.
+"""
+import os
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+HDR_MARKERS = (b"hdrgm", b"HDRGainMap", b"urn:iso:std:iso:ts:21496")
+QUALITY = "90"
+MAX_SSIM_DISTANCE = 0.06
+
+
+def tiff_ifd0_strip(data):
+    """Return (offset, length) of IFD0's single strip, or None."""
+    if data[:4] not in (b"II*\x00", b"MM\x00*"):
+        return None
+    e = "<" if data[:2] == b"II" else ">"
+    (ifd,) = struct.unpack_from(e + "I", data, 4)
+    if ifd + 2 > len(data):
+        return None
+    (count,) = struct.unpack_from(e + "H", data, ifd)
+    tags = {}
+    for i in range(count):
+        pos = ifd + 2 + 12 * i
+        if pos + 12 > len(data):
+            return None
+        tag, typ, n = struct.unpack_from(e + "HHI", data, pos)
+        if tag in (273, 279) and n == 1:
+            fmt = {3: "H", 4: "I"}.get(typ)
+            if fmt:
+                tags[tag] = struct.unpack_from(e + fmt, data, pos + 8)[0]
+    if 273 not in tags or 279 not in tags:
+        return None
+    off, length = tags[273], tags[279]
+    if off + length > len(data) or length < 4:
+        return None
+    if data[off:off + 2] != b"\xff\xd8" or data[off + length - 2:off + length] != b"\xff\xd9":
+        return None
+    return off, length
+
+
+def magick(*args):
+    return subprocess.run(["magick", *args], capture_output=True, text=True)
+
+
+def jpeg_quality(path):
+    r = magick("identify", "-format", "%Q", f"{path}[0]")
+    try:
+        return int(r.stdout.strip() or 0)
+    except ValueError:
+        return 0
+
+
+def has_transparency(path):
+    r = magick("identify", "-format", "%[opaque]", f"{path}[0]")
+    return r.stdout.strip().lower() == "false"
+
+
+def size_of(path):
+    r = magick("identify", "-format", "%wx%h", f"{path}[0]")
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def verify_reencode(src, new):
+    if size_of(new) is None or size_of(new) != size_of(src):
+        return False
+    r = magick("compare", "-metric", "SSIM", f"{src}[0]", str(new), "null:")
+    try:
+        dist = float(r.stderr.split("(")[-1].rstrip(")\n "))
+    except ValueError:
+        return False
+    return dist <= MAX_SSIM_DISTANCE
+
+
+def target_taken(src):
+    stems = {f"{src.stem}.jpg".lower(), f"{src.stem}.jpeg".lower()}
+    return any(p.name.lower() in stems and p != src for p in src.parent.iterdir())
+
+
+def trash(path):
+    dest = os.environ.get("PHOTO_SHRINK_TRASH_DIR")
+    if dest:
+        shutil.move(str(path), os.path.join(dest, path.name))
+    else:
+        subprocess.run(["gio", "trash", str(path)], check=True)
+
+
+def reencode(src, out):
+    r = magick(f"{src}[0]", "-quality", QUALITY, "-sampling-factor", "1x1", str(out))
+    if r.returncode != 0:
+        return False
+    st = src.stat()
+    os.utime(out, (st.st_atime, st.st_mtime))
+    return True
+
+
+def plan(path):
+    """Return (action, reason) for one file; action None means nothing to do."""
+    ext = path.suffix.lower()
+    if ext not in (".dng", ".jpg", ".jpeg", ".png", ".heic", ".heif"):
+        return None, None
+    data = path.read_bytes()
+    if ext == ".dng":
+        if data[:3] == b"\xff\xd8\xff":
+            return "RENAME", None
+        return ("EXTRACT", None) if tiff_ifd0_strip(data) else ("SKIP", "no embedded JPEG")
+    if any(m in data for m in HDR_MARKERS):
+        return "SKIP", "HDR"
+    if ext == ".png" and has_transparency(path):
+        return "SKIP", "transparency"
+    if ext in (".jpg", ".jpeg"):
+        return ("RECOMPRESS", None) if jpeg_quality(path) >= 98 else (None, None)
+    return "CONVERT", None
+
+
+def run(path, action):
+    """Carry out one action; return True on success."""
+    target = path.with_name(path.stem + ".jpg")
+    if action == "RENAME":
+        os.rename(path, target)
+        return True
+    if action == "EXTRACT":
+        data = path.read_bytes()
+        off, length = tiff_ifd0_strip(data)
+        part = target.with_name(target.name + ".part")
+        part.write_bytes(data[off:off + length])
+        st = path.stat()
+        os.utime(part, (st.st_atime, st.st_mtime))
+        if size_of(part) is None:
+            part.unlink()
+            return False
+        os.rename(part, target)
+        trash(path)
+        return True
+    with tempfile.TemporaryDirectory(dir=path.parent, prefix=".photo-shrink-") as tmp:
+        out = Path(tmp) / target.name
+        if not reencode(path, out) or not verify_reencode(path, out):
+            return False
+        trash(path)
+        shutil.move(str(out), str(path.with_name(path.name) if action == "RECOMPRESS" else target))
+    return True
+
+
+def main(argv):
+    if "-h" in argv or "--help" in argv:
+        print(__doc__.strip())
+        return 0
+    apply = "--apply" in argv
+    dirs = [Path(a) for a in argv if a != "--apply"]
+    if not dirs or not all(d.is_dir() for d in dirs):
+        print("usage: photo-shrink [--apply] DIR...", file=sys.stderr)
+        return 2
+    changed = skipped = failed = 0
+    for d in dirs:
+        for path in sorted(p for p in d.iterdir() if p.is_file() and not p.name.startswith(".")):
+            action, reason = plan(path)
+            if action is None:
+                continue
+            if action != "SKIP" and action != "RECOMPRESS" and target_taken(path):
+                action, reason = "SKIP", "target exists"
+            if action == "SKIP":
+                print(f"SKIP {path.name}: {reason}")
+                skipped += 1
+                continue
+            arrow = "" if action == "RECOMPRESS" else f" -> {path.stem}.jpg"
+            if apply and not run(path, action):
+                print(f"SKIP {path.name}: verify failed")
+                failed += 1
+                continue
+            print(f"{action} {path.name}{arrow}")
+            changed += 1
+    mode = "" if apply else " (dry run, nothing changed; add --apply)"
+    print(f"done: {changed} changed, {skipped} skipped, {failed} failed{mode}")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

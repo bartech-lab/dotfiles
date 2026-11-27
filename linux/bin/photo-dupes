@@ -1,0 +1,169 @@
+#!/usr/bin/env -S python3 -I
+"""photo-dupes: report exact and near-duplicate photos for review. Changes nothing.
+
+  photo-dupes [--out DIR] [--window SECONDS] [--threshold T] DIR...
+
+Near duplicates: photos taken within --window seconds (default 60; photos with no
+capture time are compared with everything) whose small blurred thumbnails match at
+or above --threshold (default 0.9, shift-tolerant correlation). Each group lists
+capture time and a sharpness score and suggests the sharpest one to keep.
+Writes report.txt and one contact sheet per group to --out
+(default ${XDG_CACHE_HOME:-~/.cache}/photo-dupes/<timestamp>).
+"""
+import argparse
+import hashlib
+import io
+import os
+import struct
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageFilter, ImageOps
+
+EXTS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".dng"}
+Image.MAX_IMAGE_PIXELS = None
+
+
+def dng_jpeg(data):
+    """Bytes of IFD0's single JPEG strip in a TIFF/DNG, or None."""
+    if data[:4] not in (b"II*\x00", b"MM\x00*"):
+        return None
+    e = "<" if data[:2] == b"II" else ">"
+    (ifd,) = struct.unpack_from(e + "I", data, 4)
+    (count,) = struct.unpack_from(e + "H", data, ifd)
+    tags = {}
+    for i in range(count):
+        tag, typ, n = struct.unpack_from(e + "HHI", data, ifd + 2 + 12 * i)
+        if tag in (273, 279) and n == 1 and typ in (3, 4):
+            tags[tag] = struct.unpack_from(e + ("H" if typ == 3 else "I"), data, ifd + 2 + 12 * i + 8)[0]
+    if 273 not in tags or 279 not in tags:
+        return None
+    chunk = data[tags[273]:tags[273] + tags[279]]
+    return chunk if chunk[:2] == b"\xff\xd8" else None
+
+
+def load(path, data):
+    """Open a file as a PIL image with orientation applied, or None."""
+    if path.suffix.lower() == ".dng" and data[:3] != b"\xff\xd8\xff":
+        data = dng_jpeg(data)
+        if data is None:
+            return None
+    try:
+        im = Image.open(io.BytesIO(data))
+        im.draft("RGB", (1600, 1600))
+        im.load()
+    except Exception:
+        r = subprocess.run(["magick", f"{path}[0]", "-auto-orient", "-resize", "1600x1600>", "png:-"],
+                           capture_output=True)
+        if r.returncode:
+            return None
+        return Image.open(io.BytesIO(r.stdout)).convert("RGB"), None
+    exif = im.getexif()
+    sub = exif.get_ifd(0x8769)
+    stamp = sub.get(0x9003) or exif.get(0x0132)
+    t = None
+    if stamp:
+        try:
+            t = datetime.strptime(str(stamp).strip("\x00 "), "%Y:%m:%d %H:%M:%S").timestamp()
+            frac = str(sub.get(0x9291, "")).strip("\x00 ")
+            t += float("0." + frac) if frac.isdigit() else 0
+        except ValueError:
+            t = None
+    return ImageOps.exif_transpose(im).convert("RGB"), t
+
+
+def features(im):
+    small = im if im.width >= im.height else im.rotate(90, expand=True)
+    small = small.resize((96, 72), Image.LANCZOS).filter(ImageFilter.GaussianBlur(1))
+    g = np.asarray(im.convert("L").resize((min(im.width, 1200), min(im.width, 1200) * im.height // im.width)), dtype=np.float32)
+    h, w = g.shape
+    c = g[h // 4:3 * h // 4, w // 4:3 * w // 4]
+    lap = c[1:-1, 1:-1] * 4 - c[:-2, 1:-1] - c[2:, 1:-1] - c[1:-1, :-2] - c[1:-1, 2:]
+    return np.asarray(small, dtype=np.float32), float(lap.var())
+
+
+def ncc(a, b, r=6):
+    best = -1.0
+    for dx in range(-r, r + 1, 2):
+        for dy in range(-r, r + 1, 2):
+            x = a[max(0, dy):72 + min(0, dy), max(0, dx):96 + min(0, dx)]
+            y = b[max(0, -dy):72 + min(0, -dy), max(0, -dx):96 + min(0, -dx)]
+            x = x - x.mean()
+            y = y - y.mean()
+            best = max(best, float((x * y).sum() / (np.sqrt((x * x).sum() * (y * y).sum()) + 1e-6)))
+    return best
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    ap.add_argument("dirs", nargs="+", type=Path)
+    ap.add_argument("--out", type=Path)
+    ap.add_argument("--window", type=float, default=60)
+    ap.add_argument("--threshold", type=float, default=0.9)
+    a = ap.parse_args()
+    if not all(d.is_dir() for d in a.dirs):
+        ap.error("every DIR must be a directory")
+    out = a.out or Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "photo-dupes" / time.strftime("%Y%m%d-%H%M%S")
+    out.mkdir(parents=True, exist_ok=True)
+
+    items, by_hash = [], {}
+    for d in a.dirs:
+        for p in sorted(x for x in d.iterdir() if x.is_file() and x.suffix.lower() in EXTS):
+            data = p.read_bytes()
+            by_hash.setdefault(hashlib.sha256(data).hexdigest(), []).append(p)
+            got = load(p, data)
+            if got is None:
+                print(f"unreadable: {p}", file=sys.stderr)
+                continue
+            im, t = got
+            thumb, sharp = features(im)
+            im.thumbnail((300, 300))
+            items.append(dict(path=p, t=t, thumb=thumb, sharp=sharp, preview=im))
+
+    lines = [f"exact: {' = '.join(map(str, ps))}" for ps in by_hash.values() if len(ps) > 1]
+    parent = list(range(len(items)))
+
+    def root(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            ti, tj = items[i]["t"], items[j]["t"]
+            if ti is not None and tj is not None and abs(ti - tj) > a.window:
+                continue
+            if ncc(items[i]["thumb"], items[j]["thumb"]) >= a.threshold:
+                parent[root(i)] = root(j)
+    groups = {}
+    for i in range(len(items)):
+        groups.setdefault(root(i), []).append(items[i])
+    n = 0
+    for g in groups.values():
+        if len(g) < 2:
+            continue
+        n += 1
+        g.sort(key=lambda it: (it["t"] or 0, str(it["path"])))
+        lines.append(f"group {n}:")
+        for it in g:
+            when = datetime.fromtimestamp(it["t"]).strftime("%Y-%m-%d %H:%M:%S.%f")[:-4] if it["t"] else "-"
+            lines.append(f"  {it['path']}  {when}  sharpness={it['sharp']:.0f}")
+        lines.append(f"suggest keep: {max(g, key=lambda it: it['sharp'])['path']}")
+        sheet = Image.new("RGB", (310 * len(g), 310), "white")
+        for k, it in enumerate(g):
+            sheet.paste(it["preview"], (310 * k + 5, 5))
+        sheet.save(out / f"group-{n:03d}.jpg", quality=85)
+    report = "\n".join(lines) + ("\n" if lines else "")
+    (out / "report.txt").write_text(report)
+    sys.stdout.write(report)
+    print(f"{n} groups, {sum(len(ps) > 1 for ps in by_hash.values())} exact sets; sheets in {out}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

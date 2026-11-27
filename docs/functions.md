@@ -606,6 +606,8 @@ Applies performance-focused defaults: disables animations, enables fast key repe
 | `cpu-uv-test` | Per-core stability test for Ryzen Curve Optimizer undervolts |
 | `hw-log [file]` | Log CPU, GPU, temperatures, fans and power to CSV every 10 s |
 | `llama-prof-watch <pid>` | Profile llama-server when it burns CPU power with an idle GPU |
+| `photo-dupes [--out DIR] [--window S] [--threshold T] DIR...` | Report exact and near-duplicate photos (shots within a minute that look alike) with a sharpness score, a suggested keeper and contact sheets; changes nothing |
+| `photo-shrink [--apply] DIR...` | Shrink phone photos to JPG keeping HDR: copy the iPhone ProRAW embedded HDR JPEG out byte for byte, rename JPEGs saved as `.DNG`, re-save quality-100 JPGs, PNG and HEIC at quality 90; skips any file with an HDR gain map; dry run unless `--apply`, originals go to the trash |
 | `sgsearch` | Code search across public repositories through Sourcegraph's public API |
 | `ydotool-autoclick-toggle` | Start or stop the left-button autoclicker (`autoclicker.service`); bound to Ctrl+Alt+. |
 
