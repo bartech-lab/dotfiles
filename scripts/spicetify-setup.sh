@@ -15,7 +15,8 @@ spicetify config \
     extensions noHomeRedirect.js custom_apps marketplace \
     sidebar_config 0 home_config 1 experimental_features 1
 # `backup apply` refuses (and still exits 0) when a backup exists, so back up only the first time.
-backup_dir="$(dirname "$(spicetify -c)")/Backup"
+# Spicetify 2.x keeps it in $XDG_STATE_HOME/spicetify/Backup.
+backup_dir="${XDG_STATE_HOME:-$HOME/.local/state}/spicetify/Backup"
 if [ -n "$(ls -A "$backup_dir" 2>/dev/null)" ]; then
     spicetify apply
 else
