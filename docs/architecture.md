@@ -34,6 +34,7 @@ dotfiles/
 │   ├── macos-apps/           # App settings as defaults plists, one per domain (scripts/macos-app-settings.py)
 │   ├── ripgrep/ripgreprc
 │   ├── spicetify/Extensions/
+│   ├── spotify/user-prefs    # Spotify audio settings, written by scripts/spotify-prefs.py
 │   ├── ssh/config
 │   ├── vscode/settings.json
 │   ├── wezterm/wezterm.lua

@@ -1,0 +1,11 @@
+# Spotify per-user settings (Users/<name>-user/prefs), written by scripts/spotify-prefs.py.
+# Very high quality for streaming and downloads, never lowered on a slow network.
+audio.play_bitrate_enumeration=5
+audio.play_bitrate_non_metered_enumeration=5
+audio.sync_bitrate_enumeration=5
+audio.allow_downgrade=false
+# No volume normalization, no automix between songs.
+audio.normalize_v2=false
+audio.automix=false
+# No sponsored banner on the home page.
+ui.hide_hpto=true

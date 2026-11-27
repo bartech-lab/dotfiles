@@ -214,6 +214,12 @@ bash setup.sh
 
 See [ai-caffeine README](../ai-caffeine/README.md) for mechanisms and tuning.
 
+## Spotify settings
+
+`install.sh` writes `config/spotify/user-prefs` (very high quality, no normalization, no automix) into each
+signed-in Spotify user's prefs, only while Spotify is closed. On a new machine sign in once, quit Spotify, then run
+`python3 ~/dotfiles/scripts/spotify-prefs.py`.
+
 ## Optional: Spicetify (Spotify theme and extensions)
 
 `install.sh` links the extensions from `config/spicetify/Extensions/` but changes nothing in Spotify. After installing
