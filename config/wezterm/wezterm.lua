@@ -74,6 +74,15 @@ if not wezterm.target_triple:find('darwin') then
       remote_wezterm_path = '/Applications/WezTerm.app/Contents/MacOS/wezterm',
     },
   }
+else
+  -- The way back: `wezterm connect archpc` from the Mac (ssh alias `linux`).
+  config.ssh_domains = {
+    {
+      name = 'archpc',
+      remote_address = 'linux',
+      multiplexing = 'WezTerm',
+    },
+  }
 end
 
 -- Use Metal through WebGpu on macOS.  OpenGL remains the conservative Linux
