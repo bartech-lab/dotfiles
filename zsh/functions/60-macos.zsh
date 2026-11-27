@@ -172,6 +172,9 @@ macos-defaults() {
 
     # Menu bar: battery percentage beside the battery icon
     defaults -currentHost write com.apple.controlcenter BatteryShowPercentage -bool true
+
+    # Menu bar: no Spotlight icon (Cmd+Space still opens Spotlight)
+    defaults -currentHost write com.apple.Spotlight MenuItemHidden -int 1
     
     # Keyboard: set fast but comfortable key repeat rate (2 = fast, 6 = default)
     defaults write NSGlobalDomain KeyRepeat -int 5
@@ -339,6 +342,7 @@ macos-defaults() {
     killall SystemUIServer 2>/dev/null || true
     killall TextInputMenuAgent 2>/dev/null || true
     killall ControlCenter 2>/dev/null || true
+    killall Spotlight 2>/dev/null || true
     
     echo ""
     echo "✅ macOS defaults applied successfully!"
