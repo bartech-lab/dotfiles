@@ -801,6 +801,21 @@ if [[ "$DOTFILES_OS" == macos ]]; then
     # IINA mpv config
     config_symlinks "$DOTFILES_DIR/config/iina/mpv.conf" "$HOME/Library/Application Support/iina/mpv.conf" "IINA mpv config"
 
+    # Docker CLI (colima daemon): find the Homebrew compose plugin and use the keychain helper
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  → Would set cliPluginsExtraDirs and credsStore in ~/.docker/config.json"
+    else
+        mkdir -p ~/.docker
+        python3 - "$HOME/.docker/config.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+config = json.load(open(path)) if os.path.exists(path) else {}
+config.setdefault("cliPluginsExtraDirs", ["/opt/homebrew/lib/docker/cli-plugins"])
+config.setdefault("credsStore", "osxkeychain")
+json.dump(config, open(path, "w"), indent=2)
+PY
+    fi
+
     # Chrome recommended policies: the same file Linux installs under /etc/opt/chrome
     if [[ "$DRY_RUN" == true ]]; then
         python3 "$DOTFILES_DIR/scripts/chrome-policies-macos.py" --dry-run
