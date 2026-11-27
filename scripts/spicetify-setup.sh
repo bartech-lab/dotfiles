@@ -14,4 +14,10 @@ spicetify config \
     disable_sentry 1 disable_ui_logging 1 remove_rtl_rule 1 expose_apis 1 \
     extensions noHomeRedirect.js custom_apps marketplace \
     sidebar_config 0 home_config 1 experimental_features 1
-spicetify backup apply
+# `backup apply` refuses (and still exits 0) when a backup exists, so back up only the first time.
+backup_dir="$(dirname "$(spicetify -c)")/Backup"
+if [ -n "$(ls -A "$backup_dir" 2>/dev/null)" ]; then
+    spicetify apply
+else
+    spicetify backup apply
+fi
