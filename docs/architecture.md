@@ -37,6 +37,7 @@ dotfiles/
 │   ├── spotify/user-prefs    # Spotify audio settings, written by scripts/spotify-prefs.py
 │   ├── ssh/config
 │   ├── vscode/settings.json
+│   ├── webcatalog/           # WebCatalog and web app settings, written by scripts/webcatalog-settings.py
 │   ├── wezterm/wezterm.lua
 │   └── yt-dlp/config
 ├── linux/                    # Linux-only setup

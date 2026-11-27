@@ -220,6 +220,13 @@ See [ai-caffeine README](../ai-caffeine/README.md) for mechanisms and tuning.
 signed-in Spotify user's prefs, only while Spotify is closed. On a new machine sign in once, quit Spotify, then run
 `python3 ~/dotfiles/scripts/spotify-prefs.py`.
 
+## WebCatalog settings
+
+On macOS `install.sh` writes `config/webcatalog/global.json` into WebCatalog's own settings and
+`config/webcatalog/<slug>.json` into that web app's settings (Proton Mail: tab bar only with several tabs, no
+toolbar). An app is skipped until it was installed and signed in once; then run
+`python3 ~/dotfiles/scripts/webcatalog-settings.py`.
+
 ## Optional: Spicetify (Spotify theme and extensions)
 
 `install.sh` links the extensions from `config/spicetify/Extensions/` but changes nothing in Spotify. After installing

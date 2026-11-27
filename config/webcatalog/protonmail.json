@@ -1,0 +1,6 @@
+{
+  "subspaceBar": true,
+  "toolbar": false,
+  "searchSuggestions": false,
+  "tabBarVisibility": "when_multiple_tabs"
+}

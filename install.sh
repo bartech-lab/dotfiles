@@ -849,6 +849,15 @@ else
     python3 "$DOTFILES_DIR/scripts/spotify-prefs.py" || true
 fi
 
+# WebCatalog and its web apps (config/webcatalog), macOS only
+if [[ "$DOTFILES_OS" == macos ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+        python3 "$DOTFILES_DIR/scripts/webcatalog-settings.py" --dry-run || true
+    else
+        python3 "$DOTFILES_DIR/scripts/webcatalog-settings.py" || true
+    fi
+fi
+
 # Browser settings from config/<browser>/preferences.json (Brave: new tab page, toolbar
 # buttons, privacy; both: extensions on macOS), written into the browser's own files,
 # so only while that browser is closed.

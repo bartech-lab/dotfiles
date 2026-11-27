@@ -398,6 +398,7 @@ macos-defaults() {
 MACOS_DOCK_APPS=(
     "/System/Applications/Calendar.app"
     "/System/Applications/Mail.app"
+    "$HOME/Applications/WebCatalog Apps/Proton Mail.app"
     "/Applications/Standard Notes.app"
     "/Applications/WhatsApp.app"
     "/Applications/Telegram Desktop.app"
