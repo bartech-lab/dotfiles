@@ -260,6 +260,7 @@ macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 #### UI/UX
 - Fast window resizing (0.001s)
 - No full-screen toolbar or Mail send/reply animation
+- No desktop widgets
 - Expanded save and print panels
 - Always show scrollbars
 - Disable focus ring animation

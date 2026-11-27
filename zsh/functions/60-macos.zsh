@@ -234,6 +234,10 @@ macos-defaults() {
     
     # UI: disable window manager (Stage Manager)
     defaults write com.apple.WindowManager GloballyEnabled -bool false
+
+    # Desktop: no widgets on the desktop or in Stage Manager
+    defaults write com.apple.WindowManager StandardHideWidgets -bool true
+    defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
     
     # UI: disable the "Are you sure you want to open this application?" dialog
     defaults write com.apple.LaunchServices LSQuarantine -bool false

@@ -29,6 +29,7 @@ source ~/.zshrc
 
 The installer will:
 - On macOS: Install Homebrew, install all dependencies via `brew bundle`
+- On macOS: Write the Chrome recommended policies (the same file Linux installs) into the `com.google.Chrome` defaults
 - On Linux: Install yay AUR helper, install packages via `pacman` and `yay`
 - Enable daily Homebrew autoupdate for formulae (macOS) or systemd timers (Linux)
 - Link dotfiles functions loader

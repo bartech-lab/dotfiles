@@ -799,6 +799,13 @@ fi
 if [[ "$DOTFILES_OS" == macos ]]; then
     # IINA mpv config
     config_symlinks "$DOTFILES_DIR/config/iina/mpv.conf" "$HOME/Library/Application Support/iina/mpv.conf" "IINA mpv config"
+
+    # Chrome recommended policies: the same file Linux installs under /etc/opt/chrome
+    if [[ "$DRY_RUN" == true ]]; then
+        python3 "$DOTFILES_DIR/scripts/chrome-policies-macos.py" --dry-run
+    else
+        python3 "$DOTFILES_DIR/scripts/chrome-policies-macos.py"
+    fi
 fi
 
 # ============================================================================
