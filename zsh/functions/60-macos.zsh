@@ -259,6 +259,9 @@ macos-defaults() {
     
     # Trackpad: enable tap to click
     defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+
+    # Trackpad: tracking speed (System Settings scale 0-3; set on privmac 2026-11-27)
+    defaults write NSGlobalDomain com.apple.trackpad.scaling -float 1
     defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
     defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
     
