@@ -48,6 +48,14 @@ class ChromePoliciesMacos(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(calls, [])
 
+    def test_policies_macos_blocks_are_not_written_and_are_named(self):
+        result, calls = self.run_script({"A": True, "RestoreOnStartup": 1, "DefaultSearchProviderEnabled": True,
+                                         "DefaultSearchProviderName": "Brave"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, ["write|com.google.Chrome|A|-bool|true|"])
+        self.assertIn("Continue where you left off", result.stdout)
+        self.assertIn("Search engine: Brave", result.stdout)
+
     def test_tracked_policy_file_is_fully_supported(self):
         result, _ = self.run_script(json.load(open(os.path.join(
             os.path.dirname(SCRIPT), "..", "linux", "etc", "opt", "chrome", "policies",
