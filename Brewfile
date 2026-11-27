@@ -116,7 +116,7 @@ cask "spotify"                  # Music player
 cask "standard-notes"           # Encrypted notes
 cask "webcatalog"               # Web apps as desktop apps
 cask "whatsapp"                 # Messenger
-cask "telegram"                 # Messenger (official native macOS app)
+cask "telegram-desktop"         # Messenger (official Telegram Desktop, the same client as archpc)
 
 # ============================================================================
 # VS Code Extensions

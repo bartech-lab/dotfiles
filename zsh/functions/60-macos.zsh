@@ -363,7 +363,7 @@ MACOS_DOCK_APPS=(
     "/Applications/Proton Mail.app"
     "/Applications/Standard Notes.app"
     "/Applications/WhatsApp.app"
-    "/Applications/Telegram.app"
+    "/Applications/Telegram Desktop.app"
     "/Applications/Slack.app"
     "/Applications/Google Chrome.app"
     "/Applications/Brave Browser.app"
@@ -457,8 +457,11 @@ macos-debloat() {
     for app in "${apps_to_remove[@]}"; do
         if [[ -d "/Applications/$app" ]]; then
             echo "  Removing: $app"
-            sudo rm -rf "/Applications/$app"
-            ((removed_count++))
+            if sudo rm -rf "/Applications/$app" && [[ ! -e "/Applications/$app" ]]; then
+                removed_count=$((removed_count + 1))
+            else
+                echo "  Could not remove: $app" >&2
+            fi
         fi
     done
     
