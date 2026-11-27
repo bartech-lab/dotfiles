@@ -14,6 +14,7 @@
 # - Finder: new window opens to the home folder, show Library folder
 # - Finder: disable animations, extension change warnings
 # - Finder: no .DS_Store on network/USB volumes
+# - Finder: every icon and list view sorts by kind by default
 # - Screenshots: save to Downloads, disable shadow, PNG format
 # - Keyboard: disable press-and-hold, enable fast key repeat
 # - Keyboard: disable auto-capitalization, smart quotes, auto-correct
@@ -140,6 +141,23 @@ macos-defaults() {
 
     # Finder: don't show icons on desktop (hide clutter)
     defaults write com.apple.finder CreateDesktop -bool false
+
+    # Finder: icon views sort by kind (keeps icons on the grid), list views sort by kind.
+    # Nested keys need PlistBuddy; export/import keeps cfprefsd in sync.
+    local finder_plist
+    finder_plist=$(mktemp -t finder-prefs) || return 1
+    defaults export com.apple.finder "$finder_plist"
+    local view
+    for view in StandardViewSettings FK_StandardViewSettings DesktopViewSettings; do
+        /usr/libexec/PlistBuddy -c "Delete :${view}:IconViewSettings:arrangeBy" "$finder_plist" 2>/dev/null
+        /usr/libexec/PlistBuddy -c "Add :${view}:IconViewSettings:arrangeBy string kind" "$finder_plist"
+    done
+    for view in StandardViewSettings FK_StandardViewSettings; do
+        /usr/libexec/PlistBuddy -c "Delete :${view}:ExtendedListViewSettingsV2:sortColumn" "$finder_plist" 2>/dev/null
+        /usr/libexec/PlistBuddy -c "Add :${view}:ExtendedListViewSettingsV2:sortColumn string kind" "$finder_plist"
+    done
+    defaults import com.apple.finder "$finder_plist"
+    rm -f "$finder_plist"
 
     # ============================================
     # SCREENSHOT SETTINGS
