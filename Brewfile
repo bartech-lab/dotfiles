@@ -78,7 +78,7 @@ brew "docker-credential-helper"  # docker-credential-osxkeychain (was bundled wi
 brew "shellcheck"       # Static analysis for Bash and POSIX sh scripts
 brew "bitwarden-cli"    # Bitwarden vault CLI
 brew "htop"             # Interactive process viewer
-# pipx removed 2026-07 — uv (installed) covers isolated Python CLI tools via `uv tool`/uvx
+brew "uv"               # Python tool runner; agents skills (job-offer, interview-prep) call it. Replaced pipx 2026-07
 
 # ============================================================================
 # GUI Applications (Casks)
