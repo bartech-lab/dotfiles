@@ -148,6 +148,12 @@ local function maximize_once(window)
   if not wezterm.GLOBAL[key] then
     window:maximize()
     wezterm.GLOBAL[key] = true
+    -- The first maximize lands before the unix-domain pane is attached, so
+    -- the pane keeps its 80x24 spawn size.  Maximize again once it is.
+    wezterm.time.call_after(0.3, function()
+      window:restore()
+      window:maximize()
+    end)
   end
 end
 
