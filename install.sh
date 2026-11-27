@@ -150,16 +150,16 @@ if [[ "$DRY_RUN" == true && -f "$DOTFILES_DIR/Brewfile" ]]; then
         if [[ "$type" == "brew" ]]; then
             if ! echo "$installed_formulae" | grep -qx "$name"; then
                 echo "  → $name"
-                ((missing++))
+                missing=$((missing + 1))
             fi
         else
             if ! echo "$installed_casks" | grep -qx "$name"; then
                 echo "  → $name (cask)"
-                ((missing++))
+                missing=$((missing + 1))
             fi
         fi
     done < <(
-        rg '^(brew|cask)[[:space:]]+"' "$DOTFILES_DIR/Brewfile" |
+        grep -E '^(brew|cask)[[:space:]]+"' "$DOTFILES_DIR/Brewfile" |
         sed -E 's/^(brew|cask)[[:space:]]+"([^"]+)".*/\1 \2/'
     )
     
