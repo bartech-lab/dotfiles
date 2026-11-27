@@ -31,6 +31,7 @@ dotfiles/
 │   ├── git/gitconfig
 │   ├── git/gitignore_global  # Global Git ignore rules
 │   ├── iina/mpv.conf
+│   ├── macos-apps/           # App settings as defaults plists, one per domain (scripts/macos-app-settings.py)
 │   ├── ripgrep/ripgreprc
 │   ├── spicetify/Extensions/
 │   ├── ssh/config

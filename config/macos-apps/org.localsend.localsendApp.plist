@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>flutter.ls_auto_finish</key>
+	<true/>
+	<key>flutter.ls_enable_animations</key>
+	<false/>
+	<key>flutter.ls_minimize_to_tray</key>
+	<true/>
+	<key>flutter.ls_quick_save</key>
+	<string>on</string>
+	<key>flutter.ls_save_to_history</key>
+	<false/>
+</dict>
+</plist>

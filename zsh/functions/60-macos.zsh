@@ -168,6 +168,9 @@ macos-defaults() {
 
     # Menu bar: hide the keyboard input-source menu
     defaults write com.apple.TextInputMenu visible -bool false
+
+    # Menu bar: battery percentage beside the battery icon
+    defaults -currentHost write com.apple.controlcenter BatteryShowPercentage -bool true
     
     # Keyboard: set fast but comfortable key repeat rate (2 = fast, 6 = default)
     defaults write NSGlobalDomain KeyRepeat -int 5
@@ -334,6 +337,7 @@ macos-defaults() {
     # Restart SystemUIServer for some UI changes
     killall SystemUIServer 2>/dev/null || true
     killall TextInputMenuAgent 2>/dev/null || true
+    killall ControlCenter 2>/dev/null || true
     
     echo ""
     echo "✅ macOS defaults applied successfully!"
@@ -891,3 +895,9 @@ macos-disable-notification-sounds() {
     "$script_path" "$@"
 }
 
+
+# Tracked app settings (config/macos-apps): `macos-app-settings apply [--dry-run]`,
+# or `macos-app-settings export DOMAIN` after changing an app's settings by hand.
+macos-app-settings() {
+    python3 "$HOME/dotfiles/scripts/macos-app-settings.py" "$@"
+}

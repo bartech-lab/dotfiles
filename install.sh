@@ -811,7 +811,9 @@ if [[ "$DOTFILES_OS" == macos ]]; then
     # zsh commands a user can rerun by hand. macos-defaults asks for the sudo password.
     if [[ "$DRY_RUN" == true ]]; then
         echo "  → Would run: macos-defaults, macos-dock, macos-debloat --yes"
+        python3 "$DOTFILES_DIR/scripts/macos-app-settings.py" apply --dry-run || true
     else
+        python3 "$DOTFILES_DIR/scripts/macos-app-settings.py" apply || true
         DOTFILES_OS=macos zsh -c 'source "$1" && macos-defaults && macos-dock && macos-debloat --yes' \
             _ "$DOTFILES_DIR/zsh/functions/60-macos.zsh" \
             || echo "⚠️  macOS settings did not finish; rerun: macos-defaults && macos-dock && macos-debloat --yes" >&2

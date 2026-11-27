@@ -205,6 +205,8 @@ Apply comprehensive macOS system preferences optimized for development.
 macos-defaults              # Apply all system defaults
 macos-defaults-export       # Export current settings to a script
 macos-dock                  # Replace the Dock with MACOS_DOCK_APPS (60-macos.zsh), needs dockutil
+macos-app-settings apply    # Write config/macos-apps/<domain>.plist into each app's defaults (--dry-run to preview)
+macos-app-settings export eu.exelban.Stats  # Save an app's current settings; read the kept keys before committing
 macos-debloat [--yes]       # Delete optional Apple apps, turn off Siri, Tips, Game Center (sudo)
 macos-disable-notification-sounds [--dry-run] [--verbose] [--exclude "App Name"]
 ```
