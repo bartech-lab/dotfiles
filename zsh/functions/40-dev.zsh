@@ -231,6 +231,8 @@ archive() {
     echo "📦 Creating archive..."
     
     setopt local_options pipe_fail
+    # Create the file before tar reads ".", or tar fails with "file changed as we read it"
+    : > "$outfile"
     if [[ "$use_gzip" == true ]]; then
         $tar_cmd \
             "${tar_opts[@]}" \
@@ -242,7 +244,7 @@ archive() {
             "${tar_opts[@]}" \
             "${exclude_args[@]}" \
             -cf - . 2>/dev/null | \
-            zstd -12 -T0 -q -o "$outfile"
+            zstd -12 -T0 -q -c > "$outfile"
     fi
     local archive_status=$?
 
