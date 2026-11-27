@@ -108,7 +108,6 @@ cask "filen"                    # Encrypted cloud sync
 cask "google-chrome"            # Browser for testing
 cask "imageoptim"               # Image optimizer GUI
 cask "pinta"                    # Image editor
-cask "proton-mail"              # Mail client
 cask "protonvpn"                # VPN client
 cask "shutter-encoder"          # Media converter GUI
 cask "slack"                    # Team chat
