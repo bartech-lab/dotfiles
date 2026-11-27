@@ -90,7 +90,7 @@ cask "font-meslo-for-powerlevel10k"  # MesloLGS NF, the WezTerm, Ghostty and p10
 cask "brave-browser"            # Privacy-focused browser
 cask "android-platform-tools"   # ADB, fastboot for Android development
 cask "ghostty"                  # Modern terminal emulator (GPU-accelerated)
-cask "wezterm@nightly"                 # GPU-accelerated terminal emulator and multiplexer
+cask "wezterm@nightly"                 # GPU terminal and multiplexer; archpc runs wezterm-nightly-bin, upgrade both the same day or the mux link breaks
 cask "handbrake-app"            # Video transcoder (GUI for ffmpeg tasks)
 cask "iina"                     # Modern macOS video player
 cask "keka"                     # Archive extractor (7z, rar support)

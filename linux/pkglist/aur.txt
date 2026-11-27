@@ -9,3 +9,4 @@ filen-desktop-bin
 standardnotes-desktop
 plasma6-applets-netspeed
 zoom
+wezterm-nightly-bin

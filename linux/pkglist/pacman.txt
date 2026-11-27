@@ -49,7 +49,6 @@ make
 
 # GUI apps
 ghostty
-wezterm
 handbrake
 
 code
