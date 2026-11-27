@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TEST_ROOT=$(mktemp -d)
+TEST_ROOT=$(cd "$(mktemp -d)" && pwd -P)  # physical path: macOS /var is a symlink to /private/var
 trap 'rm -rf "$TEST_ROOT" "${LINKS:-}"' EXIT
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
