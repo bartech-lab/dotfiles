@@ -806,6 +806,16 @@ if [[ "$DOTFILES_OS" == macos ]]; then
     else
         python3 "$DOTFILES_DIR/scripts/chrome-policies-macos.py"
     fi
+
+    # System preferences, the pinned Dock apps and the bloatware removal: the same
+    # zsh commands a user can rerun by hand. macos-defaults asks for the sudo password.
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  → Would run: macos-defaults, macos-dock, macos-debloat --yes"
+    else
+        DOTFILES_OS=macos zsh -c 'source "$1" && macos-defaults && macos-dock && macos-debloat --yes' \
+            _ "$DOTFILES_DIR/zsh/functions/60-macos.zsh" \
+            || echo "⚠️  macOS settings did not finish; rerun: macos-defaults && macos-dock && macos-debloat --yes" >&2
+    fi
 fi
 
 # ============================================================================
@@ -964,9 +974,7 @@ else
     echo ""
     echo "Run: dotfiles-doctor if anything fails"
     if [[ "$DOTFILES_OS" == macos ]]; then
-        echo "Run: macos-defaults to apply system preferences"
-        echo "Run: macos-dock to set the pinned Dock apps"
-        echo "Run: macos-debloat to remove bloatware (destructive)"
+        echo "Log out and back in so every macOS setting takes effect"
         echo "Run: macos-system-analysis to review services"
         echo ""
         echo "📌 TG Pro: install manually → https://www.tunabellysoftware.com/tgpro/"

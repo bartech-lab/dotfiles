@@ -153,7 +153,11 @@ macos-defaults() {
 
     # Screenshots: disable floating thumbnail
     defaults write com.apple.screencapture show-thumbnail -bool false
-    
+
+    # Handoff on, so Universal Clipboard (copy on the iPhone, paste on the Mac) works
+    defaults -currentHost write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool true
+    defaults -currentHost write com.apple.coreservices.useractivityd ActivityReceivingAllowed -bool true
+
     # ============================================
     # KEYBOARD SETTINGS
     # ============================================
@@ -430,7 +434,8 @@ macos-debloat() {
     # ============================================
     
     echo "📦 Checking for removable Apple apps..."
-    
+
+    # When a macOS release bundles another app nobody uses, add its name here.
     local apps_to_remove=(
         "GarageBand.app"
         "iMovie.app"

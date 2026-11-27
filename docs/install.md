@@ -30,6 +30,7 @@ source ~/.zshrc
 The installer will:
 - On macOS: Install Homebrew, install all dependencies via `brew bundle`
 - On macOS: Write the Chrome recommended policies (the same file Linux installs) into the `com.google.Chrome` defaults
+- On macOS: Run `macos-defaults` (asks for the sudo password), `macos-dock` and `macos-debloat --yes`, which deletes GarageBand, iMovie, Keynote, Pages and Numbers
 - On Linux: Install yay AUR helper, install packages via `pacman` and `yay`
 - Enable daily Homebrew autoupdate for formulae (macOS) or systemd timers (Linux)
 - Link dotfiles functions loader
@@ -240,7 +241,7 @@ On a completely fresh macOS machine:
    ./install.sh
    ```
 
-3. **Restart terminal** - Everything will be ready!
+3. **Log out and back in** - macOS applies some settings (animations, Dock, menu bar) only at login.
 
 4. **Validate setup** (optional but recommended):
    ```bash
