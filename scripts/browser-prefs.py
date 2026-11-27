@@ -2,6 +2,7 @@
 """Write the tracked browser settings into the browser's own preference files.
 
     browser-prefs.py brave|chrome [--dry-run] [--user-data-dir DIR] [PREFS_JSON]
+    browser-prefs.py brave|chrome --share-installed [--dry-run] [--user-data-dir DIR]
 
 PREFS_JSON (default config/<browser>/preferences.json) maps a file inside the
 browser's user data directory ("Default/Preferences", "Local State") to the values
@@ -12,6 +13,11 @@ sidebar), so they go straight into the files the browser reads at start.
 "external_extensions" maps extension IDs to names. On macOS each one gets an
 "External Extensions/<id>.json" file, so the browser offers to install it from the
 Chrome Web Store at the next start; the user still enables it.
+
+--share-installed (macOS) gives the same file to every extension installed by hand
+from the Chrome Web Store in any profile, so the other profiles get it at the
+next browser start. It only adds files: removing one would uninstall that
+extension from every profile.
 
 The browser rewrites its preference files while it runs, so they are never written
 while it is open.
@@ -76,11 +82,48 @@ def write_json(path, data):
     os.replace(tmp, path)
 
 
+def hand_installed(user_data_dir):
+    """Return ({id: name} installed by hand from the Web Store in any profile, unreadable profiles)."""
+    with open(os.path.join(user_data_dir, "Local State")) as f:
+        profiles = json.load(f).get("profile", {}).get("info_cache", {})
+    found, unreadable = {}, []
+    for profile in profiles:
+        settings = {}
+        try:
+            for name in ("Preferences", "Secure Preferences"):
+                path = os.path.join(user_data_dir, profile, name)
+                if os.path.exists(path):
+                    with open(path) as f:
+                        settings.update(json.load(f).get("extensions", {}).get("settings", {}))
+        except (OSError, ValueError):
+            unreadable.append(profile)
+            continue
+        for ext_id, ext in settings.items():
+            # location 1 = installed from the Web Store by the user; Google's preinstalled ones are skipped.
+            if ext.get("from_webstore") and ext.get("location") == 1 and not ext.get("was_installed_by_default"):
+                found[ext_id] = ext.get("manifest", {}).get("name", ext_id)
+    return found, unreadable
+
+
+def offer_extensions(user_data_dir, extensions, label, dry_run):
+    for ext_id, ext_name in extensions.items():
+        path = os.path.join(user_data_dir, "External Extensions", ext_id + ".json")
+        if os.path.exists(path):
+            continue
+        if dry_run:
+            print(f"  → Would offer extension: {ext_name}")
+        else:
+            write_json(path, {"external_update_url": WEB_STORE})
+            print(f"✓ {label} will offer the extension {ext_name} at next start")
+
+
 def main(argv):
     dry_run = "--dry-run" in argv
-    args = [a for a in argv if a != "--dry-run"]
+    share = "--share-installed" in argv
+    args = [a for a in argv if a not in ("--dry-run", "--share-installed")]
     if not args or args[0] not in BROWSERS:
-        print("usage: browser-prefs.py brave|chrome [--dry-run] [--user-data-dir DIR] [PREFS_JSON]", file=sys.stderr)
+        print("usage: browser-prefs.py brave|chrome [--share-installed] [--dry-run] [--user-data-dir DIR] [PREFS_JSON]",
+              file=sys.stderr)
         return 2
     browser = args.pop(0)
     label = BROWSERS[browser][2]
@@ -89,6 +132,14 @@ def main(argv):
         i = args.index("--user-data-dir")
         user_data_dir = args[i + 1]
         del args[i:i + 2]
+    if share:
+        if platform.system() != "Darwin":
+            return 0
+        found, unreadable = hand_installed(user_data_dir)
+        offer_extensions(user_data_dir, found, label, dry_run)
+        for profile in unreadable:
+            print(f"⚠️  {label} profile {profile}: preferences unreadable, skipped", file=sys.stderr)
+        return 1 if unreadable else 0
     with open(args[0] if args else os.path.join(CONFIG_DIR, browser, "preferences.json")) as f:
         tracked = json.load(f)
     extensions = tracked.pop("external_extensions", {})
@@ -114,15 +165,7 @@ def main(argv):
             print(f"✓ {label} {name}: {len(changed)} setting(s) set")
 
     if platform.system() == "Darwin":
-        for ext_id, ext_name in extensions.items():
-            path = os.path.join(user_data_dir, "External Extensions", ext_id + ".json")
-            if os.path.exists(path):
-                continue
-            if dry_run:
-                print(f"  → Would offer extension: {ext_name}")
-            else:
-                write_json(path, {"external_update_url": WEB_STORE})
-                print(f"✓ {label} will offer the extension {ext_name} at next start")
+        offer_extensions(user_data_dir, extensions, label, dry_run)
     return 0
 
 

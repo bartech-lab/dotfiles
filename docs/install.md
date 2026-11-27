@@ -30,7 +30,7 @@ source ~/.zshrc
 The installer will:
 - On macOS: Install Homebrew, install all dependencies via `brew bundle`
 - On macOS: Write the Chrome recommended policies (the same file Linux installs) into the `com.google.Chrome` defaults. macOS Chrome blocks three of them outside MDM (search engine, startup pages, usage statistics); the script names them to set once by hand
-- Write the browser settings from `config/brave/` and `config/chrome/` into each browser's own files, only while that browser is closed (rerun `python3 ~/dotfiles/scripts/browser-prefs.py brave` or `chrome` after quitting it). On macOS the browser also offers the tracked extensions at its next start
+- Write the browser settings from `config/brave/` and `config/chrome/` into each browser's own files, only while that browser is closed (rerun `python3 ~/dotfiles/scripts/browser-prefs.py brave` or `chrome` after quitting it). On macOS the browser also offers the tracked extensions at its next start. On macOS the hourly LaunchAgent `com.bartech.chrome-share-extensions` also offers every extension installed by hand in one Chrome profile to all other profiles, at the next Chrome start
 - On macOS: Point the Docker CLI at the Homebrew compose plugin and the keychain credential helper (`~/.docker/config.json`, existing keys kept)
 - On macOS: Write the tracked app settings from `config/macos-apps` (a sandboxed app, such as LocalSend, only after its first start)
 - On macOS: Run `macos-defaults` (asks for the sudo password), `macos-dock`, `macos-sidebar`, `macos-login-items` and `macos-debloat --yes`, which deletes GarageBand, iMovie, Keynote, Pages and Numbers

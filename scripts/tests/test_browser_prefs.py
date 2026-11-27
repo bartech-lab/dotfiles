@@ -99,5 +99,81 @@ class BravePrefs(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
 
 
+@unittest.skipUnless(platform.system() == "Darwin", "per-user External Extensions is a macOS location")
+class ShareInstalled(unittest.TestCase):
+    """--share-installed offers every hand-installed Web Store extension to all profiles."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.udd = tmp.name
+
+    def profiles(self, **prefs):
+        """prefs: profile dir -> {file name: extensions.settings dict}"""
+        with open(os.path.join(self.udd, "Local State"), "w") as f:
+            json.dump({"profile": {"info_cache": {p: {} for p in prefs}}}, f)
+        for profile, files in prefs.items():
+            os.makedirs(os.path.join(self.udd, profile), exist_ok=True)
+            for name, settings in files.items():
+                with open(os.path.join(self.udd, profile, name), "w") as f:
+                    f.write(settings if isinstance(settings, str) else json.dumps({"extensions": {"settings": settings}}))
+
+    def run_share(self, *extra):
+        return subprocess.run([sys.executable, SCRIPT, "chrome", "--share-installed", *extra, "--user-data-dir", self.udd],
+                              capture_output=True, text=True)
+
+    def offered(self):
+        d = os.path.join(self.udd, "External Extensions")
+        return sorted(n[:-5] for n in os.listdir(d)) if os.path.isdir(d) else []
+
+    @staticmethod
+    def ext(location=1, webstore=True, **extra):
+        return {"from_webstore": webstore, "location": location, "manifest": {"name": "N"}, **extra}
+
+    def test_hand_installed_in_a_second_profile_is_offered(self):
+        self.profiles(**{"Default": {"Preferences": {}},
+                         "Profile 2": {"Secure Preferences": {"b" * 32: self.ext()}}})
+        r = self.run_share()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.offered(), ["b" * 32])
+
+    def test_preinstalled_unpacked_and_already_external_are_skipped(self):
+        self.profiles(Default={"Preferences": {
+            "c" * 32: self.ext(was_installed_by_default=True),
+            "d" * 32: self.ext(location=4, webstore=False),
+            "e" * 32: self.ext(location=6),
+            "f" * 32: self.ext(location=5),
+        }})
+        r = self.run_share()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.offered(), [])
+
+    def test_existing_files_are_never_removed_or_rewritten(self):
+        os.makedirs(os.path.join(self.udd, "External Extensions"))
+        kept = os.path.join(self.udd, "External Extensions", "a" * 32 + ".json")
+        with open(kept, "w") as f:
+            f.write("custom")
+        self.profiles(Default={"Preferences": {"a" * 32: self.ext()}})
+        r = self.run_share()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(kept) as f:
+            self.assertEqual(f.read(), "custom")
+
+    def test_an_unreadable_profile_fails_but_the_others_are_still_shared(self):
+        self.profiles(**{"Default": {"Preferences": "{broken"},
+                         "Profile 2": {"Preferences": {"b" * 32: self.ext()}}})
+        r = self.run_share()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Default", r.stderr)
+        self.assertEqual(self.offered(), ["b" * 32])
+
+    def test_dry_run_writes_nothing(self):
+        self.profiles(Default={"Preferences": {"b" * 32: self.ext()}})
+        r = self.run_share("--dry-run")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Would offer extension", r.stdout)
+        self.assertEqual(self.offered(), [])
+
+
 if __name__ == "__main__":
     unittest.main()

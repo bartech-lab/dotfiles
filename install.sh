@@ -275,8 +275,11 @@ com.user.launchdheartbeat
 com.user.brewautoupdate
 com.bartech.ai-caffeine
 com.bartech.logbook-sync
+com.bartech.chrome-share-extensions
 HEARTBEATCONF
     else
+        grep -qx 'com.bartech.chrome-share-extensions' ~/.config/launchd-heartbeat/monitored-labels.conf \
+            || echo 'com.bartech.chrome-share-extensions' >> ~/.config/launchd-heartbeat/monitored-labels.conf
         # The domt4 agent is gone; monitoring its label alerts forever.
         sed -i '' 's|^com\.github\.domt4\.homebrew-autoupdate$|com.user.brewautoupdate|' \
             ~/.config/launchd-heartbeat/monitored-labels.conf
@@ -285,6 +288,8 @@ fi
 
 ensure_launchagent_plist "com.user.gitautopull" "$HOME/.config/git-auto-pull/git-auto-pull" 3600
 ensure_launchagent_plist "com.user.launchdheartbeat" "$HOME/.config/launchd-heartbeat/launchd-heartbeat" 3600
+# Share hand-installed Chrome extensions with every Chrome profile (scripts/browser-prefs.py --share-installed)
+ensure_launchagent_plist "com.bartech.chrome-share-extensions" "$DOTFILES_DIR/scripts/chrome-share-extensions" 3600
 
 # ai-caffeine service (keep awake while AI agent sessions run; KeepAlive daemon)
 if [[ "$DRY_RUN" == true ]]; then

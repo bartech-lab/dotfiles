@@ -1,0 +1,13 @@
+#!/bin/bash
+# LaunchAgent com.bartech.chrome-share-extensions (hourly, macOS): an extension installed
+# by hand from the Chrome Web Store in one Chrome profile is offered to every other
+# profile at the next Chrome start. See scripts/browser-prefs.py --share-installed.
+set -u
+export PATH="/opt/homebrew/bin:/usr/bin:/bin"
+dir="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
+if python3 "$dir/browser-prefs.py" chrome --share-installed; then
+    "$HOME/.local/bin/job-status" ok chrome-share-extensions --max-age 26
+else
+    "$HOME/.local/bin/job-status" fail chrome-share-extensions "browser-prefs.py --share-installed failed" --max-age 26
+    exit 1
+fi
