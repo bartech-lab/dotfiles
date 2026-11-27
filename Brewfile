@@ -84,6 +84,7 @@ brew "uv"               # Python tool runner; agents skills (job-offer, intervie
 # GUI Applications (Casks)
 # ============================================================================
 
+cask "font-meslo-for-powerlevel10k"  # MesloLGS NF, the WezTerm, Ghostty and p10k font
 cask "brave-browser"            # Privacy-focused browser
 cask "android-platform-tools"   # ADB, fastboot for Android development
 cask "ghostty"                  # Modern terminal emulator (GPU-accelerated)

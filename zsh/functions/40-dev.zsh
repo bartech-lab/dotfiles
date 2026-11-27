@@ -915,7 +915,7 @@ dotfiles-doctor() {
     else
         echo "  ⚠️  Nerd Fonts not detected"
         if [[ "$DOTFILES_OS" == macos ]]; then
-            echo "     Install: brew tap homebrew/cask-fonts && brew install --cask font-meslo-lg-nerd-font"
+            echo "     Install: brew install --cask font-meslo-for-powerlevel10k"
         else
             echo "     Install: yay -S ttf-meslo-nerd-font-powerlevel10k"
         fi

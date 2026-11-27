@@ -320,7 +320,7 @@ macos-defaults() {
     echo "Key changes:"
     echo "  • Dock auto-hides with immediate appearance (size: 66px)"
     echo "  • All hot corners disabled"
-    echo "  • Finder opens to ~/timac/, Library folder visible"
+    echo "  • Finder opens to the home folder, Library folder visible"
     echo "  • Desktop icons hidden (clutter-free)"
     echo "  • No .DS_Store files on network/USB drives"
     echo "  • Screenshots saved to Downloads as PNG (no shadow)"
