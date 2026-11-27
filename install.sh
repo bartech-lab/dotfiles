@@ -274,6 +274,7 @@ com.user.gitautopull
 com.user.launchdheartbeat
 com.user.brewautoupdate
 com.bartech.ai-caffeine
+com.bartech.logbook-sync
 HEARTBEATCONF
     else
         # The domt4 agent is gone; monitoring its label alerts forever.
