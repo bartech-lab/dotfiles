@@ -7,5 +7,6 @@ spotify
 spicetify-cli
 filen-desktop-bin
 standardnotes-desktop
+joplin-bin
 plasma6-applets-netspeed
 zoom
